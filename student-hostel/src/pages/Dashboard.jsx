@@ -1,40 +1,48 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import DashboardHeader from "../components/dashboard/admin/components/Header";
+import DashboardSidebar from "../components/dashboard/admin/components/Sidebar";
+import { Icons } from "../components/ui/InputIcons";
 
 const Dashboard = () => {
-  const user = JSON.parse(localStorage.getItem("user") || '{"name":"User"}');
+  const user = JSON.parse(
+    localStorage.getItem("user") || '{"name":"User","first_name":"Student"}',
+  );
+  const navigate = useNavigate();
+
   const userInitial = (user.name || user.first_name || "U")
     .charAt(0)
     .toUpperCase();
 
   const handleLogout = () => {
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    navigate("/login");
+  };
+
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const menuItems = [
+    { id: "overview", label: "Overview", icon: "Home" },
+    { id: "bookings", label: "My Bookings", icon: "Calendar" },
+    { id: "saved", label: "Saved Hostels", icon: "Heart" },
+    { id: "payments", label: "Payments", icon: "CreditCard" },
+    { id: "settings", label: "Settings", icon: "Settings" },
+  ];
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
   };
 
   return (
     <div className="dashboard">
-      {/* Dashboard Header */}
-      <header className="dashboard-header">
-        <div className="dashboard-header-content">
-          <div className="dashboard-brand">
-            <div className="dashboard-brand-icon">
-              <Icons.Building />
-            </div>
-            <span className="dashboard-brand-text">StudentHostel</span>
-          </div>
+      <DashboardHeader user={user} onLogout={handleLogout} />
 
-          <div className="user-info">
-            <div className="user-avatar">{userInitial}</div>
-            <span className="user-name">
-              Welcome, {user.name || user.first_name || "Student"}
-            </span>
-            <button onClick={handleLogout} className="logout-btn">
-              <Icons.Logout />
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+      <DashboardSidebar
+        menuItems={menuItems}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       {/* Dashboard Content */}
       <main className="dashboard-content">
@@ -221,6 +229,123 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      <style>{`
+        .dashboard {
+          min-height: 100vh;
+          background-color: #f3f4f6;
+        }
+
+        .dashboard-content {
+          margin-left: 260px;
+          margin-top: 64px;
+          padding: 24px;
+          min-height: calc(100vh - 64px);
+        }
+
+        .dashboard-card {
+          background-color: #ffffff;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 24px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e5e7eb;
+        }
+
+        .dashboard-card-header {
+          margin-bottom: 16px;
+        }
+
+        .dashboard-card-header h2 {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 18px;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin: 0;
+        }
+
+        .dashboard-card p {
+          color: #6b7280;
+          margin-bottom: 20px;
+          line-height: 1.6;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 20px;
+        }
+
+        .stat-item {
+          text-align: center;
+          padding: 16px;
+          background-color: #f9fafb;
+          border-radius: 8px;
+        }
+
+        .stat-value {
+          font-size: 28px;
+          font-weight: 700;
+          color: #0369a1;
+          margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .action-buttons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .action-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 20px;
+          background-color: #f3f4f6;
+          color: #374151;
+          border-radius: 8px;
+          text-decoration: none;
+          font-size: 14px;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+          background-color: #e5e7eb;
+        }
+
+        .action-btn.primary {
+          background-color: #0369a1;
+          color: #ffffff;
+        }
+
+        .action-btn.primary:hover {
+          background-color: #075985;
+        }
+
+        .fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+          opacity: 0;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

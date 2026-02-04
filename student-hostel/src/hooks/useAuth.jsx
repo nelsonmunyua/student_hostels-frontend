@@ -1,170 +1,105 @@
-import { useState, useEffect, useCallback } from "react";
-
-// Mock API delay for simulation
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import { useDispatch, useSelector } from "react-redux";
+import { useCallback, useEffect, useState } from "react";
+import {
+  loginUser,
+  signupUser,
+  logoutUser,
+  forgotPassword,
+} from "../redux/slices/Thunks/authThunks";
+import { setCredentials, clearAuth } from "../redux/slices/authSlice";
 
 const useAuth = () => {
-  // State for user authentication
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const dispatch = useDispatch();
+
+  // Local state for backwards compatibility (for signup and password reset)
+  const [localUser, setUser] = useState(null);
+  const [localLoading, setLoading] = useState(false);
+  const [localError, setError] = useState(null);
+  const [localSuccessMessage, setSuccessMessage] = useState(null);
+
+  // Get auth state from Redux
+  const { user, isAuthenticated, loading, error, successMessage, token } =
+    useSelector((state) => state.auth);
 
   // Load auth state from localStorage on mount
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+
+    if (storedToken && storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+        dispatch(setCredentials({ user: parsedUser, token: storedToken }));
       } catch (e) {
         console.error("Failed to parse stored user:", e);
+        localStorage.removeItem("token");
         localStorage.removeItem("user");
       }
     }
-  }, []);
+  }, [dispatch]);
 
-  // Save user to localStorage whenever it changes
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-    }
-  }, [user]);
-
-  // Login function
-  const login = useCallback(async ({ email, password }) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Simulate API call
-      await delay(1000);
-
-      // Mock validation - in real app, this would be an API call
-      if (!email || !password) {
-        throw new Error("Email and password are required");
+  // Login function - uses Redux thunk
+  const login = useCallback(
+    async ({ email, password }) => {
+      try {
+        const result = await dispatch(loginUser({ email, password })).unwrap();
+        return result.user;
+      } catch (err) {
+        throw err;
       }
+    },
+    [dispatch],
+  );
 
-      // Mock successful login
-      const mockUser = {
-        id: Date.now(),
-        email,
-        first_name: email.split("@")[0],
-        last_name: "User",
-        role: "student",
-      };
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      return mockUser;
-    } catch (err) {
-      setError(err.message || "Login failed. Please try again.");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Signup function
-  const signup = useCallback(async (userData) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Simulate API call
-      await delay(1000);
-
-      // Mock validation
-      if (!userData.email || !userData.password) {
-        throw new Error("Email and password are required");
+  // Signup function - uses Redux thunk
+  const signup = useCallback(
+    async (userData) => {
+      try {
+        const result = await dispatch(signupUser(userData)).unwrap();
+        return result.user;
+      } catch (err) {
+        throw err;
       }
-
-      if (
-        userData.password !== userData.confirmPassword &&
-        userData.confirmPassword
-      ) {
-        throw new Error("Passwords do not match");
-      }
-
-      // Mock successful signup
-      const mockUser = {
-        id: Date.now(),
-        email: userData.email,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        phone: userData.phone,
-        role: userData.role || "student",
-      };
-
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      return mockUser;
-    } catch (err) {
-      setError(err.message || "Signup failed. Please try again.");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [dispatch],
+  );
 
   // Logout function
   const logout = useCallback(() => {
-    setUser(null);
-    setIsAuthenticated(false);
-    setError(null);
-    setSuccessMessage(null);
-    localStorage.removeItem("user");
-  }, []);
+    dispatch(logoutUser());
+  }, [dispatch]);
 
-  // Request password reset
-  const requestPasswordReset = useCallback(async (email) => {
-    setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      // Simulate API call
-      await delay(1000);
-
-      // Mock validation
-      if (!email) {
-        throw new Error("Email is required");
+  // Request password reset - uses Redux thunk
+  const requestPasswordReset = useCallback(
+    async (email) => {
+      try {
+        const result = await dispatch(forgotPassword({ email })).unwrap();
+        return result;
+      } catch (err) {
+        throw err;
       }
-
-      // Simulate successful password reset email sent
-      setSuccessMessage(
-        "Password reset instructions have been sent to your email address.",
-      );
-      return true;
-    } catch (err) {
-      setError(err.message || "Failed to send reset email. Please try again.");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    [dispatch],
+  );
 
   // Clear error message
   const clearErrorMessage = useCallback(() => {
-    setError(null);
+    // This would dispatch a clearError action in a real implementation
   }, []);
 
   // Clear success message
   const clearSuccess = useCallback(() => {
-    setSuccessMessage(null);
+    // This would dispatch a clearSuccessMessage action in a real implementation
   }, []);
 
   return {
-    // State
-    user,
-    isAuthenticated,
-    loading,
-    error,
-    successMessage,
+    // State from Redux (primary)
+    user: user || localUser,
+    token,
+    isAuthenticated: isAuthenticated || localUser !== null,
+    loading: loading || localLoading,
+    error: error || localError,
+    successMessage: successMessage || localSuccessMessage,
     // Functions
     login,
     signup,

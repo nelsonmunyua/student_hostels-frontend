@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { Icons } from "../ui/InputIcons";
+import useAuth from "../../hooks/useAuth";
 
 const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
 
   const {
     register,
@@ -20,18 +22,32 @@ const LoginForm = () => {
     setError("");
 
     try {
-      // Simulate API call - replace with actual API
-      console.log("Login data:", data);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const user = await login(data);
 
-      // After successful login, redirect to dashboard
-      navigate("/dashboard");
+      // Navigate based on user role - ensure auth state is updated first
+      setTimeout(() => {
+        if (user.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }, 100);
     } catch (err) {
-      setError("Invalid email or password");
+      setError(err.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Redirect if already authenticated
+  if (isAuthenticated) {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (storedUser.role === "admin") {
+      navigate("/admin", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+  }
 
   return (
     <div className="auth-form-wrapper">

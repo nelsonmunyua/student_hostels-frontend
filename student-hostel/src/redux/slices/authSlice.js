@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   loginUser,
   signupUser,
@@ -9,11 +9,11 @@ import {
   verifyEmail,
   updateProfile,
   changePassword,
-} from '../thunks/authThunks';
+} from "./Thunks/authThunks";
 
 const initialState = {
   user: null,
-  token: localStorage.getItem('token') || null,
+  token: localStorage.getItem("token") || null,
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -22,7 +22,7 @@ const initialState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     // Clear error messages
@@ -49,8 +49,8 @@ const authSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.isEmailVerified = false;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     },
   },
   extraReducers: (builder) => {
@@ -68,12 +68,12 @@ const authSlice = createSlice({
         state.isEmailVerified = action.payload.user.is_verified;
         state.error = null;
         // Store in localStorage
-        localStorage.setItem('token', action.payload.token);
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem("token", action.payload.token);
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Login failed';
+        state.error = action.payload || "Login failed";
         state.isAuthenticated = false;
       });
 
@@ -89,14 +89,15 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.isEmailVerified = action.payload.user.is_verified;
-        state.successMessage = 'Account created successfully! Please verify your email.';
+        state.successMessage =
+          "Account created successfully! Please verify your email.";
         // Store in localStorage
-        localStorage.setItem('token', action.payload.token);
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem("token", action.payload.token);
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(signupUser.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Signup failed';
+        state.error = action.payload || "Signup failed";
       });
 
     // Logout
@@ -110,10 +111,10 @@ const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         state.isEmailVerified = false;
-        state.successMessage = 'Logged out successfully';
+        state.successMessage = "Logged out successfully";
         // Clear localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
@@ -122,8 +123,8 @@ const authSlice = createSlice({
         state.token = null;
         state.isAuthenticated = false;
         state.isEmailVerified = false;
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       });
 
     // Get Current User
@@ -137,19 +138,22 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.isEmailVerified = action.payload.user.is_verified;
         // Update localStorage
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
         // If unauthorized, clear auth state
-        if (action.payload?.includes('unauthorized') || action.payload?.includes('token')) {
+        if (
+          action.payload?.includes("unauthorized") ||
+          action.payload?.includes("token")
+        ) {
           state.user = null;
           state.token = null;
           state.isAuthenticated = false;
           state.isEmailVerified = false;
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
         }
       });
 
@@ -162,11 +166,12 @@ const authSlice = createSlice({
       })
       .addCase(forgotPassword.fulfilled, (state, action) => {
         state.loading = false;
-        state.successMessage = action.payload.message || 'Password reset email sent successfully';
+        state.successMessage =
+          action.payload.message || "Password reset email sent successfully";
       })
       .addCase(forgotPassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to send reset email';
+        state.error = action.payload || "Failed to send reset email";
       });
 
     // Reset Password
@@ -178,11 +183,12 @@ const authSlice = createSlice({
       })
       .addCase(resetPassword.fulfilled, (state, action) => {
         state.loading = false;
-        state.successMessage = action.payload.message || 'Password reset successfully';
+        state.successMessage =
+          action.payload.message || "Password reset successfully";
       })
       .addCase(resetPassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to reset password';
+        state.error = action.payload || "Failed to reset password";
       });
 
     // Verify Email
@@ -194,16 +200,17 @@ const authSlice = createSlice({
       .addCase(verifyEmail.fulfilled, (state, action) => {
         state.loading = false;
         state.isEmailVerified = true;
-        state.successMessage = action.payload.message || 'Email verified successfully';
+        state.successMessage =
+          action.payload.message || "Email verified successfully";
         // Update user verification status
         if (state.user) {
           state.user.is_verified = true;
-          localStorage.setItem('user', JSON.stringify(state.user));
+          localStorage.setItem("user", JSON.stringify(state.user));
         }
       })
       .addCase(verifyEmail.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Email verification failed';
+        state.error = action.payload || "Email verification failed";
       });
 
     // Update Profile
@@ -215,13 +222,13 @@ const authSlice = createSlice({
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.successMessage = 'Profile updated successfully';
+        state.successMessage = "Profile updated successfully";
         // Update localStorage
-        localStorage.setItem('user', JSON.stringify(action.payload.user));
+        localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to update profile';
+        state.error = action.payload || "Failed to update profile";
       });
 
     // Change Password
@@ -232,15 +239,17 @@ const authSlice = createSlice({
       })
       .addCase(changePassword.fulfilled, (state, action) => {
         state.loading = false;
-        state.successMessage = action.payload.message || 'Password changed successfully';
+        state.successMessage =
+          action.payload.message || "Password changed successfully";
       })
       .addCase(changePassword.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to change password';
+        state.error = action.payload || "Failed to change password";
       });
   },
 });
 
-export const { clearError, clearSuccessMessage, setCredentials, clearAuth } = authSlice.actions;
+export const { clearError, clearSuccessMessage, setCredentials, clearAuth } =
+  authSlice.actions;
 
 export default authSlice.reducer;
