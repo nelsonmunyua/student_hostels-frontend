@@ -1,24 +1,81 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
 
 const StudentProfile = ({ user }) => {
-  // Placeholder - will be implemented with actual API
+  const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+  });
+
+  // Handle input change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  // Handle save changes
+  const handleSaveChanges = async () => {
+    try {
+      setIsSaving(true);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      alert("Profile updated successfully! (Demo)");
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      alert("Failed to save profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Handle cancel
+  const handleCancel = () => {
+    // Reset form to original values
+    setFormData({
+      first_name: user?.first_name || "",
+      last_name: user?.last_name || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+    });
+    alert("Changes cancelled");
+  };
+
+  // Handle upload photo
+  const handleUploadPhoto = () => {
+    alert("Photo upload functionality would open file picker (Demo)");
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
-        <p style={styles.subtitle}>Manage your personal information and preferences</p>
+        <p style={styles.subtitle}>
+          Manage your personal information and preferences
+        </p>
       </div>
 
       <div style={styles.card}>
         <div style={styles.avatarSection}>
           <div style={styles.avatar}>
             {user?.profile_picture ? (
-              <img src={user.profile_picture} alt="Profile" style={styles.avatarImg} />
+              <img
+                src={user.profile_picture}
+                alt="Profile"
+                style={styles.avatarImg}
+              />
             ) : (
               <User size={48} color="#6b7280" />
             )}
           </div>
-          <button style={styles.uploadButton}>
+          <button style={styles.uploadButton} onClick={handleUploadPhoto}>
             <Camera size={16} />
             Change Photo
           </button>
@@ -30,7 +87,9 @@ const StudentProfile = ({ user }) => {
               <label style={styles.label}>First Name</label>
               <input
                 type="text"
-                defaultValue={user?.first_name}
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleInputChange}
                 style={styles.input}
               />
             </div>
@@ -38,7 +97,9 @@ const StudentProfile = ({ user }) => {
               <label style={styles.label}>Last Name</label>
               <input
                 type="text"
-                defaultValue={user?.last_name}
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleInputChange}
                 style={styles.input}
               />
             </div>
@@ -48,7 +109,9 @@ const StudentProfile = ({ user }) => {
             <label style={styles.label}>Email</label>
             <input
               type="email"
-              defaultValue={user?.email}
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
               style={styles.input}
             />
           </div>
@@ -57,14 +120,24 @@ const StudentProfile = ({ user }) => {
             <label style={styles.label}>Phone</label>
             <input
               type="tel"
-              defaultValue={user?.phone}
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
               style={styles.input}
             />
           </div>
 
           <div style={styles.actions}>
-            <button style={styles.saveButton}>Save Changes</button>
-            <button style={styles.cancelButton}>Cancel</button>
+            <button
+              style={styles.saveButton}
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
+            <button style={styles.cancelButton} onClick={handleCancel}>
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -75,7 +148,12 @@ const StudentProfile = ({ user }) => {
 const styles = {
   container: { maxWidth: "800px" },
   header: { marginBottom: "32px" },
-  title: { fontSize: "28px", fontWeight: 700, color: "#1a1a1a", marginBottom: "8px" },
+  title: {
+    fontSize: "28px",
+    fontWeight: 700,
+    color: "#1a1a1a",
+    marginBottom: "8px",
+  },
   subtitle: { fontSize: "16px", color: "#6b7280" },
   card: {
     backgroundColor: "#fff",

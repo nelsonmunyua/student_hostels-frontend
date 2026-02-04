@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, Heart, Star, MapPin } from "lucide-react";
 import axios from "../../../api/axios";
 
 const StudentOverview = ({ user }) => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalBookings: 0,
     activeBookings: 0,
@@ -28,6 +30,28 @@ const StudentOverview = ({ user }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle action card click
+  const handleAction = (action) => {
+    switch (action) {
+      case "browse":
+        alert("Redirecting to browse accommodations... (Demo)");
+        break;
+      case "wishlist":
+        navigate("/wishlist");
+        break;
+      case "review":
+        alert("Redirecting to reviews page... (Demo)");
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Handle Get Started button
+  const handleGetStarted = (action) => {
+    handleAction(action);
   };
 
   if (loading) {
@@ -200,7 +224,12 @@ const ActionCard = ({ title, description, icon, action }) => (
     <span style={styles.actionIcon}>{icon}</span>
     <h3 style={styles.actionTitle}>{title}</h3>
     <p style={styles.actionDescription}>{description}</p>
-    <button style={styles.actionButton}>Get Started</button>
+    <button
+      style={styles.actionButton}
+      onClick={() => handleGetStarted(action)}
+    >
+      Get Started
+    </button>
   </div>
 );
 

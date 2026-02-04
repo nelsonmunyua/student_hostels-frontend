@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Icons } from "../ui/InputIcons";
-import useAuth from "../../hooks/useAuth";
+import { loginUser } from "../../redux/slices/Thunks/authThunks";
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login, loading, error, clearErrorMessage } = useAuth();
+  const dispatch = useDispatch();
+
+  const { isAuthenticated, user, loading, error } = useSelector(
+    (state) => state.auth,
+  );
 
   const {
     register,
@@ -15,15 +20,26 @@ const LoginForm = () => {
     formState: { errors },
   } = useForm();
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (user?.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
+
   const onSubmit = async (data) => {
-    clearErrorMessage();
-    
     try {
-      await login(data);
-      // Redirect based on user role after successful login
-      navigate("/dashboard");
+      const result = await dispatch(loginUser(data)).unwrap();
+
+      if (result.user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
-      // Error is already handled by useAuth hook
       console.error("Login failed:", err);
     }
   };
@@ -32,7 +48,7 @@ const LoginForm = () => {
     <div className="auth-form-wrapper">
       <div className="auth-form-header fade-in">
         <h2>Welcome Back</h2>
-        <p>Sign in to your account to continue</p>
+        <p>Sign in to your account</p>
       </div>
 
       {error && (
@@ -137,7 +153,10 @@ const LoginForm = () => {
       </form>
 
       <p className="auth-footer">
-        Don't have an account? <Link to="/signup">Sign up</Link>
+        Do not have an account?{" "}
+        <Link to="/signup" className="auth-link">
+          Sign up
+        </Link>
       </p>
     </div>
   );
