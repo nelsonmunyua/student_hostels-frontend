@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Icons } from "../ui/InputIcons";
-import useAuth from "../../hooks/useAuth";
+import { loginUser } from "../../redux/slices/Thunks/authThunks";
 
 const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const dispatch = useDispatch();
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   const {
     register,
@@ -22,16 +24,18 @@ const LoginForm = () => {
     setError("");
 
     try {
-      const user = await login(data);
+      const result = await dispatch(loginUser(data)).unwrap();
 
-      // Navigate based on user role - ensure auth state is updated first
-      setTimeout(() => {
-        if (user.role === "admin") {
-          navigate("/admin", { replace: true });
-        } else {
-          navigate("/dashboard", { replace: true });
-        }
-      }, 100);
+      // Check if user is admin
+      if (result.user.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else {
+        // Non-admin users get access denied
+        setError("Access Denied: Only administrators can access this portal.");
+        // Clear the auth state
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+      }
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {
@@ -39,21 +43,16 @@ const LoginForm = () => {
     }
   };
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (storedUser.role === "admin") {
-      navigate("/admin", { replace: true });
-    } else {
-      navigate("/dashboard", { replace: true });
-    }
+  // Redirect if already authenticated as admin
+  if (isAuthenticated && user?.role === "admin") {
+    navigate("/admin", { replace: true });
   }
 
   return (
     <div className="auth-form-wrapper">
       <div className="auth-form-header fade-in">
-        <h2>Welcome Back</h2>
-        <p>Sign in to your account to continue</p>
+        <h2>Admin Portal</h2>
+        <p>Sign in to access the admin dashboard</p>
       </div>
 
       {error && (
@@ -158,7 +157,7 @@ const LoginForm = () => {
       </form>
 
       <p className="auth-footer">
-        Don't have an account? <Link to="/signup">Sign up</Link>
+        Admin access only. Contact system administrator for access.
       </p>
     </div>
   );

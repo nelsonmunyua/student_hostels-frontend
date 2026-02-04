@@ -50,12 +50,14 @@ export const loginUser = createAsyncThunk(
 
       if (!mockUser) {
         // Create a new mock user if not found
+        // Check if email contains "admin" to assign admin role
+        const isAdminEmail = email.toLowerCase().includes("admin");
         const newUser = {
           id: Date.now(),
           email,
           first_name: email.split("@")[0],
           last_name: "User",
-          role: email === "admin@admin.com" ? "admin" : "student",
+          role: isAdminEmail ? "admin" : "student",
           is_verified: true,
         };
         mockUsers.push(newUser);
@@ -101,12 +103,14 @@ export const signupUser = createAsyncThunk(
       }
 
       // Create new mock user
+      // Check if email contains "admin" to assign admin role, otherwise use provided role or default to student
+      const isAdminEmail = email.toLowerCase().includes("admin");
       const newUser = {
         id: Date.now(),
         email,
         first_name,
         last_name,
-        role: role || "student",
+        role: isAdminEmail ? "admin" : role || "student",
         is_verified: false, // Email verification required
         phone: userData.phone || null,
       };

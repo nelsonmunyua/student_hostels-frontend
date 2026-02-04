@@ -4,8 +4,7 @@ import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import PrivateRoute from "./components/auth/PrivateRoute";
-import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./components/dashboard/admin/AdminDashboard";
+import AdminDashboard from "./admin/AdminDashboard";
 import "./App.css";
 
 function App() {
@@ -21,21 +20,11 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 
-      {/* Student Dashboard */}
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute roles={["student", "host"]}>
-            <Dashboard />
-          </PrivateRoute>
-        }
-      />
-
       {/* Admin Dashboard */}
       <Route
         path="/admin"
         element={
-          <PrivateRoute roles={["admin"]}>
+          <PrivateRoute>
             <AdminDashboard />
           </PrivateRoute>
         }

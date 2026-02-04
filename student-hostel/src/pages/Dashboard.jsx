@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DashboardHeader from "../components/dashboard/admin/components/Header";
 import DashboardSidebar from "../components/dashboard/admin/components/Sidebar";
 import { Icons } from "../components/ui/InputIcons";
@@ -32,6 +31,15 @@ const Dashboard = () => {
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
+  };
+
+  // Handle dashboard action clicks
+  const handleActionClick = (actionType, destination) => {
+    if (destination) {
+      navigate(destination);
+    } else {
+      alert(`Navigating to ${actionType}... (Demo)`);
+    }
   };
 
   return (
@@ -94,19 +102,47 @@ const Dashboard = () => {
             Quickly access the most commonly used features of your dashboard.
           </p>
           <div className="action-buttons">
-            <Link to="/dashboard" className="action-btn primary">
+            <Link
+              to="/dashboard"
+              className="action-btn primary"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Browse Hostels", "/browse");
+              }}
+            >
               <Icons.Search />
               Browse Hostels
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("My Bookings", "/bookings");
+              }}
+            >
               <Icons.Calendar />
               My Bookings
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Saved List", "/wishlist");
+              }}
+            >
               <Icons.Heart />
               Saved List
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Settings", "/settings");
+              }}
+            >
               <Icons.Settings />
               Settings
             </Link>
@@ -126,15 +162,36 @@ const Dashboard = () => {
           </div>
           <p>Check out our top-rated hostels selected for students like you.</p>
           <div className="action-buttons">
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("University View Hostel", "/accommodations");
+              }}
+            >
               <Icons.MapPin />
               University View Hostel
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Central Student Living", "/accommodations");
+              }}
+            >
               <Icons.MapPin />
               Central Student Living
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Campus Edge Apartments", "/accommodations");
+              }}
+            >
               <Icons.MapPin />
               Campus Edge Apartments
             </Link>
@@ -156,15 +213,36 @@ const Dashboard = () => {
             Stay updated with upcoming events and activities at your hostel.
           </p>
           <div className="action-buttons">
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Study Group", "/events");
+              }}
+            >
               <Icons.Book />
               Study Group Tonight
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Coffee & Chat", "/events");
+              }}
+            >
               <Icons.Coffee />
               Coffee & Chat
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Career Workshop", "/events");
+              }}
+            >
               <Icons.GraduationCap />
               Career Workshop
             </Link>
@@ -186,15 +264,36 @@ const Dashboard = () => {
             Manage your payments, view invoices, and update payment methods.
           </p>
           <div className="action-buttons">
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("View Invoices", "/invoices");
+              }}
+            >
               <Icons.CreditCard />
               View Invoices
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Payment Methods", "/payment-methods");
+              }}
+            >
               <Icons.Settings />
               Payment Methods
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Payment History", "/payment-history");
+              }}
+            >
               <Icons.Check />
               Payment History
             </Link>
@@ -214,15 +313,36 @@ const Dashboard = () => {
           </div>
           <p>Need help? Our support team is here to assist you 24/7.</p>
           <div className="action-buttons">
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("FAQ", "/faq");
+              }}
+            >
               <Icons.Book />
               FAQ
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Contact Support", "/contact");
+              }}
+            >
               <Icons.Mail />
               Contact Support
             </Link>
-            <Link to="/dashboard" className="action-btn">
+            <Link
+              to="/dashboard"
+              className="action-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                handleActionClick("Live Chat", "/chat");
+              }}
+            >
               <Icons.MessageCircle />
               Live Chat
             </Link>
