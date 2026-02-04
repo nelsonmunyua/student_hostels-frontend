@@ -9,7 +9,7 @@ import {
   verifyEmail,
   updateProfile,
   changePassword,
-} from '../thunks/authThunks';
+} from '../Thunks/authThunks';
 
 const initialState = {
   user: null,

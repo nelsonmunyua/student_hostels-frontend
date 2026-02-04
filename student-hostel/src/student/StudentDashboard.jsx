@@ -1,5 +1,5 @@
 import { useState } from "react";
-import useAuth from "../../../hooks/useAuth";
+import useAuth from "../hooks/useAuth";
 import DashboardHeader from "./components/Header";
 import DashboardSidebar from "./components/Sidebar";
 import StudentOverview from "./pages/Overview";
