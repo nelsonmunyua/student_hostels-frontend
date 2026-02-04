@@ -23,7 +23,7 @@ const Users = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
 
-  // Mock data for users
+  // Mock data for users - in real app, fetch from API
   const users = [
     {
       id: 1,
