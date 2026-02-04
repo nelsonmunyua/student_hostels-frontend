@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Download, Eye } from "lucide-react";
 import axios from "../../../api/axios";
 
 const StudentBookings = ({ user }) => {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState("all"); // all, active, completed, cancelled
   const [loading, setLoading] = useState(true);
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
   useEffect(() => {
     fetchBookings();
@@ -33,6 +36,18 @@ const StudentBookings = ({ user }) => {
     return styles[status] || styles.pending;
   };
 
+  // Handle view details
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    alert(`Viewing details for booking #${booking.id} (Demo)`);
+  };
+
+  // Handle download receipt
+  const handleDownloadReceipt = async (booking) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    alert(`Downloading receipt for booking #${booking.id} (Demo)`);
+  };
+
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
@@ -45,7 +60,9 @@ const StudentBookings = ({ user }) => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>My Bookings</h1>
-        <p style={styles.subtitle}>Manage and track your accommodation bookings</p>
+        <p style={styles.subtitle}>
+          Manage and track your accommodation bookings
+        </p>
       </div>
 
       {/* Filters */}
@@ -71,7 +88,9 @@ const StudentBookings = ({ user }) => {
             <div key={booking.id} style={styles.bookingCard}>
               <div style={styles.bookingHeader}>
                 <div>
-                  <h3 style={styles.bookingTitle}>{booking.accommodation_title}</h3>
+                  <h3 style={styles.bookingTitle}>
+                    {booking.accommodation_title}
+                  </h3>
                   <div style={styles.bookingLocation}>
                     <MapPin size={16} />
                     <span>{booking.location}</span>
@@ -102,7 +121,9 @@ const StudentBookings = ({ user }) => {
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Total Price</span>
-                  <span style={styles.detailValue}>KSh {booking.total_price}</span>
+                  <span style={styles.detailValue}>
+                    KSh {booking.total_price}
+                  </span>
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Booking ID</span>
@@ -111,12 +132,21 @@ const StudentBookings = ({ user }) => {
               </div>
 
               <div style={styles.bookingActions}>
-                <button style={styles.actionButton}>
+                <button
+                  style={styles.actionButton}
+                  onClick={() => handleViewDetails(booking)}
+                >
                   <Eye size={16} />
                   View Details
                 </button>
                 {booking.status === "completed" && (
-                  <button style={{ ...styles.actionButton, ...styles.actionButtonSecondary }}>
+                  <button
+                    style={{
+                      ...styles.actionButton,
+                      ...styles.actionButtonSecondary,
+                    }}
+                    onClick={() => handleDownloadReceipt(booking)}
+                  >
                     <Download size={16} />
                     Download Receipt
                   </button>
