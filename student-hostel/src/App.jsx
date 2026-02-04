@@ -4,7 +4,7 @@ import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import PrivateRoute from "./components/auth/PrivateRoute";
-import Dashboard from "./pages/Dashboard";
+import StudentDashboard from "./student/StudentDashboard";
 import "./App.css";
 
 function App() {
@@ -26,7 +26,7 @@ function App() {
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <StudentDashboard />
             </PrivateRoute>
           }
         />

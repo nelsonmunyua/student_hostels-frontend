@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { Icons } from "../ui/InputIcons";
+import useAuth from "../../hooks/useAuth";
 
 const LoginForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login, loading, error, clearErrorMessage } = useAuth();
 
   const {
     register,
@@ -16,20 +16,15 @@ const LoginForm = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setIsLoading(true);
-    setError("");
-
+    clearErrorMessage();
+    
     try {
-      // Simulate API call - replace with actual API
-      console.log("Login data:", data);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // After successful login, redirect to dashboard
+      await login(data);
+      // Redirect based on user role after successful login
       navigate("/dashboard");
     } catch (err) {
-      setError("Invalid email or password");
-    } finally {
-      setIsLoading(false);
+      // Error is already handled by useAuth hook
+      console.error("Login failed:", err);
     }
   };
 
@@ -129,8 +124,8 @@ const LoginForm = () => {
           </Link>
         </div>
 
-        <button type="submit" className="auth-button" disabled={isLoading}>
-          {isLoading ? (
+        <button type="submit" className="auth-button" disabled={loading}>
+          {loading ? (
             <>
               <span className="spinner spinner-sm"></span>
               Signing in...
