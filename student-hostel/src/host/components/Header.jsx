@@ -1,25 +1,18 @@
-import { LogOut, User, Bell, Shield } from "lucide-react";
+import { LogOut, User, Bell, Building2 } from "lucide-react";
 import { useSelector } from "react-redux";
 
-// Admin Theme Colors - Professional Purple
+// Host Theme Colors - Professional Teal
 const theme = {
-  primary: "#7c3aed",
-  primaryLight: "#f5f3ff",
-  primaryHover: "#ede9fe",
-  accent: "#5b21b6",
-  success: "#059669",
+  primary: "#0d9488",
+  primaryLight: "#f0fdfa",
+  primaryHover: "#ccfbf1",
+  accent: "#0f766e",
 };
 
-const DashboardHeader = ({ userType, onLogout }) => {
-  const { user } = useSelector((state) => state.auth);
-
-  // Get current date
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+const DashboardHeader = ({ user, userType, onLogout }) => {
+  // Get user from Redux if not provided as prop
+  const reduxUser = useSelector((state) => state.auth.user);
+  const displayUser = user || reduxUser;
 
   return (
     <header style={styles.header}>
@@ -27,23 +20,23 @@ const DashboardHeader = ({ userType, onLogout }) => {
         {/* Left Section - Brand */}
         <div style={styles.brand}>
           <div style={styles.logo}>
-            <span style={styles.logoIcon}>🛡️</span>
+            <span style={styles.logoIcon}>🏨</span>
             <div style={styles.brandText}>
               <span style={styles.brandName}>StudentHostel</span>
-              <span style={styles.brandTagline}>Admin Management System</span>
+              <span style={styles.brandTagline}>Host Dashboard</span>
             </div>
           </div>
         </div>
 
-        {/* Center Section - Date Display */}
+        {/* Center Section - Quick Actions */}
         <div style={styles.centerSection}>
-          <div style={styles.dateDisplay}>
-            <span style={styles.dateIcon}>📅</span>
-            <span style={styles.dateText}>{currentDate}</span>
+          <div style={styles.propertyBadge}>
+            <Building2 size={16} />
+            <span>3 Properties</span>
           </div>
         </div>
 
-        {/* Right Section - Admin Actions */}
+        {/* Right Section - User Actions */}
         <div style={styles.rightSection}>
           {/* Notifications */}
           <button style={styles.iconButton}>
@@ -51,16 +44,29 @@ const DashboardHeader = ({ userType, onLogout }) => {
             <span style={styles.notificationBadge}>3</span>
           </button>
 
-          {/* Admin Badge */}
-          <div style={styles.adminBadge}>
-            <div style={styles.adminAvatar}>
-              <Shield size={18} color="#ffffff" />
+          {/* User Info */}
+          <div style={styles.userInfo}>
+            <div style={styles.avatar}>
+              {displayUser?.profile_picture ? (
+                <img
+                  src={displayUser.profile_picture}
+                  alt={displayUser.first_name}
+                  style={styles.avatarImg}
+                />
+              ) : displayUser?.first_name ? (
+                <span style={styles.avatarInitial}>
+                  {displayUser.first_name.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <User size={20} color="#666" />
+              )}
             </div>
-            <div style={styles.adminInfo}>
-              <span style={styles.adminName}>
-                {user?.first_name || "Admin"} {user?.last_name || ""}
+            <div style={styles.userDetails}>
+              <span style={styles.userName}>
+                {displayUser?.first_name || "Host"}{" "}
+                {displayUser?.last_name || ""}
               </span>
-              <span style={styles.adminRole}>Administrator</span>
+              <span style={styles.userRole}>Property Owner</span>
             </div>
           </div>
 
@@ -82,10 +88,10 @@ const styles = {
     left: 0,
     right: 0,
     height: "72px",
-    backgroundColor: "#1e1b4b",
-    borderBottom: "1px solid rgba(124, 58, 237, 0.2)",
+    backgroundColor: "#ffffff",
+    borderBottom: "1px solid #e2e8f0",
     zIndex: 1000,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
   },
   container: {
     height: "100%",
@@ -106,44 +112,40 @@ const styles = {
     gap: "12px",
   },
   logoIcon: {
-    fontSize: "32px",
+    fontSize: "36px",
   },
   brandText: {
     display: "flex",
     flexDirection: "column",
   },
   brandName: {
-    fontSize: "18px",
+    fontSize: "20px",
     fontWeight: 700,
-    color: "#ffffff",
+    color: "#1e293b",
     letterSpacing: "-0.02em",
     lineHeight: 1.2,
   },
   brandTagline: {
-    fontSize: "11px",
-    color: "#a5b4fc",
+    fontSize: "12px",
+    color: "#64748b",
     fontWeight: 400,
   },
   centerSection: {
     display: "flex",
     alignItems: "center",
+    gap: "8px",
   },
-  dateDisplay: {
+  propertyBadge: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "6px",
     padding: "8px 16px",
-    backgroundColor: "rgba(124, 58, 237, 0.15)",
+    backgroundColor: "#f0fdfa",
+    color: "#0d9488",
     borderRadius: "20px",
-    border: "1px solid rgba(124, 58, 237, 0.25)",
-  },
-  dateIcon: {
-    fontSize: "14px",
-  },
-  dateText: {
     fontSize: "13px",
-    color: "#c4b5fd",
     fontWeight: 500,
+    border: "1px solid #99f6e4",
   },
   rightSection: {
     display: "flex",
@@ -157,8 +159,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(124, 58, 237, 0.15)",
-    border: "1px solid rgba(124, 58, 237, 0.3)",
+    backgroundColor: "#f0fdfa",
+    border: "1px solid #99f6e4",
     borderRadius: "10px",
     cursor: "pointer",
     transition: "all 0.2s",
@@ -177,38 +179,49 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    border: "2px solid #1e1b4b",
+    border: "2px solid #ffffff",
   },
-  adminBadge: {
+  userInfo: {
     display: "flex",
     alignItems: "center",
     gap: "12px",
     padding: "6px 12px 6px 6px",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "#f8fafc",
     borderRadius: "12px",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
+    border: "1px solid #e2e8f0",
   },
-  adminAvatar: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "8px",
-    backgroundColor: "#7c3aed",
+  avatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "10px",
+    backgroundColor: "#0d9488",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
-  adminInfo: {
+  avatarImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  avatarInitial: {
+    color: "#ffffff",
+    fontSize: "16px",
+    fontWeight: 600,
+  },
+  userDetails: {
     display: "flex",
     flexDirection: "column",
   },
-  adminName: {
-    fontSize: "13px",
+  userName: {
+    fontSize: "14px",
     fontWeight: 600,
-    color: "#ffffff",
+    color: "#1e293b",
   },
-  adminRole: {
-    fontSize: "11px",
-    color: "#a5b4fc",
+  userRole: {
+    fontSize: "12px",
+    color: "#64748b",
     fontWeight: 400,
   },
   logoutButton: {
@@ -216,9 +229,9 @@ const styles = {
     alignItems: "center",
     gap: "8px",
     padding: "10px 18px",
-    backgroundColor: "rgba(239, 68, 68, 0.15)",
-    color: "#fca5a5",
-    border: "1px solid rgba(239, 68, 68, 0.3)",
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    border: "none",
     borderRadius: "10px",
     fontSize: "14px",
     fontWeight: 600,

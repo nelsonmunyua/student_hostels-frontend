@@ -9,11 +9,18 @@ import "./App.css";
 import App from "./App.jsx";
 
 // Check if user is authenticated on app start and fetch user data
-const checkAuthAndFetchUser = () => {
+const checkAuthAndFetchUser = async () => {
   const token = localStorage.getItem("token");
   if (token) {
     // Dispatch getCurrentUser to verify token and get user data
-    store.dispatch(getCurrentUser());
+    try {
+      await store.dispatch(getCurrentUser()).unwrap();
+    } catch (error) {
+      // If getCurrentUser fails (e.g., invalid token), clear localStorage
+      console.log("Auth check failed, clearing tokens");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
   } else {
     // Even without token, we need to set loading to false
     // so the app doesn't stay in loading state forever
@@ -24,6 +31,9 @@ const checkAuthAndFetchUser = () => {
   }
 };
 
+// Initialize auth check immediately
+checkAuthAndFetchUser();
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <Provider store={store}>
@@ -33,6 +43,3 @@ createRoot(document.getElementById("root")).render(
     </Provider>
   </StrictMode>,
 );
-
-// Initialize auth check
-checkAuthAndFetchUser();

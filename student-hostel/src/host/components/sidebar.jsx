@@ -23,15 +23,15 @@ const iconMap = {
   DollarSign,
 };
 
-// Admin Theme Colors - Professional Purple
+// Host Theme Colors - Professional Teal
 const theme = {
-  primary: "#7c3aed", // Purple
-  primaryLight: "#f5f3ff",
-  primaryHover: "#ede9fe",
-  activeIndicator: "#7c3aed",
-  text: "#5b21b6",
+  primary: "#0d9488", // Teal
+  primaryLight: "#f0fdfa",
+  primaryHover: "#ccfbf1",
+  activeIndicator: "#0d9488",
+  text: "#0f766e",
   textMuted: "#64748b",
-  darkBg: "#1e1b4b",
+  darkBg: "#134e4a",
 };
 
 const DashboardSidebar = ({ menuItems }) => {
@@ -39,23 +39,23 @@ const DashboardSidebar = ({ menuItems }) => {
 
   return (
     <aside style={styles.sidebar}>
-      {/* Sidebar Header with Admin Branding */}
+      {/* Sidebar Header with Host Branding */}
       <div style={styles.sidebarHeader}>
         <div style={styles.brandLogo}>
-          <div style={styles.adminShield}>
-            <span style={styles.shieldIcon}>🛡️</span>
+          <div style={styles.hostIcon}>
+            <span style={styles.hostIconEmoji}>🏨</span>
           </div>
           <div style={styles.brandText}>
-            <span style={styles.brandTextMain}>Admin Panel</span>
-            <span style={styles.brandTextSub}>Management Console</span>
+            <span style={styles.brandTextMain}>Host Portal</span>
+            <span style={styles.brandTextSub}>Property Management</span>
           </div>
         </div>
       </div>
 
-      {/* Admin Badge */}
-      <div style={styles.adminBadge}>
-        <span style={styles.badgeIcon}>⚡</span>
-        <span style={styles.badgeText}>Administrator</span>
+      {/* Host Badge */}
+      <div style={styles.hostBadge}>
+        <span style={styles.badgeIcon}>🏠</span>
+        <span style={styles.badgeText}>Property Owner</span>
       </div>
 
       <nav style={styles.nav}>
@@ -102,20 +102,22 @@ const DashboardSidebar = ({ menuItems }) => {
         })}
       </nav>
 
-      {/* Footer Section - Admin Stats */}
+      {/* Footer Section - Quick Stats */}
       <div style={styles.sidebarFooter}>
         <div style={styles.statsCard}>
           <div style={styles.statsHeader}>
-            <span style={styles.statsIcon}>📊</span>
-            <span style={styles.statsTitle}>Platform Status</span>
+            <span style={styles.statsIcon}>💰</span>
+            <span style={styles.statsTitle}>Earnings</span>
           </div>
-          <div style={styles.statsRow}>
-            <span style={styles.statsLabel}>Active Users</span>
-            <span style={styles.statsValue}>1,234</span>
+          <div style={styles.earningsRow}>
+            <span style={styles.earningsLabel}>This Month</span>
+            <span style={styles.earningsValue}>$2,450</span>
           </div>
-          <div style={styles.statsRow}>
-            <span style={styles.statsLabel}>System</span>
-            <span style={styles.statsValue}>Healthy</span>
+          <div style={styles.earningsProgress}>
+            <div style={styles.progressBar}>
+              <div style={{ ...styles.progressFill, width: "75%" }}></div>
+            </div>
+            <span style={styles.progressText}>75% of goal</span>
           </div>
         </div>
       </div>
@@ -130,34 +132,34 @@ const styles = {
     top: "64px",
     width: "280px",
     height: "calc(100vh - 64px)",
-    backgroundColor: "#1e1b4b",
-    borderRight: "none",
+    backgroundColor: "#ffffff",
+    borderRight: "1px solid #e2e8f0",
     padding: "0",
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    boxShadow: "4px 0 20px rgba(0, 0, 0, 0.15)",
+    boxShadow: "2px 0 8px rgba(0, 0, 0, 0.02)",
   },
   sidebarHeader: {
     padding: "20px 20px 16px 20px",
-    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+    borderBottom: "1px solid #f1f5f9",
   },
   brandLogo: {
     display: "flex",
     alignItems: "center",
     gap: "14px",
   },
-  adminShield: {
+  hostIcon: {
     width: "48px",
     height: "48px",
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#0d9488",
     borderRadius: "12px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 4px 12px rgba(124, 58, 237, 0.4)",
+    boxShadow: "0 4px 12px rgba(13, 148, 136, 0.3)",
   },
-  shieldIcon: {
+  hostIconEmoji: {
     fontSize: "24px",
   },
   brandText: {
@@ -167,24 +169,24 @@ const styles = {
   brandTextMain: {
     fontSize: "18px",
     fontWeight: 700,
-    color: "#ffffff",
+    color: "#0d9488",
     letterSpacing: "-0.02em",
   },
   brandTextSub: {
     fontSize: "11px",
-    color: "#a5b4fc",
+    color: "#5eead4",
     fontWeight: 400,
     marginTop: "2px",
   },
-  adminBadge: {
+  hostBadge: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
     margin: "0 20px 16px 20px",
     padding: "10px 14px",
-    backgroundColor: "rgba(124, 58, 237, 0.2)",
+    backgroundColor: "#f0fdfa",
     borderRadius: "10px",
-    border: "1px solid rgba(124, 58, 237, 0.3)",
+    border: "1px solid #99f6e4",
   },
   badgeIcon: {
     fontSize: "14px",
@@ -192,7 +194,7 @@ const styles = {
   badgeText: {
     fontSize: "12px",
     fontWeight: 600,
-    color: "#c4b5fd",
+    color: "#0d9488",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
@@ -217,11 +219,11 @@ const styles = {
     textAlign: "left",
     fontSize: "14px",
     fontWeight: 500,
-    color: "#94a3b8",
+    color: "#64748b",
     textDecoration: "none",
   },
   menuItemActive: {
-    backgroundColor: "rgba(124, 58, 237, 0.25)",
+    backgroundColor: "#f0fdfa",
   },
   menuLabel: {
     flex: 1,
@@ -237,12 +239,13 @@ const styles = {
   },
   sidebarFooter: {
     padding: "16px",
-    borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+    borderTop: "1px solid #f1f5f9",
   },
   statsCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: "#f0fdfa",
     borderRadius: "12px",
     padding: "16px",
+    border: "1px solid #99f6e4",
   },
   statsHeader: {
     display: "flex",
@@ -256,24 +259,46 @@ const styles = {
   statsTitle: {
     fontSize: "12px",
     fontWeight: 600,
-    color: "#a5b4fc",
+    color: "#0d9488",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
-  statsRow: {
+  earningsRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "6px 0",
+    marginBottom: "12px",
   },
-  statsLabel: {
+  earningsLabel: {
     fontSize: "13px",
-    color: "#94a3b8",
+    color: "#64748b",
   },
-  statsValue: {
-    fontSize: "13px",
-    fontWeight: 600,
-    color: "#ffffff",
+  earningsValue: {
+    fontSize: "20px",
+    fontWeight: 700,
+    color: "#0d9488",
+  },
+  earningsProgress: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  progressBar: {
+    width: "100%",
+    height: "6px",
+    backgroundColor: "#ccfbf1",
+    borderRadius: "3px",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#0d9488",
+    borderRadius: "3px",
+  },
+  progressText: {
+    fontSize: "11px",
+    color: "#64748b",
+    textAlign: "right",
   },
 };
 

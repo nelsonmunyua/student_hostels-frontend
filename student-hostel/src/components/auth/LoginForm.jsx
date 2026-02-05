@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Icons } from "../ui/InputIcons";
 import { loginUser } from "../../redux/slices/Thunks/authThunks";
+import { getRedirectPath } from "../../utils/roleRedirect.jsx";
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -22,11 +23,9 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      if (user?.role === "admin") {
-        navigate("/admin", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
+      // Role-based redirect after login
+      const redirectPath = getRedirectPath(user?.role);
+      navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -34,11 +33,9 @@ const LoginForm = () => {
     try {
       const result = await dispatch(loginUser(data)).unwrap();
 
-      if (result.user.role === "admin") {
-        navigate("/admin", { replace: true });
-      } else {
-        navigate("/dashboard", { replace: true });
-      }
+      // Role-based redirect after successful login
+      const redirectPath = getRedirectPath(result.user.role);
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Login failed:", err);
     }

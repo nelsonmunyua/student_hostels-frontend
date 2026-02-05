@@ -24,12 +24,16 @@ const getStoredUser = () => {
   return null;
 };
 
+// Check if there's a token in localStorage
+const hasToken = !!localStorage.getItem("token");
+
 const initialState = {
   user: getStoredUser(),
   token: localStorage.getItem("token") || null,
-  isAuthenticated: !!localStorage.getItem("token"),
-  // Set loading to true if token exists, to show spinner while fetching user
-  loading: !!localStorage.getItem("token"),
+  isAuthenticated: hasToken,
+  // Set loading to true ONLY if there's a token (meaning we need to verify it)
+  // If no token, loading is false immediately
+  loading: hasToken,
   error: null,
   successMessage: null,
   isEmailVerified: getStoredUser()?.is_verified || false,
@@ -54,6 +58,7 @@ const authSlice = createSlice({
       state.token = token;
       state.isAuthenticated = true;
       state.isEmailVerified = user?.is_verified || false;
+      state.loading = false;
     },
     // Clear all auth state
     clearAuth: (state) => {
@@ -63,6 +68,7 @@ const authSlice = createSlice({
       state.error = null;
       state.successMessage = null;
       state.isEmailVerified = false;
+      state.loading = false;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     },
@@ -160,7 +166,8 @@ const authSlice = createSlice({
         // If unauthorized, clear auth state
         if (
           action.payload?.includes("unauthorized") ||
-          action.payload?.includes("token")
+          action.payload?.includes("token") ||
+          action.payload?.includes("No authentication token")
         ) {
           state.user = null;
           state.token = null;

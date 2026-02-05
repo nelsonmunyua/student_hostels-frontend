@@ -51,8 +51,12 @@ const AdminDashboard = () => {
 
   return (
     <div style={styles.container}>
-      <DashboardHeader userType="admin" onLogout={handleLogout} />
-      <DashboardSidebar menuItems={menuItems} />
+      <div style={styles.header}>
+        <DashboardHeader userType="admin" onLogout={handleLogout} />
+      </div>
+      <div style={styles.sidebarWrapper}>
+        <DashboardSidebar menuItems={menuItems} />
+      </div>
       <main style={styles.mainContent}>
         <Outlet />
       </main>
@@ -62,13 +66,31 @@ const AdminDashboard = () => {
 
 const styles = {
   container: {
+    display: "flex",
+    flexDirection: "column",
     minHeight: "100vh",
     backgroundColor: "#f8fafc",
   },
+  header: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  },
+  sidebarWrapper: {
+    position: "fixed",
+    top: "72px",
+    left: 0,
+    width: "280px",
+    height: "calc(100vh - 72px)",
+  },
   mainContent: {
-    marginLeft: "260px",
-    marginTop: "64px",
-    minHeight: "calc(100vh - 64px)",
+    flex: 1,
+    marginLeft: "280px",
+    marginTop: "72px",
+    minHeight: "calc(100vh - 72px)",
+    backgroundColor: "#f8fafc",
   },
 };
 
