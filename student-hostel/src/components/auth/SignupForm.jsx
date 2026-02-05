@@ -1,14 +1,19 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Icons } from "../ui/InputIcons";
+import { signupUser } from "../../redux/slices/Thunks/authThunks";
+import { getRedirectPath } from "../../utils/roleRedirect.jsx";
 
 const SignupForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Get auth state from Redux
+  const { loading, error } = useSelector((state) => state.auth);
 
   const {
     register,
@@ -20,20 +25,16 @@ const SignupForm = () => {
   const password = watch("password");
 
   const onSubmit = async (data) => {
-    setIsLoading(true);
-    setError("");
-
     try {
-      // Simulate API call - replace with actual API
-      console.log("Signup data:", data);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Dispatch signup action with Redux
+      const result = await dispatch(signupUser(data)).unwrap();
 
-      // After successful signup, redirect to login
-      navigate("/login");
+      // Role-based redirect after successful signup
+      const redirectPath = getRedirectPath(result.user.role);
+      navigate(redirectPath, { replace: true });
     } catch (err) {
-      setError("Failed to create account. Please try again.");
-    } finally {
-      setIsLoading(false);
+      console.error("Signup failed:", err);
+      // Error is handled by Redux state
     }
   };
 
@@ -227,8 +228,8 @@ const SignupForm = () => {
           </span>
         )}
 
-        <button type="submit" className="auth-button" disabled={isLoading}>
-          {isLoading ? (
+        <button type="submit" className="auth-button" disabled={loading}>
+          {loading ? (
             <>
               <span className="spinner spinner-sm"></span>
               Creating Account...

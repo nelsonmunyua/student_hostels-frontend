@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import DashboardHeader from "../admin/components/Header";
-import DashboardSidebar from "../admin/components/Sidebar";
+import DashboardHeader from "../student/components/Header";
+import DashboardSidebar from "../student/components/Sidebar";
 import { Icons } from "../components/ui/InputIcons";
+import { useSelector } from "react-redux";
 
 const Dashboard = () => {
-  const user = JSON.parse(
-    localStorage.getItem("user") || '{"name":"User","first_name":"Student"}',
-  );
+  const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
 
-  const userInitial = (user.name || user.first_name || "U")
+  const userInitial = (user?.name || user?.first_name || "U")
     .charAt(0)
     .toUpperCase();
 
@@ -44,7 +43,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard">
-      <DashboardHeader user={user} onLogout={handleLogout} />
+      <DashboardHeader user={user} userType="student" onLogout={handleLogout} />
 
       <DashboardSidebar
         menuItems={menuItems}

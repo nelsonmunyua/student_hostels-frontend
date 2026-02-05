@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import AuthLayout from "./components/auth/AuthLayout";
@@ -6,8 +5,9 @@ import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import PrivateRoute from "./components/auth/PrivateRoute";
-import Dashboard from "./pages/Dashboard";
+import StudentDashboard from "./student/StudentDashboard";
 import AdminDashboard from "./admin/AdminDashboard";
+import HostDashboard from "./host/HostDashboard";
 
 // Admin page imports
 import Overview from "./admin/pages/Overview";
@@ -16,6 +16,21 @@ import Accommodations from "./admin/pages/Accommodations";
 import Bookings from "./admin/pages/Bookings";
 import Reviews from "./admin/pages/Reviews";
 import Settings from "./admin/pages/Settings";
+
+// Host page imports
+import HostOverview from "./host/pages/Overview";
+import HostListings from "./host/pages/Listings";
+import HostBookings from "./host/pages/Bookings";
+import HostReviews from "./host/pages/Reviews";
+import HostAnalytics from "./host/pages/Analytics";
+import HostProfile from "./host/pages/Profile";
+
+// Student page imports
+import StudentOverview from "./student/pages/Overview";
+import StudentBookings from "./student/pages/Bookings";
+import StudentWishlist from "./student/pages/Wishlist";
+import StudentReviews from "./student/pages/Reviews";
+import StudentProfile from "./student/pages/Profile";
 
 import "./App.css";
 
@@ -57,6 +72,11 @@ const RootRedirect = () => {
     return <Navigate to="/admin" replace />;
   }
 
+  if (user?.role === "host") {
+    return <Navigate to="/host" replace />;
+  }
+
+  // Default for students and any other authenticated users
   return <Navigate to="/dashboard" replace />;
 };
 
@@ -73,9 +93,45 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 
-      {/* Student / Host dashboard - accessible by student and host roles */}
-      <Route element={<PrivateRoute roles={["student", "host"]} />}>
-        <Route path="/dashboard" element={<Dashboard />} />
+      {/* Student dashboard - accessible by student role */}
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute roles={["student"]}>
+            <StudentDashboard />
+          </PrivateRoute>
+        }
+      >
+        {/* Default page - show overview */}
+        <Route index element={<StudentOverview />} />
+
+        {/* Nested student routes */}
+        <Route path="overview" element={<StudentOverview />} />
+        <Route path="bookings" element={<StudentBookings />} />
+        <Route path="wishlist" element={<StudentWishlist />} />
+        <Route path="reviews" element={<StudentReviews />} />
+        <Route path="profile" element={<StudentProfile />} />
+      </Route>
+
+      {/* Host dashboard - accessible only by host role */}
+      <Route
+        path="/host"
+        element={
+          <PrivateRoute roles={["host"]}>
+            <HostDashboard />
+          </PrivateRoute>
+        }
+      >
+        {/* Default page - redirect to overview */}
+        <Route index element={<Navigate to="overview" replace />} />
+
+        {/* Nested host routes */}
+        <Route path="overview" element={<HostOverview />} />
+        <Route path="listings" element={<HostListings />} />
+        <Route path="bookings" element={<HostBookings />} />
+        <Route path="reviews" element={<HostReviews />} />
+        <Route path="analytics" element={<HostAnalytics />} />
+        <Route path="profile" element={<HostProfile />} />
       </Route>
 
       {/* Admin dashboard - accessible only by admin role */}

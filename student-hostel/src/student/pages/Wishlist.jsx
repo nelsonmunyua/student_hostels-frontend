@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { Heart, MapPin, Trash2 } from "lucide-react";
+import useAuth from "../../hooks/useAuth";
 
-const StudentWishlist = ({ user }) => {
+const StudentWishlist = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Placeholder - will be implemented with actual API
 

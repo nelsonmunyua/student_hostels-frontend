@@ -1,10 +1,10 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
 import DashboardHeader from "./components/Header";
-import DashboardSidebar from "./components/Sidebar";
+import DashboardSidebar from "./components/sidebar";
 import { logoutUser } from "../redux/slices/Thunks/authThunks";
+import { useDispatch, useSelector } from "react-redux";
 
-const StudentDashboard = () => {
+const HostDashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
@@ -20,36 +20,36 @@ const StudentDashboard = () => {
     navigate("/login", { replace: true });
   };
 
-  // Menu items for sidebar - use paths with parent route prefix
   const menuItems = [
     {
       id: "overview",
       label: "Overview",
-      path: "/dashboard/overview",
+      path: "/host/overview",
       icon: "LayoutDashboard",
     },
     {
+      id: "listings",
+      label: "My Listings",
+      path: "/host/listings",
+      icon: "Home",
+    },
+    {
       id: "bookings",
-      label: "My Bookings",
-      path: "/dashboard/bookings",
+      label: "Bookings",
+      path: "/host/bookings",
       icon: "Calendar",
     },
+    { id: "reviews", label: "Reviews", path: "/host/reviews", icon: "Star" },
     {
-      id: "wishlist",
-      label: "Wishlist",
-      path: "/dashboard/wishlist",
-      icon: "Heart",
-    },
-    {
-      id: "reviews",
-      label: "My Reviews",
-      path: "/dashboard/reviews",
-      icon: "Star",
+      id: "analytics",
+      label: "Analytics",
+      path: "/host/analytics",
+      icon: "BarChart3",
     },
     {
       id: "profile",
       label: "Profile Settings",
-      path: "/dashboard/profile",
+      path: "/host/profile",
       icon: "Settings",
     },
   ];
@@ -57,11 +57,7 @@ const StudentDashboard = () => {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <DashboardHeader
-          user={user}
-          userType="student"
-          onLogout={handleLogout}
-        />
+        <DashboardHeader user={user} userType="host" onLogout={handleLogout} />
       </div>
       <div style={styles.sidebarWrapper}>
         <DashboardSidebar menuItems={menuItems} />
@@ -102,4 +98,4 @@ const styles = {
   },
 };
 
-export default StudentDashboard;
+export default HostDashboard;

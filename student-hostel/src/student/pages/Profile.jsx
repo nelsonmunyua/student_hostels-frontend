@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
+import useAuth from "../../hooks/useAuth";
 
-const StudentProfile = ({ user }) => {
+const StudentProfile = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     first_name: user?.first_name || "",
