@@ -9,7 +9,7 @@ import {
   uploadAccommodationImages,
   fetchMyListings,
   fetchFeaturedAccommodations,
-} from '../thunks/accommodationThunks';
+} from './Thunks/accommodationThunks';
 
 const initialState = {
   accommodations: [],

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, MapPin, Download, Eye } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchStudentBookings } from "../../../../redux/slices/Thunks/ bookingThunks";
+import { fetchStudentBookings } from "../../../../redux/slices/Thunks/bookingThunks";
 
 const StudentBookings = () => {
   const navigate = useNavigate();

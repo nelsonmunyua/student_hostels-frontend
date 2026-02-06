@@ -1,12 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import {
   loginUser,
   signupUser,
   logoutUser,
   forgotPassword,
 } from "../redux/slices/Thunks/authThunks";
-import { setCredentials } from "../redux/slices/authSlice";
 
 const useAuth = () => {
   const dispatch = useDispatch();
@@ -14,23 +13,6 @@ const useAuth = () => {
   // Get auth state from Redux
   const { user, isAuthenticated, loading, error, successMessage, token } =
     useSelector((state) => state.auth);
-
-  // Load auth state from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-
-    if (storedToken && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        dispatch(setCredentials({ user: parsedUser, token: storedToken }));
-      } catch (e) {
-        console.error("Failed to parse stored user:", e);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      }
-    }
-  }, [dispatch]);
 
   // Login function - uses Redux thunk
   const login = useCallback(

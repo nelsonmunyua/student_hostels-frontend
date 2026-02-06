@@ -48,6 +48,7 @@ import "./App.css";
 const RootRedirect = () => {
   const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
 
+  // Show loading spinner only while checking authentication
   if (loading) {
     return (
       <div
@@ -73,6 +74,7 @@ const RootRedirect = () => {
     );
   }
 
+  // Not authenticated - redirect to login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Heart, Star, MapPin } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -14,12 +14,10 @@ const StudentOverview = () => {
   });
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Use ref to prevent double-fetching in React Strict Mode
+  const fetchRef = useRef(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       // Try to fetch from API, but use mock data on failure
@@ -88,8 +86,17 @@ const StudentOverview = () => {
       ]);
     } finally {
       setLoading(false);
+      fetchRef.current = false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Prevent double-fetching in React Strict Mode
+    if (!fetchRef.current) {
+      fetchRef.current = true;
+      fetchDashboardData();
+    }
+  }, [fetchDashboardData]);
 
   // Handle action card click
   const handleAction = (action) => {

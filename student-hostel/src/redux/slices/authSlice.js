@@ -31,9 +31,9 @@ const initialState = {
   user: getStoredUser(),
   token: localStorage.getItem("token") || null,
   isAuthenticated: hasToken,
-  // Set loading to true ONLY if there's a token (meaning we need to verify it)
-  // If no token, loading is false immediately
-  loading: hasToken,
+  // CRITICAL FIX: loading should NEVER be true on initial load
+  // The auth check happens asynchronously - don't block the UI
+  loading: false,
   error: null,
   successMessage: null,
   isEmailVerified: getStoredUser()?.is_verified || false,
@@ -163,12 +163,24 @@ const authSlice = createSlice({
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        // If unauthorized, clear auth state
-        if (
-          action.payload?.includes("unauthorized") ||
-          action.payload?.includes("token") ||
-          action.payload?.includes("No authentication token")
-        ) {
+        // Only clear auth state for actual authentication failures
+        // NOT for the case when we're just checking and there's no token yet
+        const errorMessage = action.payload?.toLowerCase() || "";
+        const isAuthFailure = 
+          errorMessage.includes("unauthorized") ||
+          errorMessage.includes("invalid token") ||
+          errorMessage.includes("expired token") ||
+          errorMessage.includes("jwt") ||
+          errorMessage.includes("authentication failed") ||
+          errorMessage.includes("invalid authentication") ||
+          errorMessage.includes("user not found");
+        
+        // If it's "No token found" or similar, this is expected for unauthenticated users
+        // We don't clear auth state in this case - we just stop loading
+        const isNoToken = 
+          errorMessage.includes("no token");
+        
+        if (isAuthFailure && !isNoToken) {
           state.user = null;
           state.token = null;
           state.isAuthenticated = false;

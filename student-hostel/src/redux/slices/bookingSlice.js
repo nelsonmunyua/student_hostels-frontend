@@ -10,7 +10,7 @@ import {
   fetchHostBookings,
   acceptBooking,
   rejectBooking,
-} from './Thunks/ bookingThunks';
+} from './Thunks/bookingThunks';
 
 const initialState = {
   bookings: [],

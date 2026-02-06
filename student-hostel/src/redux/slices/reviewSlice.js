@@ -5,7 +5,7 @@ import {
   updateReview,
   deleteReview,
   fetchMyReviews,
-} from '../thunks/reviewThunks';
+} from './Thunks/reviewThunks';
 
 const initialState = {
   reviews: [],

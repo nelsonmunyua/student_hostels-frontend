@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Heart, MapPin, Trash2 } from "lucide-react";
-import useAuth from "../../hooks/useAuth.jsx";
+import useAuth from "../../../../hooks/useAuth.jsx";
 
 const StudentWishlist = () => {
   const navigate = useNavigate();

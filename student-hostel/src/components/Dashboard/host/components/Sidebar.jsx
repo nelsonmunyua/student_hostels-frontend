@@ -1,59 +1,33 @@
 import { NavLink } from "react-router-dom";
 
-const DashboardSidebar = ({ menuItems = [], userType = "student" }) => {
-  // Get the icon component based on icon name
+const HostSidebar = ({ menuItems = [], userType = "host" }) => {
   const getIcon = (iconName) => {
-    // Simple icon mapping - can be replaced with lucide-react or react-icons
     const icons = {
       LayoutDashboard: "📊",
       Home: "🏠",
       Calendar: "📅",
       DollarSign: "💰",
-      Heart: "❤️",
       Star: "⭐",
       Bell: "🔔",
       User: "👤",
       HelpCircle: "❓",
-      Users: "👥",
       BookOpen: "📖",
       Shield: "🛡️",
-      BarChart3: "📈",
-      Settings: "⚙️",
-      Clock: "🕐",
       BarChart: "📊",
-      Layout: "📋",
+      Clock: "🕐",
     };
     return icons[iconName] || "📄";
   };
 
-  const getRoleColor = () => {
-    switch (userType) {
-      case "admin":
-        return "#7c3aed";
-      case "host":
-        return "#059669";
-      default:
-        return "#0369a1";
-    }
-  };
-
-  const roleColor = getRoleColor();
+  const roleColor = "#059669";
 
   return (
     <aside style={styles.sidebar}>
       <div style={styles.logoSection}>
-        <div style={{ ...styles.logo, backgroundColor: roleColor }}>
-          {userType === "admin" ? "A" : userType === "host" ? "H" : "S"}
-        </div>
+        <div style={{ ...styles.logo, backgroundColor: roleColor }}>H</div>
         <div style={styles.logoText}>
-          <span style={styles.logoTitle}>
-            {userType === "admin"
-              ? "Admin Panel"
-              : userType === "host"
-              ? "Host Portal"
-              : "Student Hub"}
-          </span>
-          <span style={styles.logoSubtitle}>Welcome back!</span>
+          <span style={styles.logoTitle}>Host Portal</span>
+          <span style={styles.logoSubtitle}>Property Management</span>
         </div>
       </div>
 
@@ -77,20 +51,10 @@ const DashboardSidebar = ({ menuItems = [], userType = "student" }) => {
 
       <div style={styles.footer}>
         <div style={styles.userInfo}>
-          <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>
-            {userType === "student" ? "ST" : userType === "host" ? "HO" : "AD"}
-          </div>
+          <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>HO</div>
           <div style={styles.userText}>
-            <span style={styles.userName}>
-              {userType === "student"
-                ? "Student User"
-                : userType === "host"
-                ? "Host User"
-                : "Admin User"}
-            </span>
-            <span style={styles.userRole}>
-              {userType.charAt(0).toUpperCase() + userType.slice(1)}
-            </span>
+            <span style={styles.userName}>Host User</span>
+            <span style={styles.userRole}>Property Host</span>
           </div>
         </div>
       </div>
@@ -175,11 +139,11 @@ const styles = {
     padding: "12px 16px",
     borderRadius: "8px",
     textDecoration: "none",
-    color: "#0369a1",
+    color: "#059669",
     fontSize: "14px",
     fontWeight: "600",
-    backgroundColor: "#f0f9ff",
-    borderLeft: "3px solid #0369a1",
+    backgroundColor: "#f0fdf4",
+    borderLeft: "3px solid #059669",
     transition: "all 0.2s ease",
   },
   navIcon: {
@@ -225,4 +189,4 @@ const styles = {
   },
 };
 
-export default DashboardSidebar;
+export default HostSidebar;
