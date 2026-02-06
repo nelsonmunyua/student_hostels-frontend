@@ -14,7 +14,7 @@ import {
   Star,
   X,
 } from "lucide-react";
-import axios from "../../api/axios";
+import axios from "../../../../api/axios";
 
 const Accommodations = () => {
   const navigate = useNavigate();

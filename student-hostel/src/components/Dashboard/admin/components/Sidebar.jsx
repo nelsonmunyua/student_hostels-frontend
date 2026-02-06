@@ -1,124 +1,191 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import DashboardHeader from "./components/Header";
-import DashboardSidebar from "./components/Sidebar";
-import { logoutUser } from "../../redux/thunks/authThunks";
+import { NavLink } from "react-router-dom";
 
-const StudentDashboard = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await dispatch(logoutUser()).unwrap();
-    } catch (error) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    }
-    navigate("/login", { replace: true });
+const AdminSidebar = ({ menuItems = [], userType = "admin" }) => {
+  const getIcon = (iconName) => {
+    const icons = {
+      LayoutDashboard: "📊",
+      Home: "🏠",
+      Calendar: "📅",
+      DollarSign: "💰",
+      Star: "⭐",
+      Bell: "🔔",
+      User: "👤",
+      HelpCircle: "❓",
+      Users: "👥",
+      BarChart3: "📈",
+      Settings: "⚙️",
+    };
+    return icons[iconName] || "📄";
   };
 
-  // Student menu items - exact from specification
-  const menuItems = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      path: "/student/dashboard",
-      icon: "LayoutDashboard",
-    },
-    {
-      id: "find-accommodation",
-      label: "Find Accommodation",
-      path: "/student/find-accommodation",
-      icon: "Home",
-    },
-    {
-      id: "my-bookings",
-      label: "My Bookings",
-      path: "/student/my-bookings",
-      icon: "Calendar",
-    },
-    {
-      id: "payments",
-      label: "Payments",
-      path: "/student/payments",
-      icon: "DollarSign",
-    },
-    {
-      id: "wishlist",
-      label: "Wishlist",
-      path: "/student/wishlist",
-      icon: "Heart",
-    },
-    {
-      id: "my-reviews",
-      label: "My Reviews",
-      path: "/student/my-reviews",
-      icon: "Star",
-    },
-    {
-      id: "notifications",
-      label: "Notifications",
-      path: "/student/notifications",
-      icon: "Bell",
-    },
-    {
-      id: "profile",
-      label: "Profile",
-      path: "/student/profile",
-      icon: "User",
-    },
-    {
-      id: "support",
-      label: "Support",
-      path: "/student/support",
-      icon: "HelpCircle",
-    },
-  ];
+  const roleColor = "#7c3aed";
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <DashboardHeader userType="student" onLogout={handleLogout} />
+    <aside style={styles.sidebar}>
+      <div style={styles.logoSection}>
+        <div style={{ ...styles.logo, backgroundColor: roleColor }}>A</div>
+        <div style={styles.logoText}>
+          <span style={styles.logoTitle}>Admin Panel</span>
+          <span style={styles.logoSubtitle}>System Management</span>
+        </div>
       </div>
-      <div style={styles.sidebarWrapper}>
-        <DashboardSidebar menuItems={menuItems} userType="student" />
+
+      <nav style={styles.nav}>
+        <ul style={styles.navList}>
+          {menuItems.map((item) => (
+            <li key={item.id} style={styles.navItem}>
+              <NavLink
+                to={item.path}
+                style={({ isActive }) =>
+                  isActive ? styles.activeNavLink : styles.navLink
+                }
+              >
+                <span style={styles.navIcon}>{getIcon(item.icon)}</span>
+                <span style={styles.navLabel}>{item.label}</span>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div style={styles.footer}>
+        <div style={styles.userInfo}>
+          <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>AD</div>
+          <div style={styles.userText}>
+            <span style={styles.userName}>Admin User</span>
+            <span style={styles.userRole}>Administrator</span>
+          </div>
+        </div>
       </div>
-      <main style={styles.mainContent}>
-        <Outlet />
-      </main>
-    </div>
+    </aside>
   );
 };
 
 const styles = {
-  container: {
+  sidebar: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#ffffff",
+    borderRight: "1px solid #e2e8f0",
     display: "flex",
     flexDirection: "column",
-    minHeight: "100vh",
-    backgroundColor: "#f8fafc",
+    boxShadow: "2px 0 8px rgba(0, 0, 0, 0.02)",
   },
-  header: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
+  logoSection: {
+    padding: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    borderBottom: "1px solid #e2e8f0",
   },
-  sidebarWrapper: {
-    position: "fixed",
-    top: "72px",
-    left: 0,
-    width: "280px",
-    height: "calc(100vh - 72px)",
+  logo: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "12px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "white",
+    fontWeight: "700",
+    fontSize: "18px",
   },
-  mainContent: {
+  logoText: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  logoTitle: {
+    fontWeight: "700",
+    fontSize: "16px",
+    color: "#1e293b",
+  },
+  logoSubtitle: {
+    fontSize: "12px",
+    color: "#64748b",
+  },
+  nav: {
     flex: 1,
-    marginLeft: "280px",
-    marginTop: "72px",
-    minHeight: "calc(100vh - 72px)",
-    backgroundColor: "#f8fafc",
+    padding: "16px 12px",
+    overflowY: "auto",
+  },
+  navList: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  navItem: {
+    margin: 0,
+    padding: 0,
+  },
+  navLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    color: "#64748b",
+    fontSize: "14px",
+    fontWeight: "500",
+    transition: "all 0.2s ease",
+  },
+  activeNavLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    textDecoration: "none",
+    color: "#7c3aed",
+    fontSize: "14px",
+    fontWeight: "600",
+    backgroundColor: "#f5f3ff",
+    borderLeft: "3px solid #7c3aed",
+    transition: "all 0.2s ease",
+  },
+  navIcon: {
+    fontSize: "18px",
+    width: "24px",
+    textAlign: "center",
+  },
+  navLabel: {
+    flex: 1,
+  },
+  footer: {
+    padding: "16px",
+    borderTop: "1px solid #e2e8f0",
+  },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  userAvatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "white",
+    fontWeight: "600",
+    fontSize: "14px",
+  },
+  userText: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  userName: {
+    fontWeight: "600",
+    fontSize: "14px",
+    color: "#1e293b",
+  },
+  userRole: {
+    fontSize: "12px",
+    color: "#64748b",
   },
 };
 
-export default StudentDashboard;
+export default AdminSidebar;

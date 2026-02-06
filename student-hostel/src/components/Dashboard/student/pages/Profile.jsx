@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
-import useAuth from "../../../hooks/useAuth.jsx";
+import useAuth from "../../../../hooks/useAuth.jsx";
 
 const StudentProfile = () => {
   const navigate = useNavigate();

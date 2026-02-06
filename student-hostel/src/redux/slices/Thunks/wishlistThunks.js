@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import wishlistApi from '../../api/Wishlistapi';
+import wishlistApi from '../../../api/Wishlistapi';
 
 export const fetchWishlist = createAsyncThunk(
   'wishlist/fetchAll',

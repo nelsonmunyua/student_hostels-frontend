@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import useAuth from "../../hooks/useAuth.jsx";
+import useAuth from "../../../../hooks/useAuth.jsx";
 
 const StudentReviews = () => {
   const { user } = useAuth();

@@ -160,12 +160,46 @@ export const getCurrentUser = createAsyncThunk(
       const token = localStorage.getItem("token");
 
       if (!token) {
-        throw new Error("No authentication token found");
+        // Don't throw - this is expected when not logged in
+        return rejectWithValue("No token found");
       }
 
-      // Extract user ID from token (mock logic)
-      const userId = parseInt(token.split("-")[2]) || 1;
-      const mockUser = mockUsers.find((u) => u.id === userId) || mockUsers[0];
+      // Extract user ID from token (mock logic: mock-token-{userId}-{timestamp})
+      // Handle edge cases where token format might be different
+      let userId = null;
+      if (token && token.startsWith("mock-token-")) {
+        const parts = token.split("-");
+        if (parts.length >= 3) {
+          userId = parseInt(parts[2], 10);
+        }
+      }
+
+      // If we couldn't extract a valid userId, try to find user by stored user info
+      if (!userId || isNaN(userId)) {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            // Verify this user exists in our mock database
+            const existingUser = mockUsers.find((u) => u.id === parsedUser.id);
+            if (existingUser) {
+              return { user: existingUser };
+            }
+          } catch (e) {
+            // Invalid stored user, continue with fallback
+          }
+        }
+        // Fallback to no user found (user needs to login)
+        return rejectWithValue("Invalid token");
+      }
+
+      // Find user in mock database
+      const mockUser = mockUsers.find((u) => u.id === userId);
+
+      if (!mockUser) {
+        // User not found in mock database
+        return rejectWithValue("User not found");
+      }
 
       return { user: mockUser };
     } catch (error) {

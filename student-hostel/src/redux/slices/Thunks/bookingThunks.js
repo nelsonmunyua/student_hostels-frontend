@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import bookingApi from '../../api/Bookingapi';
+import bookingApi from '../../../api/Bookingapi';
 
 /**
  * Fetch all bookings

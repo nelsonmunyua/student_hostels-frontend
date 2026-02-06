@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import DashboardHeader from "./components/Header";
-import DashboardSidebar from "./components/Sidebar";
+import DashboardHeader from "./components/Header.jsx";
+import DashboardSidebar from "./components/Sidebar.jsx";
 import { logoutUser } from "../../../redux/slices/Thunks/authThunks";
 
 const AdminDashboard = () => {

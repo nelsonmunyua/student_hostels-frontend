@@ -1,5 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
-import accommodationApi from '../../api/Accomodationapi';
+import accommodationApi from '../../../api/Accomodationapi';
 
 /**
  * Fetch all accommodations with filters
