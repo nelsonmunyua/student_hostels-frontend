@@ -5,32 +5,42 @@ import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import PrivateRoute from "./components/auth/PrivateRoute";
-import StudentDashboard from "./student/StudentDashboard";
-import AdminDashboard from "./admin/AdminDashboard";
-import HostDashboard from "./host/HostDashboard";
+import StudentDashboard from "./components/Dashboard/student/StudentDashboard";
+import AdminDashboard from "./components/Dashboard/admin/AdminDashboard";
+import HostDashboard from "./components/Dashboard/host/HostDashboard";
 
 // Admin page imports
-import Overview from "./admin/pages/Overview";
-import Users from "./admin/pages/Users";
-import Accommodations from "./admin/pages/Accommodations";
-import Bookings from "./admin/pages/Bookings";
-import Reviews from "./admin/pages/Reviews";
-import Settings from "./admin/pages/Settings";
+import Overview from "./components/Dashboard/admin/pages/Overview";
+import Users from "./components/Dashboard/admin/pages/Users";
+import Accommodations from "./components/Dashboard/admin/pages/Accommodations";
+import Bookings from "./components/Dashboard/admin/pages/Bookings";
+import Reviews from "./components/Dashboard/admin/pages/Reviews";
+import Settings from "./components/Dashboard/admin/pages/Settings";
+import AdminPayments from "./components/Dashboard/admin/pages/Payments";
 
 // Host page imports
-import HostOverview from "./host/pages/Overview";
-import HostListings from "./host/pages/Listings";
-import HostBookings from "./host/pages/Bookings";
-import HostReviews from "./host/pages/Reviews";
-import HostAnalytics from "./host/pages/Analytics";
-import HostProfile from "./host/pages/Profile";
+import HostOverview from "./components/Dashboard/host/pages/Overview";
+import HostListings from "./components/Dashboard/host/pages/Listings";
+import HostBookings from "./components/Dashboard/host/pages/Bookings";
+import HostReviews from "./components/Dashboard/host/pages/Reviews";
+import HostAnalytics from "./components/Dashboard/host/pages/Analytics";
+import HostProfile from "./components/Dashboard/host/pages/Profile";
+import Availability from "./components/Dashboard/host/pages/Availability";
+import Earnings from "./components/Dashboard/host/pages/Earnings";
+import Verification from "./components/Dashboard/host/pages/Verification";
+import HostNotifications from "./components/Dashboard/host/pages/Notifications";
+import HostSupport from "./components/Dashboard/host/pages/Support";
 
 // Student page imports
-import StudentOverview from "./student/pages/Overview";
-import StudentBookings from "./student/pages/Bookings";
-import StudentWishlist from "./student/pages/Wishlist";
-import StudentReviews from "./student/pages/Reviews";
-import StudentProfile from "./student/pages/Profile";
+import StudentOverview from "./components/Dashboard/student/pages/Overview";
+import StudentBookings from "./components/Dashboard/student/pages/Bookings";
+import StudentWishlist from "./components/Dashboard/student/pages/Wishlist";
+import StudentReviews from "./components/Dashboard/student/pages/Reviews";
+import StudentProfile from "./components/Dashboard/student/pages/Profile";
+import FindAccommodation from "./components/Dashboard/student/pages/FindAccommodation";
+import StudentPayments from "./components/Dashboard/student/pages/Payments";
+import StudentNotifications from "./components/Dashboard/student/pages/Notifications";
+import StudentSupport from "./components/Dashboard/student/pages/Support";
 
 import "./App.css";
 
@@ -69,15 +79,15 @@ const RootRedirect = () => {
 
   // Redirect based on user role
   if (user?.role === "admin") {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   if (user?.role === "host") {
-    return <Navigate to="/host" replace />;
+    return <Navigate to="/host/dashboard" replace />;
   }
 
   // Default for students and any other authenticated users
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/student/dashboard" replace />;
 };
 
 function App() {
@@ -95,22 +105,26 @@ function App() {
 
       {/* Student dashboard - accessible by student role */}
       <Route
-        path="/dashboard"
+        path="/student"
         element={
           <PrivateRoute roles={["student"]}>
             <StudentDashboard />
           </PrivateRoute>
         }
       >
-        {/* Default page - show overview */}
-        <Route index element={<StudentOverview />} />
+        {/* Default page - redirect to dashboard */}
+        <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Nested student routes */}
-        <Route path="overview" element={<StudentOverview />} />
-        <Route path="bookings" element={<StudentBookings />} />
+        <Route path="dashboard" element={<StudentOverview />} />
+        <Route path="find-accommodation" element={<FindAccommodation />} />
+        <Route path="my-bookings" element={<StudentBookings />} />
+        <Route path="payments" element={<StudentPayments />} />
         <Route path="wishlist" element={<StudentWishlist />} />
-        <Route path="reviews" element={<StudentReviews />} />
+        <Route path="my-reviews" element={<StudentReviews />} />
+        <Route path="notifications" element={<StudentNotifications />} />
         <Route path="profile" element={<StudentProfile />} />
+        <Route path="support" element={<StudentSupport />} />
       </Route>
 
       {/* Host dashboard - accessible only by host role */}
@@ -122,16 +136,20 @@ function App() {
           </PrivateRoute>
         }
       >
-        {/* Default page - redirect to overview */}
-        <Route index element={<Navigate to="overview" replace />} />
+        {/* Default page - redirect to dashboard */}
+        <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Nested host routes */}
-        <Route path="overview" element={<HostOverview />} />
-        <Route path="listings" element={<HostListings />} />
+        <Route path="dashboard" element={<HostOverview />} />
+        <Route path="my-listings" element={<HostListings />} />
+        <Route path="availability" element={<Availability />} />
         <Route path="bookings" element={<HostBookings />} />
+        <Route path="earnings" element={<Earnings />} />
         <Route path="reviews" element={<HostReviews />} />
-        <Route path="analytics" element={<HostAnalytics />} />
+        <Route path="verification" element={<Verification />} />
+        <Route path="notifications" element={<HostNotifications />} />
         <Route path="profile" element={<HostProfile />} />
+        <Route path="support" element={<HostSupport />} />
       </Route>
 
       {/* Admin dashboard - accessible only by admin role */}
@@ -143,15 +161,17 @@ function App() {
           </PrivateRoute>
         }
       >
-        {/* Default page - redirect to overview */}
-        <Route index element={<Navigate to="overview" replace />} />
+        {/* Default page - redirect to dashboard */}
+        <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Nested admin routes */}
-        <Route path="overview" element={<Overview />} />
+        <Route path="dashboard" element={<Overview />} />
         <Route path="users" element={<Users />} />
-        <Route path="accommodations" element={<Accommodations />} />
+        <Route path="listings" element={<Accommodations />} />
         <Route path="bookings" element={<Bookings />} />
+        <Route path="payments" element={<AdminPayments />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="analytics" element={<HostAnalytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>
 
@@ -162,3 +182,4 @@ function App() {
 }
 
 export default App;
+
