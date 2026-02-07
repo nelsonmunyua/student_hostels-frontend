@@ -1,4 +1,7 @@
-import axios from './axios';
+import axios from 'axios';
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const authApi = {
   /**
@@ -13,7 +16,7 @@ const authApi = {
    * @returns {Promise} Response with user data and token
    */
   signup: async (userData) => {
-    const response = await axios.post('/auth/signup', userData);
+    const response = await axios.post(`${API_BASE_URL}/auth/signup`, userData);
     return response.data;
   },
 
@@ -25,7 +28,7 @@ const authApi = {
    * @returns {Promise} Response with user data and token
    */
   login: async (credentials) => {
-    const response = await axios.post('/auth/login', credentials);
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
     return response.data;
   },
 
@@ -34,7 +37,12 @@ const authApi = {
    * @returns {Promise} Response confirming logout
    */
   logout: async () => {
-    const response = await axios.post('/auth/logout');
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/logout`,
+      {},
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
     return response.data;
   },
 
@@ -45,7 +53,7 @@ const authApi = {
    * @returns {Promise} Response confirming reset email sent
    */
   forgotPassword: async (data) => {
-    const response = await axios.post('/auth/forgot-password', data);
+    const response = await axios.post(`${API_BASE_URL}/auth/forgot-password`, data);
     return response.data;
   },
 
@@ -57,7 +65,7 @@ const authApi = {
    * @returns {Promise} Response confirming password reset
    */
   resetPassword: async (data) => {
-    const response = await axios.post('/auth/reset-password', data);
+    const response = await axios.post(`${API_BASE_URL}/auth/reset-password`, data);
     return response.data;
   },
 
@@ -68,7 +76,7 @@ const authApi = {
    * @returns {Promise} Response confirming email verification
    */
   verifyEmail: async (data) => {
-    const response = await axios.post('/auth/verify-email', data);
+    const response = await axios.post(`${API_BASE_URL}/auth/verify-email`, data);
     return response.data;
   },
 
@@ -77,7 +85,11 @@ const authApi = {
    * @returns {Promise} Response with user profile data
    */
   getCurrentUser: async () => {
-    const response = await axios.get('/auth/me');
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `${API_BASE_URL}/auth/me`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
     return response.data;
   },
 
@@ -87,7 +99,12 @@ const authApi = {
    * @returns {Promise} Response with updated user data
    */
   updateProfile: async (userData) => {
-    const response = await axios.put('/auth/profile', userData);
+    const token = localStorage.getItem("token");
+    const response = await axios.put(
+      `${API_BASE_URL}/auth/profile`,
+      userData,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
     return response.data;
   },
 
@@ -99,7 +116,12 @@ const authApi = {
    * @returns {Promise} Response confirming password change
    */
   changePassword: async (data) => {
-    const response = await axios.post('/auth/change-password', data);
+    const token = localStorage.getItem("token");
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/change-password`,
+      data,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
     return response.data;
   },
 
@@ -108,9 +130,15 @@ const authApi = {
    * @returns {Promise} Response with new token
    */
   refreshToken: async () => {
-    const response = await axios.post('/auth/refresh-token');
+    const refreshToken = localStorage.getItem("refreshToken");
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/refresh-token`,
+      {},
+      { headers: refreshToken ? { Authorization: `Bearer ${refreshToken}` } : {} }
+    );
     return response.data;
   },
 };
 
 export default authApi;
+

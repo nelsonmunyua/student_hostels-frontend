@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /**
  * Create axios instance with base configuration
  */
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 5000, // Reduced timeout for faster failure detection
+  timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -36,7 +36,7 @@ axiosInstance.interceptors.request.use(
 
 /**
  * Response interceptor
- * Handles errors gracefully and provides mock responses for development
+ * Handles errors gracefully
  */
 axiosInstance.interceptors.response.use(
   (response) => {
@@ -80,42 +80,24 @@ axiosInstance.interceptors.response.use(
         }
       }
 
-      // For 500 errors and other server errors, log but don't crash
-      if (status >= 500) {
-        console.warn(
-          "Server error (500): Backend may not be running. Using mock data instead.",
-        );
-        // Return a mock response to prevent app crash
-        return {
-          data: {
-            message: "Mock response - backend not available",
-            mock: true,
-          },
-        };
-      }
-
-      // For client errors (400-499), return the error
+      // Return the actual error response
       return Promise.reject(error);
     }
 
     // If no response (network error, server down, etc.)
     if (!error.response) {
-      console.warn(
-        "Network error: Backend server may not be running. API calls will use mock data.",
-      );
-
-      // Return a mock response for network errors
-      // This prevents the app from crashing when backend is unavailable
-      return {
-        data: { message: "Mock response - network unavailable", mock: true },
+      // Create a network error with proper structure
+      const networkError = new Error("Network error: Unable to connect to server");
+      networkError.response = {
+        data: { message: "Unable to connect to server. Please check your connection." },
+        status: 0,
       };
+      return Promise.reject(networkError);
     }
 
     return Promise.reject(error);
   },
 );
-
-export default axiosInstance;
 
 /**
  * Helper function to check if running in mock mode
@@ -124,3 +106,6 @@ export const isMockMode = () => {
   const token = localStorage.getItem("token");
   return token?.startsWith("mock-token-") || false;
 };
+
+export default axiosInstance;
+

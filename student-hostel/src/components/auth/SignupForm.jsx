@@ -131,6 +131,58 @@ const SignupForm = () => {
           )}
         </div>
 
+        <div className="input-group">
+          <div className="input-wrapper">
+            <input
+              id="phone"
+              type="tel"
+              placeholder="Enter phone number"
+              {...register("phone", {
+                required: "Phone number is required",
+              })}
+              className={errors.phone ? "error" : ""}
+            />
+            <span className="input-icon">
+              <Icons.Phone />
+            </span>
+            <label htmlFor="phone">Phone Number</label>
+          </div>
+          {errors.phone && (
+            <span className="input-error-message">
+              <Icons.AlertCircle />
+              {errors.phone.message}
+            </span>
+          )}
+        </div>
+
+        <div className="input-group">
+          <div className="input-wrapper">
+            <select
+              id="role"
+              {...register("role", {
+                required: "Please select a role",
+              })}
+              className={errors.role ? "error" : ""}
+            >
+              <option value="">Select your role</option>
+              <option value="student">Student</option>
+              <option value="host">Host</option>
+              <option value="admin">Admin</option>
+
+            </select>
+            <span className="input-icon">
+              <Icons.User />
+            </span>
+            <label htmlFor="role">Role</label>
+          </div>
+          {errors.role && (
+            <span className="input-error-message">
+              <Icons.AlertCircle />
+              {errors.role.message}
+            </span>
+          )}
+        </div>
+
         <div className="form-row">
           <div className="input-group">
             <div className="input-wrapper">
