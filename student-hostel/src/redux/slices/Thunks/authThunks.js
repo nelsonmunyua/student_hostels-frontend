@@ -12,6 +12,11 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, credentials);
+      
+      // Store tokens in localStorage
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("refreshToken", response.data.refresh_token);
+      
       return response.data;
     } catch (error) {
       // Handle error response from API
@@ -40,6 +45,10 @@ export const signupUser = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/signup`, userData);
+      
+      // Store tokens in localStorage (signup returns access token only)
+      localStorage.setItem("token", response.data.token);
+      
       return response.data;
     } catch (error) {
       // Handle error response from API
@@ -67,11 +76,12 @@ export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      const token = localStorage.getItem("token");
+      // Get refresh token from localStorage (logout requires refresh token)
+      const refreshToken = localStorage.getItem("refreshToken");
       const response = await axios.post(
         `${API_BASE_URL}/auth/logout`,
         {},
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        { headers: refreshToken ? { Authorization: `Bearer ${refreshToken}` } : {} }
       );
       return response.data;
     } catch (error) {

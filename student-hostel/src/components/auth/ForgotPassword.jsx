@@ -1,9 +1,13 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Icons } from "../ui/InputIcons";
+import { forgotPassword } from "../../redux/slices/Thunks/authThunks";
 
 const ForgotPassword = () => {
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -19,13 +23,11 @@ const ForgotPassword = () => {
     setError("");
 
     try {
-      // Simulate API call - replace with actual API
-      console.log("Password reset request for:", data.email);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      // Call the actual API via Redux thunk
+      await dispatch(forgotPassword({ email: data.email })).unwrap();
       setIsSuccess(true);
     } catch (err) {
-      setError("Failed to send reset email. Please try again.");
+      setError(err || "Failed to send reset email. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -131,3 +133,4 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
+

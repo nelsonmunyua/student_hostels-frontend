@@ -70,6 +70,7 @@ const authSlice = createSlice({
       state.isEmailVerified = false;
       state.loading = false;
       localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
     },
   },
@@ -87,8 +88,9 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isEmailVerified = action.payload.user.is_verified;
         state.error = null;
-        // Store in localStorage
+        // Store tokens and user in localStorage
         localStorage.setItem("token", action.payload.token);
+        localStorage.setItem("refreshToken", action.payload.refresh_token);
         localStorage.setItem("user", JSON.stringify(action.payload.user));
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -134,9 +136,10 @@ const authSlice = createSlice({
         state.successMessage = "Logged out successfully";
         // Clear localStorage
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
       })
-      .addCase(logoutUser.rejected, (state, action) => {
+      .addCase(logoutUser.rejected, (state) => {
         state.loading = false;
         // Even if logout fails on server, clear local state
         state.user = null;
@@ -144,6 +147,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.isEmailVerified = false;
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
       });
 
@@ -186,6 +190,7 @@ const authSlice = createSlice({
           state.isAuthenticated = false;
           state.isEmailVerified = false;
           localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
           localStorage.removeItem("user");
         }
       });
