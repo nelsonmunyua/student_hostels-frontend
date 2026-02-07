@@ -4,6 +4,7 @@ import AuthLayout from "./components/auth/AuthLayout";
 import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import StudentDashboard from "./components/Dashboard/student/StudentDashboard";
 import AdminDashboard from "./components/Dashboard/admin/AdminDashboard";
@@ -103,6 +104,7 @@ function App() {
         <Route path="/login" element={<LoginForm />} />
         <Route path="/signup" element={<SignupForm />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
 
       {/* Student dashboard - accessible by student role */}

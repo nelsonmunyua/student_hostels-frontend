@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Icons } from "../ui/InputIcons";
 import { loginUser } from "../../redux/slices/Thunks/authThunks";
@@ -10,10 +10,28 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
 
   const { isAuthenticated, user, loading, error } = useSelector(
     (state) => state.auth,
   );
+
+  // Check for verification status from URL params
+  const verified = searchParams.get("verified");
+  const verificationError = searchParams.get("error");
+  const errorMessage = searchParams.get("message");
+  
+  const [successMessage, setSuccessMessage] = useState("");
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    if (verified === "true") {
+      setSuccessMessage("Email verified successfully! You can now log in.");
+    }
+    if (verificationError === "verification_failed") {
+      setFormError(errorMessage || "Email verification failed. Please try again.");
+    }
+  }, [verified, verificationError, errorMessage]);
 
   const {
     register,
@@ -47,6 +65,20 @@ const LoginForm = () => {
         <h2>Welcome Back</h2>
         <p>Sign in to your account</p>
       </div>
+
+      {successMessage && (
+        <div className="auth-message auth-success-message fade-in">
+          <Icons.CheckCircle />
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {formError && (
+        <div className="auth-message auth-error fade-in">
+          <Icons.AlertCircle />
+          <span>{formError}</span>
+        </div>
+      )}
 
       {error && (
         <div className="auth-message auth-error fade-in">
