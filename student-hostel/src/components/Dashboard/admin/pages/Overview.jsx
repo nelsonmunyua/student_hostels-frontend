@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -10,16 +10,50 @@ import {
   Clock,
   ArrowUpRight,
 } from "lucide-react";
+import adminApi from "../../../../api/adminApi";
 
 const Overview = () => {
   const navigate = useNavigate();
   const [isExporting, setIsExporting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    users: 0,
+    hostels: 0,
+    bookings: 0,
+    revenue: 0,
+    pending_verifications: 0,
+    stats: {
+      new_users_today: 0,
+      new_bookings_today: 0,
+      bookings_pending: 0,
+      bookings_confirmed: 0,
+      bookings_completed: 0
+    }
+  });
 
-  // Mock data for stats
-  const stats = [
+  // Fetch dashboard stats from API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await adminApi.getDashboardStats();
+        setStats(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+        // Keep default values on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Stats for display
+  const statsData = [
     {
       label: "Total Users",
-      value: "1,234",
+      value: loading ? "..." : stats.users.toLocaleString(),
       change: "+12%",
       icon: Users,
       color: "#0369a1",
@@ -27,7 +61,7 @@ const Overview = () => {
     },
     {
       label: "Active Hostels",
-      value: "89",
+      value: loading ? "..." : stats.hostels.toString(),
       change: "+5%",
       icon: Home,
       color: "#0d9488",
@@ -35,7 +69,7 @@ const Overview = () => {
     },
     {
       label: "Total Bookings",
-      value: "567",
+      value: loading ? "..." : stats.bookings.toString(),
       change: "+23%",
       icon: Calendar,
       color: "#7c3aed",
@@ -43,7 +77,7 @@ const Overview = () => {
     },
     {
       label: "Revenue",
-      value: "$45,678",
+      value: loading ? "..." : `$${(stats.revenue || 0).toLocaleString()}`,
       change: "+18%",
       icon: DollarSign,
       color: "#059669",
@@ -51,7 +85,7 @@ const Overview = () => {
     },
   ];
 
-  // Mock data for recent activity
+  // Mock data for recent activity (in real app, fetch from API)
   const recentActivity = [
     {
       id: 1,
@@ -127,7 +161,7 @@ const Overview = () => {
   const handleExportReport = async () => {
     try {
       setIsExporting(true);
-      // Simulate API call
+      // In real app, this would call an API endpoint
       await new Promise((resolve) => setTimeout(resolve, 1500));
       alert("Report exported successfully! (Demo)");
     } catch (error) {
@@ -186,7 +220,7 @@ const Overview = () => {
 
       {/* Stats Grid */}
       <div style={styles.statsGrid}>
-        {stats.map((stat, index) => (
+        {statsData.map((stat, index) => (
           <div key={index} style={styles.statCard}>
             <div style={styles.statHeader}>
               <div
@@ -340,15 +374,24 @@ const Overview = () => {
           <div style={styles.trendsContent}>
             <div style={styles.trendStat}>
               <span style={styles.trendLabel}>This Month</span>
-              <span style={styles.trendValue}>156</span>
+              <span style={styles.trendValue}>
+                {loading ? "..." : (stats.stats?.new_bookings_today || 0)}
+              </span>
             </div>
             <div style={styles.trendStat}>
-              <span style={styles.trendLabel}>Last Month</span>
-              <span style={styles.trendValue}>134</span>
+              <span style={styles.trendLabel}>Pending</span>
+              <span style={styles.trendValue}>
+                {loading ? "..." : (stats.stats?.bookings_pending || 0)}
+              </span>
             </div>
             <div style={styles.trendGrowth}>
               <TrendingUp size={20} color="#059669" />
-              <span>+16.4% increase</span>
+              <span>
+                {loading
+                  ? "Loading..."
+                  : `${((stats.stats?.bookings_confirmed || 0) / Math.max(stats.bookings, 1) * 100).toFixed(1)}% confirmed`
+                }
+              </span>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -13,6 +13,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import adminApi from "../../../../api/adminApi";
 
 const Users = () => {
   const navigate = useNavigate();
@@ -22,9 +23,39 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for users - in real app, fetch from API
-  const users = [
+  // New user form state
+  const [newUser, setNewUser] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "student",
+    password: ""
+  });
+
+  // Fetch users from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const data = await adminApi.getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        // Keep mock data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Mock data for fallback
+  const mockUsers = [
     {
       id: 1,
       firstName: "John",
@@ -123,6 +154,9 @@ const Users = () => {
     },
   ];
 
+  // Use mock data if API data is empty
+  const displayUsers = users.length > 0 ? users : mockUsers;
+
   const getRoleBadge = (role) => {
     const roleStyles = {
       student: {
@@ -142,7 +176,8 @@ const Users = () => {
       },
     };
 
-    const style = roleStyles[role] || roleStyles.student;
+    const safeRole = role || "student";
+    const style = roleStyles[safeRole] || roleStyles.student;
 
     return (
       <span
@@ -153,7 +188,7 @@ const Users = () => {
         }}
       >
         <style.icon size={12} />
-        {role.charAt(0).toUpperCase() + role.slice(1)}
+        {safeRole.charAt(0).toUpperCase() + safeRole.slice(1)}
       </span>
     );
   };
@@ -174,40 +209,75 @@ const Users = () => {
       },
     };
 
+    const safeStatus = status || "active";
+    const style = statusStyles[safeStatus] || statusStyles.active;
+
     return (
       <span
         style={{
           ...styles.statusBadge,
-          ...statusStyles[status],
+          backgroundColor: style.backgroundColor,
+          color: style.color,
         }}
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
       </span>
     );
   };
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = displayUsers.filter((user) => {
     const matchesSearch =
       `${user.firstName} ${user.lastName}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
   const getInitials = (firstName, lastName) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    const safeFirst = firstName || "";
+    const safeLast = lastName || "";
+    return `${safeFirst.charAt(0) || ""}${safeLast.charAt(0) || ""}`.toUpperCase();
   };
 
   // Handle add user
   const handleAddUser = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert("User added successfully! (Demo)");
-    setShowAddModal(false);
-    setIsSubmitting(false);
+
+    try {
+      const userData = {
+        first_name: newUser.firstName,
+        last_name: newUser.lastName,
+        email: newUser.email,
+        phone: newUser.phone,
+        role: newUser.role,
+        password: newUser.password
+      };
+
+      await adminApi.createUser(userData);
+      alert("User added successfully!");
+      
+      // Refresh list
+      const data = await adminApi.getUsers();
+      setUsers(data);
+      
+      setShowAddModal(false);
+      setNewUser({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        role: "student",
+        password: ""
+      });
+    } catch (error) {
+      console.error("Failed to add user:", error);
+      alert("Failed to add user. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle view user details
@@ -216,20 +286,45 @@ const Users = () => {
     setShowViewModal(true);
   };
 
-  // Handle edit user
+  // Handle toggle user status
+  const handleToggleUserStatus = async (user) => {
+    try {
+      await adminApi.toggleUserStatus(user.id);
+      alert(`User ${user.status === 'active' ? 'deactivated' : 'activated'} successfully!`);
+      
+      // Refresh list
+      const data = await adminApi.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+      alert("Failed to update user status. Please try again.");
+    }
+  };
+
+  // Handle edit user (toggle status as edit)
   const handleEditUser = async (user) => {
-    alert(`Editing user: ${user.firstName} ${user.lastName} (Demo)`);
+    // For now, we use this to toggle user status
+    await handleToggleUserStatus(user);
   };
 
   // Handle delete user
   const handleDeleteUser = async (user) => {
     if (
       window.confirm(
-        `Are you sure you want to delete user: ${user.firstName} ${user.lastName}?`,
+        `Are you sure you want to delete user: ${user.firstName} ${user.lastName}?`
       )
     ) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert("User deleted successfully! (Demo)");
+      try {
+        await adminApi.deleteUser(user.id);
+        alert("User deleted successfully!");
+        
+        // Refresh list
+        const data = await adminApi.getUsers();
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to delete user:", error);
+        alert("Failed to delete user. Please try again.");
+      }
     }
   };
 

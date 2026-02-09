@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -16,6 +16,7 @@ import {
   ThumbsDown,
   Flag,
 } from "lucide-react";
+import adminApi from "../../../../api/adminApi";
 
 const Reviews = () => {
   const navigate = useNavigate();
@@ -25,9 +26,29 @@ const Reviews = () => {
   const [selectedReview, setSelectedReview] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for reviews
-  const reviews = [
+  // Fetch reviews from API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setLoading(true);
+        const data = await adminApi.getReviews();
+        setReviews(data);
+      } catch (error) {
+        console.error("Failed to fetch reviews:", error);
+        // Keep mock data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  // Mock data for fallback
+  const mockReviews = [
     {
       id: 1,
       user: {
@@ -152,6 +173,29 @@ const Reviews = () => {
     },
   ];
 
+  // Use mock data if API data is empty
+  const displayReviews = reviews.length > 0 ? reviews : mockReviews;
+
+  // Safe getter for user name
+  const getUserName = (review) => {
+    if (review.user?.name) return review.user.name;
+    if (review.user_id) return `User #${review.user_id}`;
+    return "Anonymous User";
+  };
+
+  // Safe getter for user email
+  const getUserEmail = (review) => {
+    if (review.user?.email) return review.user.email;
+    return "user@example.com";
+  };
+
+  // Safe getter for accommodation name
+  const getAccommodationName = (review) => {
+    if (review.accommodation?.name) return review.accommodation.name;
+    if (review.hostel_id) return `Hostel #${review.hostel_id}`;
+    return "Unknown Hostel";
+  };
+
   const getStatusBadge = (status) => {
     const statusStyles = {
       approved: {
@@ -168,53 +212,69 @@ const Reviews = () => {
       },
     };
 
+    // Handle undefined status
+    const safeStatus = status || "pending";
+    const style = statusStyles[safeStatus] || statusStyles.pending;
+
     return (
       <span
         style={{
           ...styles.statusBadge,
-          ...statusStyles[status],
+          backgroundColor: style.backgroundColor,
+          color: style.color,
         }}
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
       </span>
     );
   };
 
   const renderStars = (rating) => {
+    const safeRating = rating || 0;
     return (
       <div style={styles.stars}>
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
             size={14}
-            color={star <= rating ? "#f59e0b" : "#e5e7eb"}
-            fill={star <= rating ? "#f59e0b" : "none"}
+            color={star <= safeRating ? "#f59e0b" : "#e5e7eb"}
+            fill={star <= safeRating ? "#f59e0b" : "none"}
           />
         ))}
       </div>
     );
   };
 
-  const filteredReviews = reviews.filter((review) => {
+  const filteredReviews = displayReviews.filter((review) => {
+    const safeName = getUserName(review).toLowerCase();
+    const safeAccommodation = getAccommodationName(review).toLowerCase();
+    const safeComment = (review.comment || "").toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+
     const matchesSearch =
-      review.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      review.accommodation.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      review.comment.toLowerCase().includes(searchTerm.toLowerCase());
+      safeName.includes(searchLower) ||
+      safeAccommodation.includes(searchLower) ||
+      safeComment.includes(searchLower);
+
+    const safeStatus = review.status || "pending";
     const matchesStatus =
-      statusFilter === "all" || review.status === statusFilter;
+      statusFilter === "all" || safeStatus === statusFilter;
+
+    const safeRating = review.rating || 0;
     const matchesRating =
-      ratingFilter === "all" || review.rating.toString() === ratingFilter;
+      ratingFilter === "all" || safeRating.toString() === ratingFilter;
+
     return matchesSearch && matchesStatus && matchesRating;
   });
 
   const getInitials = (name) => {
-    return name
+    const safeName = name || "Anonymous";
+    return safeName
       .split(" ")
       .map((n) => n[0])
       .join("")
-      .toUpperCase();
+      .toUpperCase()
+      .slice(0, 2) || "?";
   };
 
   // Handle view review details
@@ -226,9 +286,19 @@ const Reviews = () => {
   // Handle approve review
   const handleApproveReview = async (review) => {
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    alert(`Review #${review.id} approved successfully! (Demo)`);
-    setIsProcessing(false);
+    try {
+      await adminApi.updateReviewStatus(review.id, "approve");
+      alert(`Review #${review.id} approved successfully!`);
+      
+      // Refresh list
+      const data = await adminApi.getReviews();
+      setReviews(data);
+    } catch (error) {
+      console.error("Failed to approve review:", error);
+      alert("Failed to approve review. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle reject review
@@ -237,9 +307,41 @@ const Reviews = () => {
       window.confirm(`Are you sure you want to reject review #${review.id}?`)
     ) {
       setIsProcessing(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert(`Review #${review.id} rejected! (Demo)`);
-      setIsProcessing(false);
+      try {
+        await adminApi.updateReviewStatus(review.id, "reject");
+        alert(`Review #${review.id} rejected!`);
+        
+        // Refresh list
+        const data = await adminApi.getReviews();
+        setReviews(data);
+      } catch (error) {
+        console.error("Failed to reject review:", error);
+        alert("Failed to reject review. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  // Handle delete review
+  const handleDeleteReview = async (review) => {
+    if (
+      window.confirm(`Are you sure you want to delete this review?`)
+    ) {
+      setIsProcessing(true);
+      try {
+        await adminApi.deleteReview(review.id);
+        alert("Review deleted successfully!");
+        
+        // Refresh list
+        const data = await adminApi.getReviews();
+        setReviews(data);
+      } catch (error) {
+        console.error("Failed to delete review:", error);
+        alert("Failed to delete review. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -247,11 +349,21 @@ const Reviews = () => {
   const handleApproveFromModal = async () => {
     if (selectedReview) {
       setIsProcessing(true);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert(`Review #${selectedReview.id} approved successfully! (Demo)`);
-      setShowViewModal(false);
-      setSelectedReview(null);
-      setIsProcessing(false);
+      try {
+        await adminApi.updateReviewStatus(selectedReview.id, "approve");
+        alert(`Review #${selectedReview.id} approved successfully!`);
+        setShowViewModal(false);
+        setSelectedReview(null);
+        
+        // Refresh list
+        const data = await adminApi.getReviews();
+        setReviews(data);
+      } catch (error) {
+        console.error("Failed to approve review:", error);
+        alert("Failed to approve review. Please try again.");
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -260,11 +372,21 @@ const Reviews = () => {
     if (selectedReview) {
       if (window.confirm(`Are you sure you want to reject this review?`)) {
         setIsProcessing(true);
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        alert(`Review #${selectedReview.id} rejected! (Demo)`);
-        setShowViewModal(false);
-        setSelectedReview(null);
-        setIsProcessing(false);
+        try {
+          await adminApi.updateReviewStatus(selectedReview.id, "reject");
+          alert(`Review #${selectedReview.id} rejected!`);
+          setShowViewModal(false);
+          setSelectedReview(null);
+          
+          // Refresh list
+          const data = await adminApi.getReviews();
+          setReviews(data);
+        } catch (error) {
+          console.error("Failed to reject review:", error);
+          alert("Failed to reject review. Please try again.");
+        } finally {
+          setIsProcessing(false);
+        }
       }
     }
   };
@@ -326,28 +448,36 @@ const Reviews = () => {
             <div style={styles.reviewHeader}>
               <div style={styles.userInfo}>
                 <div style={styles.avatar}>
-                  {review.user.avatar ? (
+                  {review.user?.avatar ? (
                     <img
                       src={review.user.avatar}
-                      alt={review.user.name}
+                      alt={getUserName(review)}
                       style={styles.avatarImg}
                     />
                   ) : (
                     <span style={styles.avatarText}>
-                      {getInitials(review.user.name)}
+                      {getInitials(getUserName(review))}
                     </span>
                   )}
                 </div>
                 <div>
-                  <span style={styles.userName}>{review.user.name}</span>
+                  <span style={styles.userName}>{getUserName(review)}</span>
                   <div style={styles.reviewMeta}>
                     {renderStars(review.rating)}
                     <span style={styles.reviewDate}>
-                      {new Date(review.date).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {review.created_at
+                        ? new Date(review.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : review.date
+                        ? new Date(review.date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -358,21 +488,21 @@ const Reviews = () => {
             <div style={styles.accommodationInfo}>
               <Home size={16} color="#64748b" />
               <span style={styles.accommodationName}>
-                {review.accommodation.name}
+                {getAccommodationName(review)}
               </span>
             </div>
 
             <div style={styles.reviewContent}>
-              <p style={styles.reviewText}>{review.comment}</p>
+              <p style={styles.reviewText}>{review.comment || "No comment provided"}</p>
             </div>
 
             <div style={styles.reviewFooter}>
               <div style={styles.reviewStats}>
                 <span style={styles.helpfulCount}>
                   <ThumbsUp size={14} color="#64748b" />
-                  {review.helpful} helpful
+                  {review.helpful || 0} helpful
                 </span>
-                {review.reported && (
+                {(review.reported || false) && (
                   <span style={styles.reportedBadge}>
                     <Flag size={14} />
                     Reported
@@ -386,7 +516,7 @@ const Reviews = () => {
                 >
                   <Eye size={16} color="#64748b" />
                 </button>
-                {review.status === "pending" && (
+                {(review.status || "pending") === "pending" && (
                   <>
                     <button
                       style={styles.approveBtn}
@@ -407,12 +537,12 @@ const Reviews = () => {
               </div>
             </div>
 
-            {review.response && (
+            {(review.response || review.host_response) && (
               <div style={styles.responseSection}>
                 <div style={styles.responseHeader}>
                   <span style={styles.responseLabel}>Host Response</span>
                 </div>
-                <p style={styles.responseText}>{review.response}</p>
+                <p style={styles.responseText}>{review.response || review.host_response}</p>
               </div>
             )}
           </div>
@@ -438,29 +568,40 @@ const Reviews = () => {
                   <div style={styles.detailUser}>
                     <div style={styles.detailAvatar}>
                       <span style={styles.detailAvatarText}>
-                        {getInitials(selectedReview.user.name)}
+                        {getInitials(getUserName(selectedReview))}
                       </span>
                     </div>
                     <div>
                       <h3 style={styles.detailUserName}>
-                        {selectedReview.user.name}
+                        {getUserName(selectedReview)}
                       </h3>
                       <p style={styles.detailUserEmail}>
-                        {selectedReview.user.email}
+                        {getUserEmail(selectedReview)}
                       </p>
                     </div>
                   </div>
                   <div style={styles.detailRating}>
                     {renderStars(selectedReview.rating)}
                     <span style={styles.detailDate}>
-                      {new Date(selectedReview.date).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "long",
-                          day: "numeric",
-                          year: "numeric",
-                        },
-                      )}
+                      {selectedReview.created_at
+                        ? new Date(selectedReview.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )
+                        : selectedReview.date
+                        ? new Date(selectedReview.date).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            },
+                          )
+                        : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -469,10 +610,10 @@ const Reviews = () => {
                   <Home size={18} color="#64748b" />
                   <div>
                     <h4 style={styles.detailAccommodationName}>
-                      {selectedReview.accommodation.name}
+                      {getAccommodationName(selectedReview)}
                     </h4>
                     <p style={styles.detailAccommodationLocation}>
-                      {selectedReview.accommodation.location}
+                      {selectedReview.accommodation?.location || "Location not available"}
                     </p>
                   </div>
                 </div>
@@ -480,7 +621,7 @@ const Reviews = () => {
                 <div style={styles.detailComment}>
                   <h4 style={styles.detailCommentTitle}>Review</h4>
                   <p style={styles.detailCommentText}>
-                    {selectedReview.comment}
+                    {selectedReview.comment || "No comment provided"}
                   </p>
                 </div>
 
@@ -492,22 +633,22 @@ const Reviews = () => {
                   <div style={styles.detailStat}>
                     <span style={styles.detailStatLabel}>Helpful Votes</span>
                     <span style={styles.detailStatValue}>
-                      {selectedReview.helpful}
+                      {selectedReview.helpful || 0}
                     </span>
                   </div>
                   <div style={styles.detailStat}>
                     <span style={styles.detailStatLabel}>Reported</span>
                     <span style={styles.detailStatValue}>
-                      {selectedReview.reported ? "Yes" : "No"}
+                      {(selectedReview.reported || false) ? "Yes" : "No"}
                     </span>
                   </div>
                 </div>
 
-                {selectedReview.response && (
+                {(selectedReview.response || selectedReview.host_response) && (
                   <div style={styles.detailResponse}>
                     <h4 style={styles.detailResponseTitle}>Host Response</h4>
                     <p style={styles.detailResponseText}>
-                      {selectedReview.response}
+                      {selectedReview.response || selectedReview.host_response}
                     </p>
                   </div>
                 )}
@@ -523,7 +664,7 @@ const Reviews = () => {
               >
                 Close
               </button>
-              {selectedReview?.status === "pending" && (
+              {(selectedReview?.status || "pending") === "pending" && (
                 <>
                   <button
                     style={styles.rejectBtnModal}

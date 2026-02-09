@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -17,6 +17,7 @@ import {
   Download,
   Plus,
 } from "lucide-react";
+import adminApi from "../../../../api/adminApi";
 
 const Bookings = () => {
   const navigate = useNavigate();
@@ -27,9 +28,29 @@ const Bookings = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for bookings
-  const bookings = [
+  // Fetch bookings from API
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const data = await adminApi.getBookings();
+        setBookings(data);
+      } catch (error) {
+        console.error("Failed to fetch bookings:", error);
+        // Keep mock data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
+
+  // Mock data for fallback
+  const mockBookings = [
     {
       id: 1,
       guest: {
@@ -158,34 +179,68 @@ const Bookings = () => {
     },
   ];
 
-  // Filtered bookings based on search and filters
-  const filteredBookings = bookings.filter((booking) => {
-    const matchesSearch =
-      booking.guest.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.guest.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.accommodation.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+  // Use mock data if API data is empty
+  const displayBookings = bookings.length > 0 ? bookings : mockBookings;
 
+  // Safe getter for guest name
+  const getGuestName = (booking) => {
+    if (booking.guest?.name) return booking.guest.name;
+    if (booking.student_id) return `User #${booking.student_id}`;
+    return "Guest";
+  };
+
+  // Safe getter for guest email
+  const getGuestEmail = (booking) => {
+    if (booking.guest?.email) return booking.guest.email;
+    return "guest@example.com";
+  };
+
+  // Safe getter for accommodation name
+  const getAccommodationName = (booking) => {
+    if (booking.accommodation?.name) return booking.accommodation.name;
+    if (booking.room_id) return `Room #${booking.room_id}`;
+    return "Accommodation";
+  };
+
+  // Safe getter for room type
+  const getRoomType = (booking) => {
+    if (booking.accommodation?.roomType) return booking.accommodation.roomType;
+    return "Standard Room";
+  };
+
+  // Filtered bookings based on search and filters
+  const filteredBookings = displayBookings.filter((booking) => {
+    const safeName = getGuestName(booking).toLowerCase();
+    const safeEmail = getGuestEmail(booking).toLowerCase();
+    const safeAccommodation = getAccommodationName(booking).toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
+
+    const matchesSearch =
+      safeName.includes(searchLower) ||
+      safeEmail.includes(searchLower) ||
+      safeAccommodation.includes(searchLower);
+
+    const safeStatus = booking.status || "pending";
     const matchesStatus =
-      statusFilter === "all" || booking.status === statusFilter;
+      statusFilter === "all" || safeStatus === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
   // Stats calculations
-  const totalBookings = bookings.length;
-  const totalRevenue = bookings.reduce(
-    (sum, booking) => sum + booking.totalAmount,
+  const totalBookings = displayBookings.length;
+  const totalRevenue = displayBookings.reduce(
+    (sum, booking) => sum + (booking.total_amount || booking.totalAmount || 0),
     0,
   );
   const occupancyRate = 85; // Mock value
-  const pendingBookings = bookings.filter(
-    (booking) => booking.status === "pending",
+  const pendingBookings = displayBookings.filter(
+    (booking) => (booking.status || "pending") === "pending",
   ).length;
 
   const getStatusColor = (status) => {
-    switch (status) {
+    const safeStatus = status || "pending";
+    switch (safeStatus) {
       case "confirmed":
         return "#10b981";
       case "pending":
@@ -194,19 +249,24 @@ const Bookings = () => {
         return "#3b82f6";
       case "cancelled":
         return "#ef4444";
+      case "completed":
+        return "#6b7280";
       default:
         return "#6b7280";
     }
   };
 
   const getPaymentStatusColor = (status) => {
-    switch (status) {
+    const safeStatus = status || "pending";
+    switch (safeStatus) {
       case "paid":
         return "#10b981";
       case "pending":
         return "#f59e0b";
       case "refunded":
         return "#ef4444";
+      case "failed":
+        return "#dc2626";
       default:
         return "#6b7280";
     }
@@ -216,6 +276,7 @@ const Bookings = () => {
   const handleAddBooking = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    // In real app, this would call the API
     await new Promise((resolve) => setTimeout(resolve, 1000));
     alert("Booking added successfully! (Demo)");
     setShowAddModal(false);
@@ -228,9 +289,19 @@ const Bookings = () => {
     setShowViewModal(true);
   };
 
-  // Handle edit booking
-  const handleEditBooking = async (booking) => {
-    alert(`Editing booking #${booking.id} (Demo)`);
+  // Handle edit booking status
+  const handleEditBooking = async (booking, newStatus) => {
+    try {
+      await adminApi.updateBookingStatus(booking.id, newStatus);
+      alert(`Booking #${booking.id} status updated to ${newStatus}!`);
+      
+      // Refresh list
+      const data = await adminApi.getBookings();
+      setBookings(data);
+    } catch (error) {
+      console.error("Failed to update booking status:", error);
+      alert("Failed to update booking status. Please try again.");
+    }
   };
 
   // Handle cancel booking
@@ -238,8 +309,17 @@ const Bookings = () => {
     if (
       window.confirm(`Are you sure you want to cancel booking #${booking.id}?`)
     ) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert("Booking cancelled successfully! (Demo)");
+      try {
+        await adminApi.updateBookingStatus(booking.id, "cancelled");
+        alert("Booking cancelled successfully!");
+        
+        // Refresh list
+        const data = await adminApi.getBookings();
+        setBookings(data);
+      } catch (error) {
+        console.error("Failed to cancel booking:", error);
+        alert("Failed to cancel booking. Please try again.");
+      }
     }
   };
 
@@ -366,35 +446,35 @@ const Bookings = () => {
                 <td style={styles.tableCell}>
                   <div style={styles.guestInfo}>
                     <div style={styles.avatar}>
-                      {booking.guest.name.charAt(0)}
+                      {getGuestName(booking).charAt(0)}
                     </div>
                     <div>
-                      <p style={styles.guestName}>{booking.guest.name}</p>
-                      <p style={styles.guestEmail}>{booking.guest.email}</p>
+                      <p style={styles.guestName}>{getGuestName(booking)}</p>
+                      <p style={styles.guestEmail}>{getGuestEmail(booking)}</p>
                     </div>
                   </div>
                 </td>
                 <td style={styles.tableCell}>
                   <div>
                     <p style={styles.accommodationName}>
-                      {booking.accommodation.name}
+                      {getAccommodationName(booking)}
                     </p>
                     <p style={styles.roomType}>
-                      {booking.accommodation.roomType}
+                      {getRoomType(booking)}
                     </p>
                   </div>
                 </td>
                 <td style={styles.tableCell}>
                   <div>
-                    <p style={styles.dateText}>{booking.checkIn}</p>
-                    <p style={styles.dateText}>{booking.checkOut}</p>
+                    <p style={styles.dateText}>{booking.start_date || booking.checkIn}</p>
+                    <p style={styles.dateText}>{booking.end_date || booking.checkOut}</p>
                   </div>
                 </td>
                 <td style={styles.tableCell}>
-                  <span style={styles.nightsBadge}>{booking.nights}</span>
+                  <span style={styles.nightsBadge}>{booking.nights || "-"}</span>
                 </td>
                 <td style={styles.tableCell}>
-                  <span style={styles.amountText}>${booking.totalAmount}</span>
+                  <span style={styles.amountText}>${booking.total_amount || booking.totalAmount || 0}</span>
                 </td>
                 <td style={styles.tableCell}>
                   <span
@@ -403,7 +483,7 @@ const Bookings = () => {
                       backgroundColor: getStatusColor(booking.status),
                     }}
                   >
-                    {booking.status}
+                    {(booking.status || "pending").charAt(0).toUpperCase() + (booking.status || "pending").slice(1)}
                   </span>
                 </td>
                 <td style={styles.tableCell}>
@@ -411,11 +491,11 @@ const Bookings = () => {
                     style={{
                       ...styles.statusBadge,
                       backgroundColor: getPaymentStatusColor(
-                        booking.paymentStatus,
+                        booking.payment_status || booking.paymentStatus,
                       ),
                     }}
                   >
-                    {booking.paymentStatus}
+                    {(booking.payment_status || booking.paymentStatus || "pending").charAt(0).toUpperCase() + (booking.payment_status || booking.paymentStatus || "pending").slice(1)}
                   </span>
                 </td>
                 <td style={styles.tableCell}>

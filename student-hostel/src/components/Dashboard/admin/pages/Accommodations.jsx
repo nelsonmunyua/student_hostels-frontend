@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
@@ -14,7 +14,7 @@ import {
   Star,
   X,
 } from "lucide-react";
-import axios from "../../../../api/axios";
+import adminApi from "../../../../api/adminApi";
 
 const Accommodations = () => {
   const navigate = useNavigate();
@@ -26,17 +26,52 @@ const Accommodations = () => {
   const [selectedAccommodation, setSelectedAccommodation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [accommodations, setAccommodations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // New accommodation form state
+  const [newAccommodation, setNewAccommodation] = useState({
+    name: "",
+    type: "Hostel",
+    price: "",
+    location: "",
+    rooms: "",
+    capacity: "",
+    description: "",
+    host_id: ""
+  });
 
   // Check if we should show add modal from navigation state
-  React.useEffect(() => {
+  useEffect(() => {
     if (location.state?.showAddModal) {
       setShowAddModal(true);
       navigate(location.pathname, { replace: true });
     }
   }, [location, navigate]);
 
-  // Mock data for accommodations
-  const accommodations = [
+  // Fetch accommodations from API
+  useEffect(() => {
+    const fetchAccommodations = async () => {
+      try {
+        setLoading(true);
+        const data = await adminApi.getHostels();
+        setAccommodations(data);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch accommodations:", err);
+        setError("Failed to load accommodations. Using demo data.");
+        // Keep mock data on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAccommodations();
+  }, []);
+
+  // Mock data for fallback
+  const mockAccommodations = [
     {
       id: 1,
       name: "University View Hostel",
@@ -121,6 +156,24 @@ const Accommodations = () => {
     },
   ];
 
+  // Use mock data if API data is empty or on error
+  const displayAccommodations = accommodations.length > 0 ? accommodations : mockAccommodations;
+
+  // Helper to get image URL from accommodation
+  const getImageUrl = (acc) => {
+    // If API data with images array
+    if (acc.images && Array.isArray(acc.images) && acc.images.length > 0) {
+      return acc.images[0];
+    }
+    // If API data with single image field
+    if (acc.image) {
+      return acc.image;
+    }
+    // Fallback to mock image based on ID
+    const mockIndex = (acc.id - 1) % mockAccommodations.length;
+    return mockAccommodations[mockIndex].image;
+  };
+
   const getStatusBadge = (status) => {
     const statusStyles = {
       active: {
@@ -137,22 +190,27 @@ const Accommodations = () => {
       },
     };
 
+    // Handle undefined status - default to active
+    const safeStatus = status || "active";
+    const style = statusStyles[safeStatus] || statusStyles.active;
+
     return (
       <span
         style={{
           ...styles.statusBadge,
-          ...statusStyles[status],
+          backgroundColor: style.backgroundColor,
+          color: style.color,
         }}
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
       </span>
     );
   };
 
-  const filteredAccommodations = accommodations.filter((acc) => {
+  const filteredAccommodations = displayAccommodations.filter((acc) => {
     const matchesSearch =
-      acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      acc.location.toLowerCase().includes(searchTerm.toLowerCase());
+      acc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      acc.location?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || acc.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -161,31 +219,85 @@ const Accommodations = () => {
   const handleAddAccommodation = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert("Accommodation added successfully! (Demo)");
-    setShowAddModal(false);
-    setIsSubmitting(false);
+
+    try {
+      const hostelData = {
+        name: newAccommodation.name,
+        location: newAccommodation.location,
+        description: newAccommodation.description,
+        amenities: {
+          type: newAccommodation.type,
+          rooms: parseInt(newAccommodation.rooms) || 0,
+          capacity: parseInt(newAccommodation.capacity) || 0,
+          price: parseInt(newAccommodation.price) || 0
+        },
+        host_id: parseInt(newAccommodation.host_id) || 1
+      };
+
+      const response = await adminApi.createHostel(hostelData);
+      alert("Accommodation added successfully!");
+      
+      // Refresh list
+      const data = await adminApi.getHostels();
+      setAccommodations(data);
+      
+      setShowAddModal(false);
+      setNewAccommodation({
+        name: "",
+        type: "Hostel",
+        price: "",
+        location: "",
+        rooms: "",
+        capacity: "",
+        description: "",
+        host_id: ""
+      });
+    } catch (error) {
+      console.error("Failed to add accommodation:", error);
+      alert("Failed to add accommodation. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Handle edit accommodation
+  // Handle edit accommodation status
   const handleEditAccommodation = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert(`Accommodation updated successfully! (Demo)`);
-    setShowEditModal(false);
-    setSelectedAccommodation(null);
-    setIsSubmitting(false);
+
+    try {
+      await adminApi.toggleHostelStatus(editingId);
+      alert("Accommodation updated successfully!");
+      
+      // Refresh list
+      const data = await adminApi.getHostels();
+      setAccommodations(data);
+      
+      setShowEditModal(false);
+      setSelectedAccommodation(null);
+      setEditingId(null);
+    } catch (error) {
+      console.error("Failed to update accommodation:", error);
+      alert("Failed to update accommodation. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle delete accommodation
   const handleDeleteAccommodation = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert("Accommodation deleted successfully! (Demo)");
+      try {
+        await adminApi.deleteHostel(id);
+        alert("Accommodation deleted successfully!");
+        
+        // Refresh list
+        const data = await adminApi.getHostels();
+        setAccommodations(data);
+      } catch (error) {
+        console.error("Failed to delete accommodation:", error);
+        alert("Failed to delete accommodation. Please try again.");
+      }
     }
   };
 
@@ -276,7 +388,7 @@ const Accommodations = () => {
         {filteredAccommodations.map((acc) => (
           <div key={acc.id} style={styles.card}>
             <div style={styles.cardImage}>
-              <img src={acc.image} alt={acc.name} style={styles.cardImg} />
+              <img src={getImageUrl(acc)} alt={acc.name} style={styles.cardImg} />
               <span style={styles.typeBadge}>{acc.type}</span>
               {getStatusBadge(acc.status)}
             </div>
@@ -437,7 +549,7 @@ const Accommodations = () => {
             </div>
             <div style={styles.modalContent}>
               <img
-                src={selectedAccommodation.image}
+                src={getImageUrl(selectedAccommodation)}
                 alt={selectedAccommodation.name}
                 style={styles.detailImage}
               />
