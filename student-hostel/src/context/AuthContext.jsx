@@ -1,11 +1,12 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import authApi from "../api/authApi";
 
 // Create the Auth Context
 const AuthContext = createContext(null);
 
 /**
  * AuthProvider - Manages authentication state
- * This replaces Redux for authentication
+ * Uses real backend API for authentication
  */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -17,110 +18,156 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
-  const checkAuth = () => {
+  /**
+   * Check if user has valid token on app start
+   */
+  const checkAuth = async () => {
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
 
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData));
-        setIsAuthenticated(true);
-      } catch (error) {
-        // Invalid user data, clear storage
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      }
+    // If no token or user data, not authenticated
+    if (!token || !userData) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // Check if it's a mock token (shouldn't happen with real API)
+    if (token.startsWith("mock-token-")) {
+      // Clear mock data
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Verify token with backend
+      const response = await authApi.getCurrentUser();
+      setUser(response.user || response.data || response);
+      setIsAuthenticated(true);
+    } catch (error) {
+      // Token invalid or expired
+      console.error("Auth check failed:", error.message);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("refreshToken");
+    } finally {
+      setLoading(false);
+    }
   };
 
   /**
-   * Login user
+   * Login user with real API
    * @param {Object} credentials - { email, password }
    * @returns {Object} - { success, user, error }
    */
   const login = async (credentials) => {
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const { email, password } = credentials;
 
       if (!email || !password) {
         return { success: false, error: "Email and password are required" };
       }
 
-      // Mock user for demo
-      const isAdminEmail = email.toLowerCase().includes("admin");
-      const mockUser = {
-        id: Date.now(),
-        email,
-        first_name: email.split("@")[0],
-        last_name: "User",
-        role: isAdminEmail ? "admin" : "student",
-        is_verified: true,
-      };
+      // Call real backend API
+      const response = await authApi.login({ email, password });
+      
+      // Handle different response formats
+      const data = response.data || response;
+      const { access_token, refresh_token, user: userData } = data;
 
-      const mockToken = `mock-token-${mockUser.id}-${Date.now()}`;
+      // Store tokens
+      if (access_token) {
+        localStorage.setItem("token", access_token);
+      }
+      if (refresh_token) {
+        localStorage.setItem("refreshToken", refresh_token);
+      }
+      if (userData) {
+        localStorage.setItem("user", JSON.stringify(userData));
+        setUser(userData);
+      }
 
-      // Store in localStorage
-      localStorage.setItem("token", mockToken);
-      localStorage.setItem("user", JSON.stringify(mockUser));
-
-      setUser(mockUser);
       setIsAuthenticated(true);
 
-      return { success: true, user: mockUser };
+      return { success: true, user: userData };
     } catch (error) {
-      return { success: false, error: error.message || "Login failed" };
+      const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           "Login failed";
+      return { success: false, error: errorMessage };
     }
   };
 
   /**
-   * Signup user
-   * @param {Object} userData - { email, password, first_name, last_name, role }
+   * Signup user with real API
+   * @param {Object} userData - { email, password, first_name, last_name, role, phone }
    * @returns {Object} - { success, user, error }
    */
   const signup = async (userData) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const { email, password, first_name, last_name, role } = userData;
+      const { email, password, first_name, last_name, role, phone } = userData;
 
       if (!email || !password || !first_name || !last_name) {
         return { success: false, error: "All fields are required" };
       }
 
-      const isAdminEmail = email.toLowerCase().includes("admin");
-      const newUser = {
-        id: Date.now(),
+      // Call real backend API
+      const response = await authApi.signup({
         email,
+        password,
         first_name,
         last_name,
-        role: isAdminEmail ? "admin" : role || "student",
-        is_verified: false,
-      };
+        role: role || "student",
+        phone
+      });
+      
+      // Handle different response formats
+      const data = response.data || response;
+      const { access_token, refresh_token, user: newUser } = data;
 
-      const mockToken = `mock-token-${newUser.id}-${Date.now()}`;
+      // Store tokens
+      if (access_token) {
+        localStorage.setItem("token", access_token);
+      }
+      if (refresh_token) {
+        localStorage.setItem("refreshToken", refresh_token);
+      }
+      if (newUser) {
+        localStorage.setItem("user", JSON.stringify(newUser));
+        setUser(newUser);
+      }
 
-      localStorage.setItem("token", mockToken);
-      localStorage.setItem("user", JSON.stringify(newUser));
-
-      setUser(newUser);
       setIsAuthenticated(true);
 
       return { success: true, user: newUser };
     } catch (error) {
-      return { success: false, error: error.message || "Signup failed" };
+      const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           "Signup failed";
+      return { success: false, error: errorMessage };
     }
   };
 
   /**
    * Logout user
    */
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call logout API (optional - will fail silently if backend is down)
+      await authApi.logout();
+    } catch (error) {
+      // Ignore logout API errors
+      console.log("Logout API call skipped");
+    }
+    
+    // Clear local storage
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    
     setUser(null);
     setIsAuthenticated(false);
   };
@@ -129,11 +176,49 @@ export const AuthProvider = ({ children }) => {
    * Update user profile
    * @param {Object} userData - Updated user data
    */
-  const updateProfile = (userData) => {
-    const updatedUser = { ...user, ...userData };
-    localStorage.setItem("user", JSON.stringify(updatedUser));
-    setUser(updatedUser);
+  const updateProfile = async (userData) => {
+    try {
+      const response = await authApi.updateProfile(userData);
+      const data = response.data || response;
+      
+      if (data.user) {
+        const updatedUser = { ...user, ...data.user };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        return { success: true, user: updatedUser };
+      }
+      
+      return { success: true, user: data };
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.error || 
+                           error.message || 
+                           "Profile update failed";
+      return { success: false, error: errorMessage };
+    }
   };
+
+  /**
+   * Refresh authentication token
+   */
+  const refreshToken = useCallback(async () => {
+    try {
+      const response = await authApi.refreshToken();
+      const data = response.data || response;
+      
+      if (data.access_token) {
+        localStorage.setItem("token", data.access_token);
+        if (data.refresh_token) {
+          localStorage.setItem("refreshToken", data.refresh_token);
+        }
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Token refresh failed:", error.message);
+      return false;
+    }
+  }, []);
 
   // Value provided to consumers
   const value = {
@@ -144,6 +229,8 @@ export const AuthProvider = ({ children }) => {
     signup,
     logout,
     updateProfile,
+    refreshToken,
+    checkAuth,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -162,3 +249,4 @@ export const useAuth = () => {
 };
 
 export default AuthContext;
+

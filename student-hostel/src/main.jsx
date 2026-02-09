@@ -20,18 +20,25 @@ const AuthInitializer = ({ children }) => {
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
       
+      // Clear mock tokens - these are not valid JWT tokens
+      if (token && token.startsWith("mock-token-")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        localStorage.removeItem("refreshToken");
+        return;
+      }
+      
       if (token) {
-        // Only fetch user if we have a token - this verifies the token is valid
+        // Verify token with backend
         try {
           await store.dispatch(getCurrentUser()).unwrap();
         } catch (error) {
           // Token invalid or expired - clear storage
-          console.log("Auth verification failed, clearing tokens");
           localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
           localStorage.removeItem("user");
         }
       }
-      // If no token, do nothing - app will proceed as unauthenticated
     };
 
     checkAuth();
@@ -49,3 +56,4 @@ createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </Provider>,
 );
+

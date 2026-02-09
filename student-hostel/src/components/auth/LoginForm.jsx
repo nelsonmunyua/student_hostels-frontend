@@ -22,16 +22,15 @@ const LoginForm = () => {
   const errorMessage = searchParams.get("message");
   
   const [successMessage, setSuccessMessage] = useState("");
-  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (verified === "true") {
       setSuccessMessage("Email verified successfully! You can now log in.");
     }
     if (verificationError === "verification_failed") {
-      setFormError(errorMessage || "Email verification failed. Please try again.");
+      // Error is shown via Redux error state
     }
-  }, [verified, verificationError, errorMessage]);
+  }, [verified, verificationError]);
 
   const {
     register,
@@ -40,22 +39,19 @@ const LoginForm = () => {
   } = useForm();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       // Role-based redirect after login
-      const redirectPath = getRedirectPath(user?.role);
+      const redirectPath = getRedirectPath(user.role);
       navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
   const onSubmit = async (data) => {
-    try {
-      const result = await dispatch(loginUser(data)).unwrap();
-
-      // Role-based redirect after successful login
-      const redirectPath = getRedirectPath(result.user.role);
-      navigate(redirectPath, { replace: true });
-    } catch (err) {
-      console.error("Login failed:", err);
+    const result = await dispatch(loginUser(data));
+    
+    // If login failed, result.payload will contain the error
+    if (loginUser.fulfilled.match(result)) {
+      // Redirect handled by useEffect
     }
   };
 
@@ -70,13 +66,6 @@ const LoginForm = () => {
         <div className="auth-message auth-success-message fade-in">
           <Icons.CheckCircle />
           <span>{successMessage}</span>
-        </div>
-      )}
-
-      {formError && (
-        <div className="auth-message auth-error fade-in">
-          <Icons.AlertCircle />
-          <span>{formError}</span>
         </div>
       )}
 
@@ -192,3 +181,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+
