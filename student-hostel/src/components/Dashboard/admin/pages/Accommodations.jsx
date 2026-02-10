@@ -30,6 +30,17 @@ const Accommodations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: "",
+    type: "Hostel",
+    price: "",
+    location: "",
+    rooms: "",
+    capacity: "",
+    status: "active"
+  });
+
   // New accommodation form state
   const [newAccommodation, setNewAccommodation] = useState({
     name: "",
@@ -305,6 +316,15 @@ const Accommodations = () => {
   const openEditModal = (acc) => {
     setSelectedAccommodation(acc);
     setEditingId(acc.id);
+    setEditForm({
+      name: acc.name || "",
+      type: acc.type || "Hostel",
+      price: acc.price?.toString() || "",
+      location: acc.location || "",
+      rooms: acc.rooms?.toString() || "",
+      capacity: acc.capacity?.toString() || "",
+      status: acc.status || "active"
+    });
     setShowEditModal(true);
   };
 
@@ -461,15 +481,21 @@ const Accommodations = () => {
                   type="text"
                   style={styles.input}
                   placeholder="Enter name"
+                  value={newAccommodation.name}
+                  onChange={(e) => setNewAccommodation({ ...newAccommodation, name: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Type</label>
-                  <select style={styles.select}>
-                    <option>Hostel</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
+                  <select
+                    style={styles.select}
+                    value={newAccommodation.type}
+                    onChange={(e) => setNewAccommodation({ ...newAccommodation, type: e.target.value })}
+                  >
+                    <option value="Hostel">Hostel</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="Studio">Studio</option>
                   </select>
                 </div>
                 <div style={styles.formGroup}>
@@ -478,6 +504,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     placeholder="Enter price"
+                    value={newAccommodation.price}
+                    onChange={(e) => setNewAccommodation({ ...newAccommodation, price: e.target.value })}
                   />
                 </div>
               </div>
@@ -487,6 +515,8 @@ const Accommodations = () => {
                   type="text"
                   style={styles.input}
                   placeholder="Enter address"
+                  value={newAccommodation.location}
+                  onChange={(e) => setNewAccommodation({ ...newAccommodation, location: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
@@ -496,6 +526,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     placeholder="Enter rooms"
+                    value={newAccommodation.rooms}
+                    onChange={(e) => setNewAccommodation({ ...newAccommodation, rooms: e.target.value })}
                   />
                 </div>
                 <div style={styles.formGroup}>
@@ -504,6 +536,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     placeholder="Enter capacity"
+                    value={newAccommodation.capacity}
+                    onChange={(e) => setNewAccommodation({ ...newAccommodation, capacity: e.target.value })}
                   />
                 </div>
               </div>
@@ -512,6 +546,8 @@ const Accommodations = () => {
                 <textarea
                   style={{ ...styles.input, minHeight: "100px" }}
                   placeholder="Enter description"
+                  value={newAccommodation.description}
+                  onChange={(e) => setNewAccommodation({ ...newAccommodation, description: e.target.value })}
                 />
               </div>
             </div>
@@ -635,7 +671,8 @@ const Accommodations = () => {
                 <input
                   type="text"
                   style={styles.input}
-                  defaultValue={selectedAccommodation.name}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
@@ -643,7 +680,8 @@ const Accommodations = () => {
                   <label style={styles.label}>Type</label>
                   <select
                     style={styles.select}
-                    defaultValue={selectedAccommodation.type}
+                    value={editForm.type}
+                    onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
                   >
                     <option value="Hostel">Hostel</option>
                     <option value="Apartment">Apartment</option>
@@ -655,7 +693,8 @@ const Accommodations = () => {
                   <input
                     type="number"
                     style={styles.input}
-                    defaultValue={selectedAccommodation.price}
+                    value={editForm.price}
+                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                   />
                 </div>
               </div>
@@ -664,7 +703,8 @@ const Accommodations = () => {
                 <input
                   type="text"
                   style={styles.input}
-                  defaultValue={selectedAccommodation.location}
+                  value={editForm.location}
+                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
@@ -673,7 +713,8 @@ const Accommodations = () => {
                   <input
                     type="number"
                     style={styles.input}
-                    defaultValue={selectedAccommodation.rooms}
+                    value={editForm.rooms}
+                    onChange={(e) => setEditForm({ ...editForm, rooms: e.target.value })}
                   />
                 </div>
                 <div style={styles.formGroup}>
@@ -681,7 +722,8 @@ const Accommodations = () => {
                   <input
                     type="number"
                     style={styles.input}
-                    defaultValue={selectedAccommodation.capacity}
+                    value={editForm.capacity}
+                    onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
                   />
                 </div>
               </div>
@@ -689,7 +731,8 @@ const Accommodations = () => {
                 <label style={styles.label}>Status</label>
                 <select
                   style={styles.select}
-                  defaultValue={selectedAccommodation.status}
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 >
                   <option value="active">Active</option>
                   <option value="pending">Pending</option>

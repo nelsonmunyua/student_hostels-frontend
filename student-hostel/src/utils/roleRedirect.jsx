@@ -13,7 +13,7 @@ export const getRedirectPath = (role) => {
       return "/host";
     case "student":
     default:
-      return "/dashboard";
+      return "/student";
   }
 };
 
