@@ -36,6 +36,9 @@ const Users = () => {
     password: ""
   });
 
+  // View user modal state
+  const [viewUser, setViewUser] = useState(null);
+
   // Fetch users from API
   useEffect(() => {
     const fetchUsers = async () => {
@@ -282,8 +285,14 @@ const Users = () => {
 
   // Handle view user details
   const handleViewUser = (user) => {
-    setSelectedUser(user);
+    setViewUser(user);
     setShowViewModal(true);
+  };
+
+  // Handle close view modal
+  const handleCloseViewModal = () => {
+    setViewUser(null);
+    setShowViewModal(false);
   };
 
   // Handle toggle user status
@@ -548,6 +557,8 @@ const Users = () => {
                     type="text"
                     style={styles.input}
                     placeholder="Enter first name"
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                   />
                 </div>
                 <div style={styles.formGroup}>
@@ -556,6 +567,8 @@ const Users = () => {
                     type="text"
                     style={styles.input}
                     placeholder="Enter last name"
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                   />
                 </div>
               </div>
@@ -567,6 +580,8 @@ const Users = () => {
                     type="email"
                     style={styles.inputWithIcon}
                     placeholder="Enter email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   />
                 </div>
               </div>
@@ -576,15 +591,31 @@ const Users = () => {
                   type="tel"
                   style={styles.input}
                   placeholder="Enter phone number"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Role</label>
-                <select style={styles.select}>
+                <select
+                  style={styles.select}
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                >
                   <option value="student">Student</option>
                   <option value="host">Host</option>
                   <option value="admin">Admin</option>
                 </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Password</label>
+                <input
+                  type="password"
+                  style={styles.input}
+                  placeholder="Enter password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
               </div>
             </div>
             <div style={styles.modalFooter}>
@@ -607,14 +638,14 @@ const Users = () => {
       )}
 
       {/* View User Modal */}
-      {selectedUser && (
+      {showViewModal && viewUser && (
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>User Details</h2>
               <button
                 style={styles.closeBtn}
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseViewModal}
               >
                 <X size={20} />
               </button>
@@ -623,34 +654,34 @@ const Users = () => {
               <div style={styles.userProfile}>
                 <div style={styles.profileAvatar}>
                   <span style={styles.profileAvatarText}>
-                    {getInitials(selectedUser.firstName, selectedUser.lastName)}
+                    {getInitials(viewUser.firstName, viewUser.lastName)}
                   </span>
                 </div>
                 <div style={styles.profileInfo}>
                   <h3 style={styles.profileName}>
-                    {selectedUser.firstName} {selectedUser.lastName}
+                    {viewUser.firstName} {viewUser.lastName}
                   </h3>
-                  {getRoleBadge(selectedUser.role)}
+                  {getRoleBadge(viewUser.role)}
                 </div>
               </div>
 
               <div style={styles.detailGrid}>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Email</span>
-                  <span style={styles.detailValue}>{selectedUser.email}</span>
+                  <span style={styles.detailValue}>{viewUser.email}</span>
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Phone</span>
-                  <span style={styles.detailValue}>{selectedUser.phone}</span>
+                  <span style={styles.detailValue}>{viewUser.phone}</span>
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Status</span>
-                  {getStatusBadge(selectedUser.status)}
+                  {getStatusBadge(viewUser.status)}
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>Joined</span>
                   <span style={styles.detailValue}>
-                    {new Date(selectedUser.joinedDate).toLocaleDateString(
+                    {new Date(viewUser.joinedDate).toLocaleDateString(
                       "en-US",
                       {
                         month: "long",
@@ -662,12 +693,12 @@ const Users = () => {
                 </div>
                 <div style={styles.detailItem}>
                   <span style={styles.detailLabel}>
-                    {selectedUser.role === "host" ? "Listings" : "Bookings"}
+                    {viewUser.role === "host" ? "Listings" : "Bookings"}
                   </span>
                   <span style={styles.detailValue}>
-                    {selectedUser.role === "host"
-                      ? selectedUser.listings || 0
-                      : selectedUser.bookings || 0}
+                    {viewUser.role === "host"
+                      ? viewUser.listings || 0
+                      : viewUser.bookings || 0}
                   </span>
                 </div>
               </div>
@@ -675,13 +706,16 @@ const Users = () => {
             <div style={styles.modalFooter}>
               <button
                 style={styles.cancelBtn}
-                onClick={() => setSelectedUser(null)}
+                onClick={handleCloseViewModal}
               >
                 Close
               </button>
               <button
                 style={styles.editBtn}
-                onClick={() => handleEditUser(selectedUser)}
+                onClick={() => {
+                  handleEditUser(viewUser);
+                  handleCloseViewModal();
+                }}
               >
                 Edit User
               </button>

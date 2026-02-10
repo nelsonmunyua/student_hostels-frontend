@@ -116,9 +116,21 @@ const StudentOverview = () => {
   };
 
   // Handle Get Started button
-  const handleGetStarted = (action) => {
-    handleAction(action);
-  };
+  const handleGetStarted = useCallback((action) => {
+    switch (action) {
+      case "browse":
+        navigate("/student/find-accommodation");
+        break;
+      case "wishlist":
+        navigate("/student/wishlist");
+        break;
+      case "review":
+        navigate("/student/my-reviews");
+        break;
+      default:
+        break;
+    }
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -177,9 +189,12 @@ const StudentOverview = () => {
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>Recent Bookings</h2>
-          <a href="#" style={styles.viewAllLink}>
+          <button 
+            style={styles.viewAllLink}
+            onClick={() => navigate("/student/my-bookings")}
+          >
             View all
-          </a>
+          </button>
         </div>
         <div style={styles.card}>
           {recentBookings.length > 0 ? (
@@ -387,6 +402,10 @@ const styles = {
     color: "#3b82f6",
     textDecoration: "none",
     fontWeight: 500,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
   },
   card: {
     backgroundColor: "#fff",

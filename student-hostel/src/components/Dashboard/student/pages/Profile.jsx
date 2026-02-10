@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
 import useAuth from "../../../../hooks/useAuth.jsx";
@@ -8,6 +8,15 @@ const StudentProfile = () => {
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
+    first_name: user?.first_name || "",
+    last_name: user?.last_name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+  });
+  const fileInputRef = useRef(null);
+
+  // Store original values for reset
+  const originalData = useRef({
     first_name: user?.first_name || "",
     last_name: user?.last_name || "",
     email: user?.email || "",
@@ -30,6 +39,8 @@ const StudentProfile = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       alert("Profile updated successfully! (Demo)");
+      // Update original data after successful save
+      originalData.current = { ...formData };
     } catch (error) {
       console.error("Failed to save profile:", error);
       alert("Failed to save profile");
@@ -38,25 +49,35 @@ const StudentProfile = () => {
     }
   };
 
-  // Handle cancel
+  // Handle cancel - reset to original values
   const handleCancel = () => {
-    // Reset form to original values
-    setFormData({
-      first_name: user?.first_name || "",
-      last_name: user?.last_name || "",
-      email: user?.email || "",
-      phone: user?.phone || "",
-    });
-    alert("Changes cancelled");
+    setFormData({ ...originalData.current });
   };
 
   // Handle upload photo
   const handleUploadPhoto = () => {
-    alert("Photo upload functionality would open file picker (Demo)");
+    fileInputRef.current?.click();
+  };
+
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      alert(`Photo "${file.name}" selected. This would be uploaded to the server.`);
+    }
   };
 
   return (
     <div style={styles.container}>
+      {/* Hidden file input for photo upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        style={{ display: "none" }}
+      />
+      
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
         <p style={styles.subtitle}>

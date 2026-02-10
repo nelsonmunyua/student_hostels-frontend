@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useSelector } from "react-redux";
 import AuthLayout from "./components/auth/AuthLayout";
 import LoginForm from "./components/auth/LoginForm";
 import SignupForm from "./components/auth/SignupForm";
@@ -10,6 +9,14 @@ import StudentDashboard from "./components/Dashboard/student/StudentDashboard";
 import AdminDashboard from "./components/Dashboard/admin/AdminDashboard";
 import HostDashboard from "./components/Dashboard/host/HostDashboard";
 
+// Public pages imports
+import Home from "./pages/Home";
+import AccommodationListPage from "./pages/AccommodationListPage";
+import AccommodationDetailPage from "./pages/AccommodationDetailPage";
+import SearchPage from "./pages/SearchPage";
+import BookingPage from "./pages/BookingPage";
+import NotFound from "./pages/NotFound";
+
 // Admin page imports
 import Overview from "./components/Dashboard/admin/pages/Overview";
 import Users from "./components/Dashboard/admin/pages/Users";
@@ -18,8 +25,6 @@ import Bookings from "./components/Dashboard/admin/pages/Bookings";
 import Reviews from "./components/Dashboard/admin/pages/Reviews";
 import Settings from "./components/Dashboard/admin/pages/Settings";
 import AdminPayments from "./components/Dashboard/admin/pages/Payments";
-
-// will do
 
 // Host page imports
 import HostOverview from "./components/Dashboard/host/pages/Overview";
@@ -44,62 +49,23 @@ import FindAccommodation from "./components/Dashboard/student/pages/FindAccommod
 import StudentPayments from "./components/Dashboard/student/pages/Payments";
 import StudentNotifications from "./components/Dashboard/student/pages/Notifications";
 import StudentSupport from "./components/Dashboard/student/pages/Support";
+import PaymentCheckout from "./components/Dashboard/student/pages/PaymentCheckout";
+import PaymentSuccess from "./components/payment/PaymentSuccess";
+import AccommodationReviews from "./components/Dashboard/student/pages/AccommodationReviews";
 
 import "./App.css";
-
-// RootRedirect component to handle role-based redirection
-const RootRedirect = () => {
-  const { user, isAuthenticated, loading } = useSelector((state) => state.auth);
-
-  // Show loading spinner only while checking authentication
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          backgroundColor: "#f8fafc",
-        }}
-      >
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            border: "3px solid #e2e8f0",
-            borderTopColor: "#0369a1",
-            borderRadius: "50%",
-            animation: "spin 1s linear infinite",
-          }}
-        ></div>
-      </div>
-    );
-  }
-
-  // Not authenticated - redirect to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Redirect based on user role
-  if (user?.role === "admin") {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
-
-  if (user?.role === "host") {
-    return <Navigate to="/host/dashboard" replace />;
-  }
-
-  // Default for students and any other authenticated users
-  return <Navigate to="/student/dashboard" replace />;
-};
 
 function App() {
   return (
     <Routes>
-      {/* Root redirect with role-based navigation */}
-      <Route path="/" element={<RootRedirect />} />
+      {/* Public routes - accessible without authentication */}
+      <Route path="/" element={<Home />} />
+      
+      {/* Public accommodation routes */}
+      <Route path="/accommodations" element={<AccommodationListPage />} />
+      <Route path="/accommodations/:id" element={<AccommodationDetailPage />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/booking" element={<BookingPage />} />
 
       {/* Auth routes */}
       <Route element={<AuthLayout />}>
@@ -131,6 +97,9 @@ function App() {
         <Route path="notifications" element={<StudentNotifications />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="support" element={<StudentSupport />} />
+        <Route path="payment/checkout/:bookingId" element={<PaymentCheckout />} />
+        <Route path="payment/success" element={<PaymentSuccess />} />
+        <Route path="reviews/:hostelId" element={<AccommodationReviews />} />
       </Route>
 
       {/* Host dashboard - accessible only by host role */}
@@ -178,11 +147,14 @@ function App() {
         <Route path="payments" element={<AdminPayments />} />
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<HostAnalytics />} />
-        <Route path="settings" element={<Settings />} />
+<Route path="settings" element={<Settings />} />
       </Route>
 
-      {/* Catch-all - redirect to root which handles role-based redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Redirect legacy /dashboard route to /student/dashboard */}
+      <Route path="/dashboard" element={<Navigate to="/student/dashboard" replace />} />
+
+      {/* 404 Not Found */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
