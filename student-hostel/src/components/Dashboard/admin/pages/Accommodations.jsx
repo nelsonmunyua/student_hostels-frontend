@@ -31,6 +31,17 @@ const Accommodations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: "",
+    type: "Hostel",
+    price: "",
+    location: "",
+    rooms: "",
+    capacity: "",
+    status: "active"
+  });
+
   // New accommodation form state
   const [newAccommodation, setNewAccommodation] = useState({
     name: "",
@@ -363,6 +374,15 @@ const Accommodations = () => {
   const openEditModal = (acc) => {
     setSelectedAccommodation(acc);
     setEditingId(acc.id);
+    setEditForm({
+      name: acc.name || "",
+      type: acc.type || "Hostel",
+      price: acc.price?.toString() || "",
+      location: acc.location || "",
+      rooms: acc.rooms?.toString() || "",
+      capacity: acc.capacity?.toString() || "",
+      status: acc.status || "active"
+    });
     setShowEditModal(true);
   };
 
@@ -720,7 +740,8 @@ const Accommodations = () => {
                 <input
                   type="text"
                   style={styles.input}
-                  defaultValue={selectedAccommodation.name}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
@@ -729,6 +750,8 @@ const Accommodations = () => {
                   <select
                     style={styles.select}
                     defaultValue={getType(selectedAccommodation)}
+                    value={editForm.type}
+                    onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
                   >
                     <option value="Hostel">Hostel</option>
                     <option value="Apartment">Apartment</option>
@@ -741,6 +764,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     defaultValue={getPrice(selectedAccommodation)}
+                    value={editForm.price}
+                    onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                   />
                 </div>
               </div>
@@ -749,7 +774,8 @@ const Accommodations = () => {
                 <input
                   type="text"
                   style={styles.input}
-                  defaultValue={selectedAccommodation.location}
+                  value={editForm.location}
+                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                 />
               </div>
               <div style={styles.formRow}>
@@ -759,6 +785,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     defaultValue={getRooms(selectedAccommodation)}
+                    value={editForm.rooms}
+                    onChange={(e) => setEditForm({ ...editForm, rooms: e.target.value })}
                   />
                 </div>
                 <div style={styles.formGroup}>
@@ -767,6 +795,8 @@ const Accommodations = () => {
                     type="number"
                     style={styles.input}
                     defaultValue={getCapacity(selectedAccommodation)}
+                    value={editForm.capacity}
+                    onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
                   />
                 </div>
               </div>
@@ -775,6 +805,8 @@ const Accommodations = () => {
                 <select
                   style={styles.select}
                   defaultValue={getStatus(selectedAccommodation)}
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 >
                   <option value="active">Active</option>
                   <option value="pending">Pending</option>

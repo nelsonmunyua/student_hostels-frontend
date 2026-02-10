@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Users, Calendar } from 'lucide-react';
-import { calculateBookingPrice, checkAvailability } from '../../redux/slices/Thunks/ bookingThunks';
+import { calculateBookingPrice, checkAvailability } from '../../redux/slices/Thunks/bookingThunks';
 import BookingCalendar from './BookingCalendar';
 
 const BookingForm = ({ accommodation, onSubmit }) => {

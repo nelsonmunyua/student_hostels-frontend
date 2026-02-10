@@ -306,7 +306,10 @@ const FindAccommodation = () => {
             </div>
 
             <button
-              style={styles.clearFiltersButton}
+              style={{
+                ...styles.clearFiltersButton,
+                ...(!hasActiveFilters ? styles.clearFiltersButtonDisabled : {})
+              }}
               onClick={clearFilters}
               disabled={!hasActiveFilters}
             >
@@ -721,6 +724,11 @@ const styles = {
     fontWeight: 500,
     cursor: "pointer",
     alignSelf: "flex-end",
+    transition: "all 0.2s",
+  },
+  clearFiltersButtonDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
   },
   resultsInfo: {
     marginBottom: "24px",

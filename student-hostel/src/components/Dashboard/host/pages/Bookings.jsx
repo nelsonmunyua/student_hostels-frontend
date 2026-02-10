@@ -1,6 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 
 const HostBookings = () => {
+  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
   const [bookings] = useState([
     {
       id: "BK001",
@@ -55,6 +62,32 @@ const HostBookings = () => {
     }
   };
 
+  // Filter bookings based on status
+  const filteredBookings = statusFilter === "all"
+    ? bookings
+    : bookings.filter(b => b.status === statusFilter);
+
+  // Modal handlers
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    setShowDetailsModal(true);
+  };
+
+  const handleAccept = (booking) => {
+    alert(`Booking ${booking.id} accepted! Status updated to confirmed.`);
+  };
+
+  const handleReject = (booking) => {
+    if (confirm(`Are you sure you want to reject booking ${booking.id}?`)) {
+      alert(`Booking ${booking.id} rejected. Guest will be notified.`);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedBooking(null);
+    setShowDetailsModal(false);
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -63,7 +96,11 @@ const HostBookings = () => {
           <p style={styles.subtitle}>Manage your property bookings</p>
         </div>
         <div style={styles.headerActions}>
-          <select style={styles.filterSelect}>
+          <select
+            style={styles.filterSelect}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="confirmed">Confirmed</option>
@@ -109,7 +146,7 @@ const HostBookings = () => {
             </tr>
           </thead>
           <tbody>
-            {bookings.map((booking) => {
+            {filteredBookings.map((booking) => {
               const statusColor = getStatusColor(booking.status);
               return (
                 <tr key={booking.id} style={styles.tableRow}>
@@ -144,11 +181,26 @@ const HostBookings = () => {
                   </td>
                   <td style={styles.td}>
                     <div style={styles.actions}>
-                      <button style={styles.viewBtn}>View</button>
+                      <button
+                        style={styles.viewBtn}
+                        onClick={() => handleViewDetails(booking)}
+                      >
+                        View
+                      </button>
                       {booking.status === "pending" && (
                         <>
-                          <button style={styles.acceptBtn}>Accept</button>
-                          <button style={styles.rejectBtn}>Reject</button>
+                          <button
+                            style={styles.acceptBtn}
+                            onClick={() => handleAccept(booking)}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            style={styles.rejectBtn}
+                            onClick={() => handleReject(booking)}
+                          >
+                            Reject
+                          </button>
                         </>
                       )}
                     </div>
@@ -164,7 +216,7 @@ const HostBookings = () => {
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Upcoming Arrivals</h2>
         <div style={styles.arrivalsGrid}>
-          {bookings
+          {filteredBookings
             .filter((b) => b.status === "confirmed" || b.status === "pending")
             .map((booking) => (
               <div key={booking.id} style={styles.arrivalCard}>
@@ -193,12 +245,96 @@ const HostBookings = () => {
                 </div>
                 <div style={styles.arrivalFooter}>
                   <span style={styles.arrivalAmount}>${booking.amount}</span>
-                  <button style={styles.arrivalBtn}>Details</button>
+                  <button
+                    style={styles.arrivalBtn}
+                    onClick={() => handleViewDetails(booking)}
+                  >
+                    Details
+                  </button>
                 </div>
               </div>
             ))}
         </div>
       </div>
+
+      {/* Booking Details Modal */}
+      {showDetailsModal && selectedBooking && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Booking Details</h2>
+              <button style={styles.closeBtn} onClick={handleCloseModal}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={styles.modalContent}>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Booking ID:</span>
+                <span style={styles.detailValue}>{selectedBooking.id}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Guest:</span>
+                <span style={styles.detailValue}>{selectedBooking.guest}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Property:</span>
+                <span style={styles.detailValue}>{selectedBooking.property}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Check-in:</span>
+                <span style={styles.detailValue}>{selectedBooking.checkIn}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Check-out:</span>
+                <span style={styles.detailValue}>{selectedBooking.checkOut}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Amount:</span>
+                <span style={styles.detailValue}>${selectedBooking.amount}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Status:</span>
+                <span
+                  style={{
+                    ...styles.statusBadge,
+                    backgroundColor: getStatusColor(selectedBooking.status).bg,
+                    color: getStatusColor(selectedBooking.status).color,
+                  }}
+                >
+                  {selectedBooking.status}
+                </span>
+              </div>
+            </div>
+            <div style={styles.modalFooter}>
+              <button style={styles.cancelBtn} onClick={handleCloseModal}>
+                Close
+              </button>
+              {selectedBooking.status === "pending" && (
+                <>
+                  <button
+                    style={styles.acceptBtn}
+                    onClick={() => {
+                      handleAccept(selectedBooking);
+                      handleCloseModal();
+                    }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    style={styles.rejectBtn}
+                    onClick={() => {
+                      handleReject(selectedBooking);
+                      handleCloseModal();
+                    }}
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn {
@@ -471,6 +607,82 @@ const styles = {
     fontSize: "13px",
     fontWeight: "500",
     cursor: "pointer",
+  },
+  // Modal styles
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: "#ffffff",
+    borderRadius: "16px",
+    width: "100%",
+    maxWidth: "480px",
+    maxHeight: "90vh",
+    overflow: "auto",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    borderBottom: "1px solid #e2e8f0",
+  },
+  modalTitle: {
+    fontSize: "20px",
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  closeBtn: {
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    padding: "4px",
+    color: "#64748b",
+  },
+  modalContent: {
+    padding: "20px",
+  },
+  modalFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+    padding: "20px",
+    borderTop: "1px solid #e2e8f0",
+  },
+  cancelBtn: {
+    padding: "10px 20px",
+    backgroundColor: "#f1f5f9",
+    color: "#64748b",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  detailRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "12px 0",
+    borderBottom: "1px solid #f1f5f9",
+  },
+  detailLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  detailValue: {
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#1e293b",
   },
 };
 
