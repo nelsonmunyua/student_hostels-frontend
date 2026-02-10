@@ -13,6 +13,7 @@ import {
   User,
   X,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
 
 const Users = () => {
@@ -246,6 +247,13 @@ const Users = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Validate required fields
+    if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.phone || !newUser.password) {
+      toast.error("Please fill in all required fields");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const userData = {
         first_name: newUser.firstName,
@@ -257,7 +265,7 @@ const Users = () => {
       };
 
       await adminApi.createUser(userData);
-      alert("User added successfully!");
+      toast.success("User added successfully!");
       
       // Refresh list
       const data = await adminApi.getUsers();
@@ -274,7 +282,7 @@ const Users = () => {
       });
     } catch (error) {
       console.error("Failed to add user:", error);
-      alert("Failed to add user. Please try again.");
+      toast.error(error.response?.data?.message || "Failed to add user. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -290,14 +298,14 @@ const Users = () => {
   const handleToggleUserStatus = async (user) => {
     try {
       await adminApi.toggleUserStatus(user.id);
-      alert(`User ${user.status === 'active' ? 'deactivated' : 'activated'} successfully!`);
+      toast.success(`User ${user.status === 'active' ? 'deactivated' : 'activated'} successfully!`);
       
       // Refresh list
       const data = await adminApi.getUsers();
       setUsers(data);
     } catch (error) {
       console.error("Failed to update user status:", error);
-      alert("Failed to update user status. Please try again.");
+      toast.error("Failed to update user status. Please try again.");
     }
   };
 
@@ -316,14 +324,14 @@ const Users = () => {
     ) {
       try {
         await adminApi.deleteUser(user.id);
-        alert("User deleted successfully!");
+        toast.success("User deleted successfully!");
         
         // Refresh list
         const data = await adminApi.getUsers();
         setUsers(data);
       } catch (error) {
         console.error("Failed to delete user:", error);
-        alert("Failed to delete user. Please try again.");
+        toast.error("Failed to delete user. Please try again.");
       }
     }
   };
@@ -548,6 +556,8 @@ const Users = () => {
                     type="text"
                     style={styles.input}
                     placeholder="Enter first name"
+                    value={newUser.firstName}
+                    onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                   />
                 </div>
                 <div style={styles.formGroup}>
@@ -556,6 +566,8 @@ const Users = () => {
                     type="text"
                     style={styles.input}
                     placeholder="Enter last name"
+                    value={newUser.lastName}
+                    onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                   />
                 </div>
               </div>
@@ -567,6 +579,8 @@ const Users = () => {
                     type="email"
                     style={styles.inputWithIcon}
                     placeholder="Enter email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   />
                 </div>
               </div>
@@ -576,15 +590,31 @@ const Users = () => {
                   type="tel"
                   style={styles.input}
                   placeholder="Enter phone number"
+                  value={newUser.phone}
+                  onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Role</label>
-                <select style={styles.select}>
+                <select
+                  style={styles.select}
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                >
                   <option value="student">Student</option>
                   <option value="host">Host</option>
                   <option value="admin">Admin</option>
                 </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Password</label>
+                <input
+                  type="password"
+                  style={styles.input}
+                  placeholder="Enter password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
               </div>
             </div>
             <div style={styles.modalFooter}>

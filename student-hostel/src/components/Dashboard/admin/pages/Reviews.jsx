@@ -16,6 +16,7 @@ import {
   ThumbsDown,
   Flag,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
 
 const Reviews = () => {
@@ -288,14 +289,14 @@ const Reviews = () => {
     setIsProcessing(true);
     try {
       await adminApi.updateReviewStatus(review.id, "approve");
-      alert(`Review #${review.id} approved successfully!`);
+      toast.success(`Review #${review.id} approved successfully!`);
       
       // Refresh list
       const data = await adminApi.getReviews();
       setReviews(data);
     } catch (error) {
       console.error("Failed to approve review:", error);
-      alert("Failed to approve review. Please try again.");
+      toast.error("Failed to approve review. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -309,14 +310,14 @@ const Reviews = () => {
       setIsProcessing(true);
       try {
         await adminApi.updateReviewStatus(review.id, "reject");
-        alert(`Review #${review.id} rejected!`);
+        toast.success(`Review #${review.id} rejected!`);
         
         // Refresh list
         const data = await adminApi.getReviews();
         setReviews(data);
       } catch (error) {
         console.error("Failed to reject review:", error);
-        alert("Failed to reject review. Please try again.");
+        toast.error("Failed to reject review. Please try again.");
       } finally {
         setIsProcessing(false);
       }
@@ -331,14 +332,14 @@ const Reviews = () => {
       setIsProcessing(true);
       try {
         await adminApi.deleteReview(review.id);
-        alert("Review deleted successfully!");
+        toast.success("Review deleted successfully!");
         
         // Refresh list
         const data = await adminApi.getReviews();
         setReviews(data);
       } catch (error) {
         console.error("Failed to delete review:", error);
-        alert("Failed to delete review. Please try again.");
+        toast.error("Failed to delete review. Please try again.");
       } finally {
         setIsProcessing(false);
       }
@@ -351,7 +352,7 @@ const Reviews = () => {
       setIsProcessing(true);
       try {
         await adminApi.updateReviewStatus(selectedReview.id, "approve");
-        alert(`Review #${selectedReview.id} approved successfully!`);
+        toast.success(`Review #${selectedReview.id} approved successfully!`);
         setShowViewModal(false);
         setSelectedReview(null);
         
@@ -360,7 +361,7 @@ const Reviews = () => {
         setReviews(data);
       } catch (error) {
         console.error("Failed to approve review:", error);
-        alert("Failed to approve review. Please try again.");
+        toast.error("Failed to approve review. Please try again.");
       } finally {
         setIsProcessing(false);
       }
@@ -374,7 +375,7 @@ const Reviews = () => {
         setIsProcessing(true);
         try {
           await adminApi.updateReviewStatus(selectedReview.id, "reject");
-          alert(`Review #${selectedReview.id} rejected!`);
+          toast.success(`Review #${selectedReview.id} rejected!`);
           setShowViewModal(false);
           setSelectedReview(null);
           
@@ -383,7 +384,7 @@ const Reviews = () => {
           setReviews(data);
         } catch (error) {
           console.error("Failed to reject review:", error);
-          alert("Failed to reject review. Please try again.");
+          toast.error("Failed to reject review. Please try again.");
         } finally {
           setIsProcessing(false);
         }

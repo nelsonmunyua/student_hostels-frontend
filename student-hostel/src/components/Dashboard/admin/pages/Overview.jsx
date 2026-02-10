@@ -10,12 +10,76 @@ import {
   Clock,
   ArrowUpRight,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
+
+// Helper function to format time difference
+const formatTimeAgo = (dateString) => {
+  if (!dateString) return "Unknown time";
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Unknown time";
+  
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return "Just now";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  
+  return date.toLocaleDateString();
+};
+
+// Default mock data for initial render
+const defaultRecentActivity = [
+  {
+    id: 1,
+    user: "John Doe",
+    action: "Booked a room",
+    hostel: "University View Hostel",
+    time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    type: "booking",
+  },
+  {
+    id: 2,
+    user: "Jane Smith",
+    action: "Registered as student",
+    hostel: "-",
+    time: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    type: "registration",
+  },
+  {
+    id: 3,
+    user: "Mike Johnson",
+    action: "Left a review",
+    hostel: "Central Student Living",
+    time: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    type: "review",
+  },
+  {
+    id: 4,
+    user: "Sarah Wilson",
+    action: "Updated profile",
+    hostel: "-",
+    time: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+    type: "profile",
+  },
+  {
+    id: 5,
+    user: "Tom Brown",
+    action: "Booked a room",
+    hostel: "Campus Edge Apartments",
+    time: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+    type: "booking",
+  },
+];
 
 const Overview = () => {
   const navigate = useNavigate();
   const [isExporting, setIsExporting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState(defaultRecentActivity);
   const [stats, setStats] = useState({
     users: 0,
     hostels: 0,
@@ -38,6 +102,10 @@ const Overview = () => {
         setLoading(true);
         const data = await adminApi.getDashboardStats();
         setStats(data);
+        // Update recent activity from API if available
+        if (data.recent_activity && Array.isArray(data.recent_activity) && data.recent_activity.length > 0) {
+          setRecentActivity(data.recent_activity);
+        }
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
         // Keep default values on error
@@ -77,7 +145,7 @@ const Overview = () => {
     },
     {
       label: "Revenue",
-      value: loading ? "..." : `$${(stats.revenue || 0).toLocaleString()}`,
+      value: loading ? "..." : `Ksh ${(stats.revenue || 0).toLocaleString()}`,
       change: "+18%",
       icon: DollarSign,
       color: "#059669",
@@ -85,51 +153,7 @@ const Overview = () => {
     },
   ];
 
-  // Mock data for recent activity (in real app, fetch from API)
-  const recentActivity = [
-    {
-      id: 1,
-      user: "John Doe",
-      action: "Booked a room",
-      hostel: "University View Hostel",
-      time: "2 hours ago",
-      type: "booking",
-    },
-    {
-      id: 2,
-      user: "Jane Smith",
-      action: "Registered as student",
-      hostel: "-",
-      time: "3 hours ago",
-      type: "registration",
-    },
-    {
-      id: 3,
-      user: "Mike Johnson",
-      action: "Left a review",
-      hostel: "Central Student Living",
-      time: "5 hours ago",
-      type: "review",
-    },
-    {
-      id: 4,
-      user: "Sarah Wilson",
-      action: "Updated profile",
-      hostel: "-",
-      time: "6 hours ago",
-      type: "profile",
-    },
-    {
-      id: 5,
-      user: "Tom Brown",
-      action: "Booked a room",
-      hostel: "Campus Edge Apartments",
-      time: "8 hours ago",
-      type: "booking",
-    },
-  ];
-
-  // Mock data for quick actions
+  // Quick actions data
   const quickActions = [
     {
       label: "Add New Hostel",
@@ -163,10 +187,10 @@ const Overview = () => {
       setIsExporting(true);
       // In real app, this would call an API endpoint
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      alert("Report exported successfully! (Demo)");
+      toast.success("Report exported successfully! (Demo)");
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Failed to export report");
+      toast.error("Failed to export report");
     } finally {
       setIsExporting(false);
     }
@@ -176,7 +200,7 @@ const Overview = () => {
   const handleQuickAction = (action) => {
     switch (action) {
       case "add-hostel":
-        navigate("/admin/accommodations", { state: { showAddModal: true } });
+        navigate("/admin/listings", { state: { showAddModal: true } });
         break;
       case "view-users":
         navigate("/admin/users");
@@ -290,7 +314,7 @@ const Overview = () => {
                   {activity.hostel !== "-" && (
                     <span style={styles.activityHostel}>{activity.hostel}</span>
                   )}
-                  <span style={styles.activityTime}>{activity.time}</span>
+                  <span style={styles.activityTime}>{formatTimeAgo(activity.time)}</span>
                 </div>
               </div>
             ))}

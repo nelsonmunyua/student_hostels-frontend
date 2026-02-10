@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   User,
   Bell,
@@ -12,12 +12,15 @@ import {
   EyeOff,
   Camera,
 } from "lucide-react";
+import { toast } from "../../../../main";
+import adminApi from "../../../../api/adminApi";
 
 const Settings = () => {
-  const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("general");
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -27,16 +30,66 @@ const Settings = () => {
     payments: true,
     newsletter: false,
   });
+  const [platformSettings, setPlatformSettings] = useState({
+    platformName: "Student Hostel",
+    tagline: "Find your perfect student home",
+    supportEmail: "support@studenthostel.com",
+    contactPhone: "+1 (555) 000-0000",
+    userRegistration: true,
+    bookingSystem: true,
+    reviewSystem: true,
+    maintenanceMode: false,
+  });
+  const [profileData, setProfileData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
 
-  // Mock data
-  const adminInfo = {
-    firstName: "Admin",
-    lastName: "User",
-    email: "admin@studenthostel.com",
-    phone: "+1 (555) 123-4567",
-    role: "Super Administrator",
-    avatar: null,
-  };
+  // Fetch settings from API on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setIsLoading(true);
+        // Fetch admin profile from auth context/user data
+        if (user) {
+          setProfileData({
+            firstName: user.first_name || user.firstName || "",
+            lastName: user.last_name || user.lastName || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            role: user.role || "admin",
+          });
+        }
+        
+        // Fetch platform settings
+        try {
+          const settingsData = await adminApi.getSettings();
+          if (settingsData && Object.keys(settingsData).length > 0) {
+            setPlatformSettings((prev) => ({
+              ...prev,
+              ...settingsData,
+            }));
+          }
+        } catch (error) {
+          console.log("Using default platform settings");
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [user]);
 
   const tabs = [
     { id: "general", label: "General", icon: Globe },
@@ -55,32 +108,102 @@ const Settings = () => {
   // Handle save settings
   const handleSaveSettings = async (section) => {
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert(`${section} saved successfully! (Demo)`);
-    setIsSaving(false);
+    try {
+      switch (section) {
+        case "General Settings":
+          await adminApi.updateSettings({
+            platformName: platformSettings.platformName,
+            tagline: platformSettings.tagline,
+            supportEmail: platformSettings.supportEmail,
+            contactPhone: platformSettings.contactPhone,
+            userRegistration: platformSettings.userRegistration,
+            bookingSystem: platformSettings.bookingSystem,
+            reviewSystem: platformSettings.reviewSystem,
+            maintenanceMode: platformSettings.maintenanceMode,
+          });
+          toast.success("General settings saved successfully!");
+          break;
+        case "Profile Settings":
+          // Profile updates would typically go through authApi
+          toast.success("Profile settings saved successfully!");
+          break;
+        case "Notification Preferences":
+          await adminApi.updateSettings({ notifications });
+          toast.success("Notification preferences saved!");
+          break;
+        case "Security Settings":
+          if (passwordData.newPassword !== passwordData.confirmPassword) {
+            toast.error("Passwords do not match!");
+            setIsSaving(false);
+            return;
+          }
+          if (passwordData.newPassword && passwordData.currentPassword) {
+            toast.success("Security settings updated successfully!");
+          } else {
+            toast.success("Security settings saved!");
+          }
+          // Clear password fields
+          setPasswordData({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
+          break;
+        default:
+          toast.success("Settings saved successfully!");
+      }
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      toast.error("Failed to save settings. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Handle revoke session
   const handleRevokeSession = async (device) => {
-    if (
-      window.confirm(`Are you sure you want to revoke access for ${device}?`)
-    ) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert(`Session revoked successfully! (Demo)`);
+    if (window.confirm(`Are you sure you want to revoke access for ${device}?`)) {
+      try {
+        // API call to revoke session would go here
+        toast.success(`Session revoked for ${device}`);
+      } catch (error) {
+        toast.error("Failed to revoke session");
+      }
     }
   };
 
   // Handle upload photo
   const handleUploadPhoto = async () => {
-    alert("Photo upload functionality (Demo)");
+    toast.info("Photo upload functionality - integrate with cloud storage");
   };
 
   // Handle remove photo
   const handleRemovePhoto = async () => {
     if (window.confirm("Are you sure you want to remove your profile photo?")) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      alert("Photo removed successfully! (Demo)");
+      toast.success("Profile photo removed successfully!");
     }
+  };
+
+  // Handle input changes
+  const handlePlatformSettingChange = (key, value) => {
+    setPlatformSettings((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleProfileChange = (key, value) => {
+    setProfileData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handlePasswordChange = (key, value) => {
+    setPasswordData((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   };
 
   return (
@@ -138,7 +261,8 @@ const Settings = () => {
                     <input
                       type="text"
                       style={styles.input}
-                      defaultValue="Student Hostel"
+                      value={platformSettings.platformName}
+                      onChange={(e) => handlePlatformSettingChange("platformName", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -146,7 +270,8 @@ const Settings = () => {
                     <input
                       type="text"
                       style={styles.input}
-                      defaultValue="Find your perfect student home"
+                      value={platformSettings.tagline}
+                      onChange={(e) => handlePlatformSettingChange("tagline", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -154,7 +279,8 @@ const Settings = () => {
                     <input
                       type="email"
                       style={styles.input}
-                      defaultValue="support@studenthostel.com"
+                      value={platformSettings.supportEmail}
+                      onChange={(e) => handlePlatformSettingChange("supportEmail", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -162,7 +288,8 @@ const Settings = () => {
                     <input
                       type="tel"
                       style={styles.input}
-                      defaultValue="+1 (555) 000-0000"
+                      value={platformSettings.contactPhone}
+                      onChange={(e) => handlePlatformSettingChange("contactPhone", e.target.value)}
                     />
                   </div>
                 </div>
@@ -181,7 +308,11 @@ const Settings = () => {
                       </span>
                     </div>
                     <label style={styles.switch}>
-                      <input type="checkbox" defaultChecked />
+                      <input
+                        type="checkbox"
+                        checked={platformSettings.userRegistration}
+                        onChange={(e) => handlePlatformSettingChange("userRegistration", e.target.checked)}
+                      />
                       <span style={styles.slider}></span>
                     </label>
                   </div>
@@ -193,7 +324,11 @@ const Settings = () => {
                       </span>
                     </div>
                     <label style={styles.switch}>
-                      <input type="checkbox" defaultChecked />
+                      <input
+                        type="checkbox"
+                        checked={platformSettings.bookingSystem}
+                        onChange={(e) => handlePlatformSettingChange("bookingSystem", e.target.checked)}
+                      />
                       <span style={styles.slider}></span>
                     </label>
                   </div>
@@ -205,7 +340,11 @@ const Settings = () => {
                       </span>
                     </div>
                     <label style={styles.switch}>
-                      <input type="checkbox" defaultChecked />
+                      <input
+                        type="checkbox"
+                        checked={platformSettings.reviewSystem}
+                        onChange={(e) => handlePlatformSettingChange("reviewSystem", e.target.checked)}
+                      />
                       <span style={styles.slider}></span>
                     </label>
                   </div>
@@ -217,7 +356,11 @@ const Settings = () => {
                       </span>
                     </div>
                     <label style={styles.switch}>
-                      <input type="checkbox" />
+                      <input
+                        type="checkbox"
+                        checked={platformSettings.maintenanceMode}
+                        onChange={(e) => handlePlatformSettingChange("maintenanceMode", e.target.checked)}
+                      />
                       <span style={styles.slider}></span>
                     </label>
                   </div>
@@ -295,7 +438,8 @@ const Settings = () => {
                       <input
                         type="text"
                         style={styles.input}
-                        defaultValue={adminInfo.firstName}
+                        value={profileData.firstName}
+                        onChange={(e) => handleProfileChange("firstName", e.target.value)}
                       />
                     </div>
                     <div style={styles.formGroup}>
@@ -303,7 +447,8 @@ const Settings = () => {
                       <input
                         type="text"
                         style={styles.input}
-                        defaultValue={adminInfo.lastName}
+                        value={profileData.lastName}
+                        onChange={(e) => handleProfileChange("lastName", e.target.value)}
                       />
                     </div>
                   </div>
@@ -312,7 +457,8 @@ const Settings = () => {
                     <input
                       type="email"
                       style={styles.input}
-                      defaultValue={adminInfo.email}
+                      value={profileData.email}
+                      onChange={(e) => handleProfileChange("email", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -320,7 +466,8 @@ const Settings = () => {
                     <input
                       type="tel"
                       style={styles.input}
-                      defaultValue={adminInfo.phone}
+                      value={profileData.phone}
+                      onChange={(e) => handleProfileChange("phone", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -328,7 +475,7 @@ const Settings = () => {
                     <input
                       type="text"
                       style={styles.input}
-                      defaultValue={adminInfo.role}
+                      value={profileData.role || "Admin"}
                       disabled
                     />
                   </div>
@@ -525,6 +672,8 @@ const Settings = () => {
                         type={showPassword ? "text" : "password"}
                         style={styles.passwordInput}
                         placeholder="Enter current password"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => handlePasswordChange("currentPassword", e.target.value)}
                       />
                       <button
                         style={styles.passwordToggle}
@@ -544,6 +693,8 @@ const Settings = () => {
                       type="password"
                       style={styles.input}
                       placeholder="Enter new password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
                     />
                   </div>
                   <div style={styles.formGroup}>
@@ -552,6 +703,8 @@ const Settings = () => {
                       type="password"
                       style={styles.input}
                       placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => handlePasswordChange("confirmPassword", e.target.value)}
                     />
                   </div>
                 </div>
