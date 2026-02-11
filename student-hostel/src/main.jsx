@@ -1,14 +1,20 @@
+import React, { useEffect, useRef, Component } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
-import React, { useEffect, Component } from "react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import store from "./redux/store";
 import { getCurrentUser } from "./redux/slices/Thunks/authThunks";
 import "./index.css";
 import "./App.css";
 import App from "./App.jsx";
 
-// Error Boundary Component - catches React errors gracefully
+// Export toast for use in components
+export { toast };
+
+// Error Boundary Component
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -43,7 +49,7 @@ class ErrorBoundary extends Component {
             Oops! Something went wrong
           </h1>
           <p style={{ marginBottom: "1.5rem", opacity: 0.9 }}>
-            We're sorry for the inconvenience. Please try refreshing the page.
+            Please refresh the page.
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -60,22 +66,6 @@ class ErrorBoundary extends Component {
           >
             Refresh Page
           </button>
-          {import.meta.env.DEV && this.state.error && (
-            <pre
-              style={{
-                marginTop: "20px",
-                padding: "16px",
-                backgroundColor: "rgba(0,0,0,0.3)",
-                borderRadius: "8px",
-                textAlign: "left",
-                maxWidth: "600px",
-                overflow: "auto",
-                fontSize: "12px",
-              }}
-            >
-              {this.state.error.toString()}
-            </pre>
-          )}
         </div>
       );
     }
@@ -83,46 +73,29 @@ class ErrorBoundary extends Component {
   }
 }
 
-// Non-blocking Auth initialization component
-// Renders immediately and checks auth in background
+// Auth initialization component
 const AuthInitializer = ({ children }) => {
+  const initialized = useRef(false);
+
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
-
-      if (!token) {
-        return;
-      }
-
-      if (token.startsWith("mock-token-")) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        localStorage.removeItem("refreshToken");
-        return;
-      }
+      if (!token) return;
 
       try {
-        // Use a timeout to prevent hanging on slow API
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
         await store.dispatch(getCurrentUser());
-        clearTimeout(timeoutId);
       } catch (error) {
         console.warn("Auth check failed:", error.message);
-        // Only clear tokens for actual auth failures, not for timeouts
-        if (error.name !== "AbortError") {
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("user");
-        }
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
       }
     };
 
-    // Small delay to let initial render complete
-    const timer = setTimeout(checkAuth, 100);
-
-    return () => clearTimeout(timer);
+    checkAuth();
   }, []);
 
   return children;
@@ -134,10 +107,11 @@ createRoot(document.getElementById("root")).render(
       <Provider store={store}>
         <BrowserRouter>
           <AuthInitializer>
+            <ToastContainer position="top-right" autoClose={3000} />
             <App />
           </AuthInitializer>
         </BrowserRouter>
       </Provider>
     </ErrorBoundary>
-  </React.StrictMode>,
+  </React.StrictMode>
 );

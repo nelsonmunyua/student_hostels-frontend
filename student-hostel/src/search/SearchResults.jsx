@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { searchAccommodations } from "../redux/slices/Thunks/accommodationThunks";
+import { toggleWishlist } from "../redux/slices/Thunks/wishlistThunks";
 import { setFilters, setPagination } from "../redux/slices/accommodationSlice";
 import {
   MapPin,
@@ -79,9 +80,11 @@ const getFallbackImage = (id) => {
 
 const SearchResults = ({ viewMode = "grid", onViewModeChange }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { searchResults, error, pagination, filters } = useSelector(
     (state) => state.accommodation,
   );
+  const { user } = useSelector((state) => state.auth);
 
   const [selectedForCompare, setSelectedForCompare] = useState([]);
   const [showQuickView, setShowQuickView] = useState(null);
@@ -207,8 +210,12 @@ const SearchResults = ({ viewMode = "grid", onViewModeChange }) => {
   };
 
   // Handle wishlist toggle
-  const toggleWishlist = (accommodationId) => {
-    console.log("Toggle wishlist:", accommodationId);
+  const handleWishlistToggle = (accommodationId) => {
+    if (!user) {
+      navigate("/signup");
+      return;
+    }
+    dispatch(toggleWishlist(accommodationId));
   };
 
   // Sort options
@@ -454,7 +461,7 @@ const SearchResults = ({ viewMode = "grid", onViewModeChange }) => {
                 <div className="action-buttons">
                   <button
                     className="wishlist-icon-btn"
-                    onClick={() => toggleWishlist(accommodation.id)}
+                    onClick={() => handleWishlistToggle(accommodation.id)}
                   >
                     <Heart size={18} />
                   </button>

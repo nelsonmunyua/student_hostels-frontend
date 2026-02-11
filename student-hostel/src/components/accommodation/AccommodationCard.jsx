@@ -88,7 +88,7 @@ const AccommodationCard = ({ accommodation, layout = "grid" }) => {
   const handleWishlistClick = (e) => {
     e.stopPropagation();
     if (!user) {
-      navigate("/login");
+      navigate("/signup");
       return;
     }
     dispatch(toggleWishlist(accommodation.id));

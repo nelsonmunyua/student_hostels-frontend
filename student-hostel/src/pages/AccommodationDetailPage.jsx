@@ -106,7 +106,13 @@ const AccommodationDetailPage = () => {
           </button>
           <button
             style={styles.iconButton}
-            onClick={() => dispatch(toggleWishlist(id))}
+            onClick={() => {
+              if (!user) {
+                navigate("/signup");
+                return;
+              }
+              dispatch(toggleWishlist(id));
+            }}
           >
             <Heart
               size={20}

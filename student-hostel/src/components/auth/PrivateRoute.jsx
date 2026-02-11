@@ -7,7 +7,7 @@ const PrivateRoute = ({ children, roles = [] }) => {
   const { user, isAuthenticated } = useSelector((state) => state.auth);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/signup" state={{ from: location }} replace />;
   }
 
   if (roles.length > 0 && !roles.includes(user?.role)) {
