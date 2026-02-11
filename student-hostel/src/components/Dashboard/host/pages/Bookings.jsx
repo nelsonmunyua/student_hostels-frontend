@@ -1,631 +1,650 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Eye,
+  Check,
+  X,
+  MessageSquare,
+  Calendar,
+  MapPin,
+  Users,
+  DollarSign,
+} from "lucide-react";
+import {
+  fetchHostBookings,
+  acceptBooking,
+  rejectBooking,
+} from "../../../../redux/slices/Thunks/bookingThunks";
 
 const HostBookings = () => {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const dispatch = useDispatch();
+  const { hostBookings, loading, error, successMessage } = useSelector(
+    (state) => state.booking,
+  );
 
-  const [bookings] = useState([
-    {
-      id: "BK001",
-      guest: "John Smith",
-      property: "University View Hostel",
-      checkIn: "2024-02-15",
-      checkOut: "2024-02-28",
-      status: "confirmed",
-      amount: 1170,
-    },
-    {
-      id: "BK002",
-      guest: "Emily Johnson",
-      property: "Central Student Living",
-      checkIn: "2024-02-20",
-      checkOut: "2024-03-05",
-      status: "pending",
-      amount: 570,
-    },
-    {
-      id: "BK003",
-      guest: "Michael Brown",
-      property: "University View Hostel",
-      checkIn: "2024-02-10",
-      checkOut: "2024-02-12",
-      status: "completed",
-      amount: 450,
-    },
-    {
-      id: "BK004",
-      guest: "Sarah Davis",
-      property: "Campus Edge Apartments",
-      checkIn: "2024-03-01",
-      checkOut: "2024-03-15",
-      status: "pending",
-      amount: 780,
-    },
-  ]);
+  const [filter, setFilter] = useState("all");
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [localError, setLocalError] = useState(null);
+  const [localSuccess, setLocalSuccess] = useState(null);
+
+  // Fetch host bookings on mount
+  useEffect(() => {
+    dispatch(fetchHostBookings());
+  }, [dispatch]);
+
+  // Handle Redux error/success messages
+  useEffect(() => {
+    if (error) {
+      setLocalError(error);
+      setTimeout(() => setLocalError(null), 5000);
+    }
+    if (successMessage) {
+      setLocalSuccess(successMessage);
+      setTimeout(() => setLocalSuccess(null), 5000);
+    }
+  }, [error, successMessage]);
+
+  // Use Redux data only - no mock fallback
+  const bookings = hostBookings || [];
+  const filteredBookings =
+    filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "confirmed":
-        return { bg: "#dcfce7", color: "#16a34a" };
-      case "pending":
-        return { bg: "#fef3c7", color: "#d97706" };
-      case "completed":
-        return { bg: "#f3f4f6", color: "#6b7280" };
-      case "cancelled":
-        return { bg: "#fee2e2", color: "#dc2626" };
-      default:
-        return { bg: "#f3f4f6", color: "#6b7280" };
+    const colors = {
+      confirmed: { bg: "#dcfce7", text: "#16a34a" },
+      pending: { bg: "#fef9c3", text: "#ca8a04" },
+      completed: { bg: "#e0f2fe", text: "#0284c7" },
+      cancelled: { bg: "#fee2e2", text: "#dc2626" },
+    };
+    return colors[status] || colors.pending;
+  };
+
+  const handleConfirm = async (id) => {
+    try {
+      await dispatch(acceptBooking(id));
+      setLocalSuccess(`Booking #${id} confirmed successfully!`);
+      setSelectedBooking(null);
+    } catch (err) {
+      setLocalError("Failed to confirm booking");
     }
   };
 
-  // Filter bookings based on status
-  const filteredBookings = statusFilter === "all"
-    ? bookings
-    : bookings.filter(b => b.status === statusFilter);
-
-  // Modal handlers
-  const handleViewDetails = (booking) => {
-    setSelectedBooking(booking);
-    setShowDetailsModal(true);
-  };
-
-  const handleAccept = (booking) => {
-    alert(`Booking ${booking.id} accepted! Status updated to confirmed.`);
-  };
-
-  const handleReject = (booking) => {
-    if (confirm(`Are you sure you want to reject booking ${booking.id}?`)) {
-      alert(`Booking ${booking.id} rejected. Guest will be notified.`);
+  const handleReject = async (id) => {
+    if (window.confirm("Are you sure you want to reject this booking?")) {
+      try {
+        await dispatch(rejectBooking({ id, reason: "Rejected by host" }));
+        setLocalSuccess(`Booking #${id} rejected`);
+        setSelectedBooking(null);
+      } catch (err) {
+        setLocalError("Failed to reject booking");
+      }
     }
-  };
-
-  const handleCloseModal = () => {
-    setSelectedBooking(null);
-    setShowDetailsModal(false);
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Bookings Management</h1>
+          <h1 style={styles.title}>Bookings</h1>
           <p style={styles.subtitle}>Manage your property bookings</p>
-        </div>
-        <div style={styles.headerActions}>
-          <select
-            style={styles.filterSelect}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div style={styles.statsRow}>
+      {/* Stats */}
+      <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <span style={styles.statValue}>{bookings.length}</span>
-          <span style={styles.statLabel}>Total Bookings</span>
+          <div style={styles.statIcon}>
+            <Calendar size={24} />
+          </div>
+          <div>
+            <span style={styles.statValue}>{bookings.length}</span>
+            <span style={styles.statLabel}>Total Bookings</span>
+          </div>
         </div>
         <div style={styles.statCard}>
-          <span style={styles.statValue}>3</span>
-          <span style={styles.statLabel}>Pending</span>
+          <div style={{ ...styles.statIcon, ...styles.statPending }}>
+            <ClockIcon />
+          </div>
+          <div>
+            <span style={styles.statValue}>
+              {bookings.filter((b) => b.status === "pending").length}
+            </span>
+            <span style={styles.statLabel}>Pending</span>
+          </div>
         </div>
         <div style={styles.statCard}>
-          <span style={styles.statValue}>2</span>
-          <span style={styles.statLabel}>This Week</span>
+          <div style={{ ...styles.statIcon, ...styles.statConfirmed }}>
+            <Check size={24} />
+          </div>
+          <div>
+            <span style={styles.statValue}>
+              {bookings.filter((b) => b.status === "confirmed").length}
+            </span>
+            <span style={styles.statLabel}>Confirmed</span>
+          </div>
         </div>
         <div style={styles.statCard}>
-          <span style={styles.statValue}>$2,970</span>
-          <span style={styles.statLabel}>Revenue</span>
+          <div style={{ ...styles.statIcon, ...styles.statRevenue }}>
+            <DollarSign size={24} />
+          </div>
+          <div>
+            <span style={styles.statValue}>
+              KSh{" "}
+              {bookings
+                .filter((b) => b.status !== "cancelled")
+                .reduce((acc, b) => acc + b.total_price, 0)
+                .toLocaleString()}
+            </span>
+            <span style={styles.statLabel}>Revenue</span>
+          </div>
         </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div style={styles.filterTabs}>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "all" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("all")}
+        >
+          All ({bookings.length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "pending" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("pending")}
+        >
+          Pending ({bookings.filter((b) => b.status === "pending").length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "confirmed" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("confirmed")}
+        >
+          Confirmed ({bookings.filter((b) => b.status === "confirmed").length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "completed" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("completed")}
+        >
+          Completed ({bookings.filter((b) => b.status === "completed").length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "cancelled" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("cancelled")}
+        >
+          Cancelled ({bookings.filter((b) => b.status === "cancelled").length})
+        </button>
       </div>
 
       {/* Bookings Table */}
-      <div style={styles.tableContainer}>
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.tableHeader}>
-              <th style={styles.th}>Booking ID</th>
-              <th style={styles.th}>Guest</th>
-              <th style={styles.th}>Property</th>
-              <th style={styles.th}>Check-in</th>
-              <th style={styles.th}>Check-out</th>
-              <th style={styles.th}>Amount</th>
-              <th style={styles.th}>Status</th>
-              <th style={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBookings.map((booking) => {
-              const statusColor = getStatusColor(booking.status);
-              return (
-                <tr key={booking.id} style={styles.tableRow}>
-                  <td style={styles.td}>
-                    <span style={styles.bookingId}>{booking.id}</span>
-                  </td>
-                  <td style={styles.td}>
-                    <div style={styles.guestCell}>
-                      <span style={styles.guestAvatar}>
-                        {booking.guest.charAt(0)}
-                      </span>
-                      <span style={styles.guestName}>{booking.guest}</span>
-                    </div>
-                  </td>
-                  <td style={styles.td}>{booking.property}</td>
-                  <td style={styles.td}>{booking.checkIn}</td>
-                  <td style={styles.td}>{booking.checkOut}</td>
-                  <td style={styles.td}>
-                    <span style={styles.amount}>${booking.amount}</span>
-                  </td>
-                  <td style={styles.td}>
-                    <span
-                      style={{
-                        ...styles.statusBadge,
-                        backgroundColor: statusColor.bg,
-                        color: statusColor.color,
-                      }}
-                    >
-                      {booking.status.charAt(0).toUpperCase() +
-                        booking.status.slice(1)}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <div style={styles.actions}>
-                      <button
-                        style={styles.viewBtn}
-                        onClick={() => handleViewDetails(booking)}
-                      >
-                        View
-                      </button>
-                      {booking.status === "pending" && (
-                        <>
-                          <button
-                            style={styles.acceptBtn}
-                            onClick={() => handleAccept(booking)}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            style={styles.rejectBtn}
-                            onClick={() => handleReject(booking)}
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Upcoming Arrivals */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Upcoming Arrivals</h2>
-        <div style={styles.arrivalsGrid}>
-          {filteredBookings
-            .filter((b) => b.status === "confirmed" || b.status === "pending")
-            .map((booking) => (
-              <div key={booking.id} style={styles.arrivalCard}>
-                <div style={styles.arrivalHeader}>
-                  <span style={styles.arrivalId}>{booking.id}</span>
-                  <span
-                    style={{
-                      ...styles.arrivalBadge,
-                      ...(booking.status === "confirmed"
-                        ? styles.confirmedBadge
-                        : styles.pendingBadge),
-                    }}
-                  >
-                    {booking.status}
-                  </span>
-                </div>
-                <div style={styles.arrivalGuest}>
-                  <span style={styles.arrivalAvatar}>
-                    {booking.guest.charAt(0)}
-                  </span>
-                  <span style={styles.arrivalName}>{booking.guest}</span>
-                </div>
-                <div style={styles.arrivalProperty}>📍 {booking.property}</div>
-                <div style={styles.arrivalDates}>
-                  📅 {booking.checkIn} → {booking.checkOut}
-                </div>
-                <div style={styles.arrivalFooter}>
-                  <span style={styles.arrivalAmount}>${booking.amount}</span>
-                  <button
-                    style={styles.arrivalBtn}
-                    onClick={() => handleViewDetails(booking)}
-                  >
-                    Details
-                  </button>
-                </div>
-              </div>
-            ))}
+      {filteredBookings.length === 0 ? (
+        <div style={styles.emptyState}>
+          <Calendar size={48} color="#94a3b8" />
+          <p style={{ marginTop: "16px", color: "#64748b" }}>
+            No bookings found
+          </p>
         </div>
-      </div>
+      ) : (
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>Guest</th>
+                <th style={styles.th}>Property</th>
+                <th style={styles.th}>Dates</th>
+                <th style={styles.th}>Guests</th>
+                <th style={styles.th}>Price</th>
+                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredBookings.map((booking) => {
+                const statusStyle = getStatusColor(booking.status);
+                return (
+                  <tr key={booking.id} style={styles.tr}>
+                    <td style={styles.td}>
+                      <div style={styles.guestInfo}>
+                        <span style={styles.guestName}>
+                          {booking.guest_name}
+                        </span>
+                        <span style={styles.guestEmail}>
+                          {booking.guest_email}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={styles.propertyName}>
+                        {booking.property}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.dateInfo}>
+                        <span>
+                          Check-in:{" "}
+                          <strong>{formatDate(booking.check_in)}</strong>
+                        </span>
+                        <span>
+                          Check-out:{" "}
+                          <strong>{formatDate(booking.check_out)}</strong>
+                        </span>
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.guests}>
+                        <Users size={14} />
+                        <span>{booking.guests}</span>
+                      </div>
+                    </td>
+                    <td style={styles.td}>
+                      <span style={styles.price}>
+                        KSh {booking.total_price.toLocaleString()}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <span
+                        style={{
+                          ...styles.statusBadge,
+                          backgroundColor: statusStyle.bg,
+                          color: statusStyle.text,
+                        }}
+                      >
+                        {booking.status.charAt(0).toUpperCase() +
+                          booking.status.slice(1)}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
+                      <div style={styles.actions}>
+                        <button
+                          style={styles.actionBtn}
+                          onClick={() => setSelectedBooking(booking)}
+                          title="View Details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {booking.status === "pending" && (
+                          <>
+                            <button
+                              style={{
+                                ...styles.actionBtn,
+                                ...styles.confirmBtn,
+                              }}
+                              onClick={() => handleConfirm(booking.id)}
+                              title="Confirm"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              style={{
+                                ...styles.actionBtn,
+                                ...styles.rejectBtn,
+                              }}
+                              onClick={() => handleReject(booking.id)}
+                              title="Reject"
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        )}
+                        <button style={styles.actionBtn} title="Message">
+                          <MessageSquare size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      {/* Booking Details Modal */}
-      {showDetailsModal && selectedBooking && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
+      {/* Booking Detail Modal */}
+      {selectedBooking && (
+        <div style={styles.modal} onClick={() => setSelectedBooking(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>Booking Details</h2>
-              <button style={styles.closeBtn} onClick={handleCloseModal}>
+              <button
+                style={styles.closeBtn}
+                onClick={() => setSelectedBooking(null)}
+              >
                 <X size={20} />
               </button>
             </div>
-            <div style={styles.modalContent}>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Booking ID:</span>
-                <span style={styles.detailValue}>{selectedBooking.id}</span>
+
+            <div style={styles.modalBody}>
+              <div style={styles.detailSection}>
+                <h3 style={styles.detailTitle}>Guest Information</h3>
+                <p>
+                  <strong>Name:</strong> {selectedBooking.guest_name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedBooking.guest_email}
+                </p>
+                <p>
+                  <strong>Number of Guests:</strong> {selectedBooking.guests}
+                </p>
               </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Guest:</span>
-                <span style={styles.detailValue}>{selectedBooking.guest}</span>
+
+              <div style={styles.detailSection}>
+                <h3 style={styles.detailTitle}>Booking Information</h3>
+                <p>
+                  <strong>Property:</strong> {selectedBooking.property}
+                </p>
+                <p>
+                  <strong>Check-in:</strong>{" "}
+                  {formatDate(selectedBooking.check_in)}
+                </p>
+                <p>
+                  <strong>Check-out:</strong>{" "}
+                  {formatDate(selectedBooking.check_out)}
+                </p>
+                <p>
+                  <strong>Total Price:</strong> KSh{" "}
+                  {selectedBooking.total_price.toLocaleString()}
+                </p>
+                <p>
+                  <strong>Status:</strong> {selectedBooking.status}
+                </p>
               </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Property:</span>
-                <span style={styles.detailValue}>{selectedBooking.property}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Check-in:</span>
-                <span style={styles.detailValue}>{selectedBooking.checkIn}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Check-out:</span>
-                <span style={styles.detailValue}>{selectedBooking.checkOut}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Amount:</span>
-                <span style={styles.detailValue}>${selectedBooking.amount}</span>
-              </div>
-              <div style={styles.detailRow}>
-                <span style={styles.detailLabel}>Status:</span>
-                <span
-                  style={{
-                    ...styles.statusBadge,
-                    backgroundColor: getStatusColor(selectedBooking.status).bg,
-                    color: getStatusColor(selectedBooking.status).color,
-                  }}
-                >
-                  {selectedBooking.status}
-                </span>
-              </div>
-            </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={handleCloseModal}>
-                Close
-              </button>
-              {selectedBooking.status === "pending" && (
-                <>
-                  <button
-                    style={styles.acceptBtn}
-                    onClick={() => {
-                      handleAccept(selectedBooking);
-                      handleCloseModal();
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    style={styles.rejectBtn}
-                    onClick={() => {
-                      handleReject(selectedBooking);
-                      handleCloseModal();
-                    }}
-                  >
-                    Reject
-                  </button>
-                </>
+
+              {selectedBooking.message && (
+                <div style={styles.detailSection}>
+                  <h3 style={styles.detailTitle}>Message from Guest</h3>
+                  <p style={styles.message}>{selectedBooking.message}</p>
+                </div>
               )}
+
+              <div style={styles.modalActions}>
+                {selectedBooking.status === "pending" && (
+                  <>
+                    <button
+                      style={styles.confirmButton}
+                      onClick={() => {
+                        handleConfirm(selectedBooking.id);
+                        setSelectedBooking(null);
+                      }}
+                    >
+                      <Check size={18} />
+                      Confirm Booking
+                    </button>
+                    <button
+                      style={styles.rejectButton}
+                      onClick={() => {
+                        handleReject(selectedBooking.id);
+                        setSelectedBooking(null);
+                      }}
+                    >
+                      <X size={18} />
+                      Reject Booking
+                    </button>
+                  </>
+                )}
+                <button style={styles.messageButton}>
+                  <MessageSquare size={18} />
+                  Message Guest
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 };
 
+// Clock icon component
+const ClockIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#ca8a04"
+    strokeWidth="2"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
 const styles = {
   container: {
-    animation: "fadeIn 0.4s ease-out",
+    padding: "32px",
   },
   header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: "32px",
   },
   title: {
     fontSize: "28px",
-    fontWeight: "700",
-    color: "#1a1a1a",
-    margin: "0 0 8px 0",
+    fontWeight: 700,
+    color: "#1e293b",
+    marginBottom: "4px",
   },
   subtitle: {
-    fontSize: "16px",
-    color: "#6b7280",
-    margin: 0,
-  },
-  headerActions: {
-    display: "flex",
-    gap: "12px",
-  },
-  filterSelect: {
-    padding: "10px 16px",
-    borderRadius: "8px",
-    border: "1px solid #e5e7eb",
     fontSize: "14px",
-    color: "#374151",
-    backgroundColor: "#ffffff",
-    cursor: "pointer",
+    color: "#64748b",
   },
-  statsRow: {
+  statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(4, 1fr)",
     gap: "20px",
     marginBottom: "32px",
   },
   statCard: {
-    backgroundColor: "#ffffff",
-    padding: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    backgroundColor: "#fff",
     borderRadius: "12px",
+    padding: "20px",
     border: "1px solid #e5e7eb",
-    textAlign: "center",
+  },
+  statIcon: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "12px",
+    backgroundColor: "#eff6ff",
+    color: "#3b82f6",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statPending: {
+    backgroundColor: "#fef9c3",
+    color: "#ca8a04",
+  },
+  statConfirmed: {
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+  },
+  statRevenue: {
+    backgroundColor: "#f0fdf4",
+    color: "#16a34a",
   },
   statValue: {
     display: "block",
-    fontSize: "28px",
-    fontWeight: "700",
-    color: "#0369a1",
-    marginBottom: "4px",
+    fontSize: "20px",
+    fontWeight: 700,
+    color: "#1e293b",
   },
   statLabel: {
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  filterTabs: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "24px",
+    paddingBottom: "16px",
+    borderBottom: "1px solid #e5e7eb",
+    overflowX: "auto",
+  },
+  filterTab: {
+    padding: "8px 16px",
+    backgroundColor: "transparent",
+    border: "none",
+    borderRadius: "8px",
     fontSize: "14px",
-    color: "#6b7280",
+    fontWeight: 500,
+    color: "#64748b",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  filterTabActive: {
+    backgroundColor: "#eff6ff",
+    color: "#3b82f6",
   },
   tableContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
     overflow: "hidden",
-    marginBottom: "32px",
-    overflowX: "auto",
   },
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "800px",
   },
   tableHeader: {
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#f8fafc",
+    borderBottom: "1px solid #e5e7eb",
   },
   th: {
-    padding: "14px 16px",
+    padding: "16px",
     textAlign: "left",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#6b7280",
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#64748b",
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    borderBottom: "1px solid #e5e7eb",
   },
-  tableRow: {
-    borderBottom: "1px solid #e5e7eb",
+  tr: {
+    borderBottom: "1px solid #f1f5f9",
   },
   td: {
     padding: "16px",
-    fontSize: "14px",
-    color: "#374151",
     verticalAlign: "middle",
   },
-  bookingId: {
-    fontWeight: "600",
-    color: "#0369a1",
-  },
-  guestCell: {
+  guestInfo: {
     display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  guestAvatar: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "50%",
-    backgroundColor: "#f0f9ff",
-    color: "#0369a1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "600",
-    fontSize: "14px",
+    flexDirection: "column",
+    gap: "2px",
   },
   guestName: {
-    fontWeight: "500",
+    fontWeight: 600,
+    color: "#1e293b",
   },
-  amount: {
-    fontWeight: "600",
-    color: "#16a34a",
+  guestEmail: {
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  propertyName: {
+    fontWeight: 500,
+    color: "#374151",
+  },
+  dateInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "2px",
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  guests: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    color: "#64748b",
+  },
+  price: {
+    fontWeight: 600,
+    color: "#1e293b",
   },
   statusBadge: {
+    display: "inline-block",
     padding: "4px 12px",
-    borderRadius: "12px",
+    borderRadius: "20px",
     fontSize: "12px",
-    fontWeight: "500",
-    textTransform: "capitalize",
+    fontWeight: 600,
   },
   actions: {
     display: "flex",
     gap: "8px",
   },
-  viewBtn: {
-    padding: "6px 12px",
-    backgroundColor: "#f3f4f6",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#374151",
-    cursor: "pointer",
-  },
-  acceptBtn: {
-    padding: "6px 12px",
-    backgroundColor: "#dcfce7",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#16a34a",
-    cursor: "pointer",
-  },
-  rejectBtn: {
-    padding: "6px 12px",
-    backgroundColor: "#fee2e2",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#dc2626",
-    cursor: "pointer",
-  },
-  section: {
-    marginTop: "32px",
-  },
-  sectionTitle: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: "20px",
-  },
-  arrivalsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: "20px",
-  },
-  arrivalCard: {
-    backgroundColor: "#ffffff",
-    padding: "20px",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
-  },
-  arrivalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-  },
-  arrivalId: {
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#6b7280",
-  },
-  arrivalBadge: {
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "500",
-    textTransform: "capitalize",
-  },
-  confirmedBadge: {
-    backgroundColor: "#dcfce7",
-    color: "#16a34a",
-  },
-  pendingBadge: {
-    backgroundColor: "#fef3c7",
-    color: "#d97706",
-  },
-  arrivalGuest: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "8px",
-  },
-  arrivalAvatar: {
+  actionBtn: {
     width: "32px",
     height: "32px",
-    borderRadius: "50%",
-    backgroundColor: "#f0f9ff",
-    color: "#0369a1",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "600",
-    fontSize: "14px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "6px",
+    cursor: "pointer",
+    color: "#64748b",
+    transition: "all 0.2s",
   },
-  arrivalName: {
-    fontWeight: "600",
-    color: "#1a1a1a",
-  },
-  arrivalProperty: {
-    fontSize: "13px",
-    color: "#6b7280",
-    marginBottom: "4px",
-  },
-  arrivalDates: {
-    fontSize: "13px",
-    color: "#6b7280",
-    marginBottom: "12px",
-  },
-  arrivalFooter: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: "12px",
-    borderTop: "1px solid #e5e7eb",
-  },
-  arrivalAmount: {
-    fontSize: "18px",
-    fontWeight: "700",
+  confirmBtn: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#bbf7d0",
     color: "#16a34a",
   },
-  arrivalBtn: {
-    padding: "6px 14px",
-    backgroundColor: "#0369a1",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    cursor: "pointer",
+  rejectBtn: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#fecaca",
+    color: "#dc2626",
   },
-  // Modal styles
-  modalOverlay: {
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e5e7eb",
+  },
+  modal: {
     position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 1000,
   },
-  modal: {
-    backgroundColor: "#ffffff",
+  modalContent: {
+    backgroundColor: "#fff",
     borderRadius: "16px",
     width: "100%",
-    maxWidth: "480px",
+    maxWidth: "500px",
     maxHeight: "90vh",
     overflow: "auto",
   },
@@ -633,56 +652,85 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px",
-    borderBottom: "1px solid #e2e8f0",
+    padding: "24px",
+    borderBottom: "1px solid #e5e7eb",
   },
   modalTitle: {
     fontSize: "20px",
-    fontWeight: 600,
+    fontWeight: 700,
     color: "#1e293b",
     margin: 0,
   },
   closeBtn: {
-    backgroundColor: "transparent",
+    background: "none",
     border: "none",
     cursor: "pointer",
-    padding: "4px",
     color: "#64748b",
   },
-  modalContent: {
-    padding: "20px",
+  modalBody: {
+    padding: "24px",
   },
-  modalFooter: {
+  detailSection: {
+    marginBottom: "24px",
+  },
+  detailTitle: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#374151",
+    marginBottom: "12px",
+  },
+  message: {
+    padding: "12px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#475569",
+    fontStyle: "italic",
+  },
+  modalActions: {
     display: "flex",
-    justifyContent: "flex-end",
     gap: "12px",
-    padding: "20px",
-    borderTop: "1px solid #e2e8f0",
+    marginTop: "24px",
   },
-  cancelBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#f1f5f9",
-    color: "#64748b",
+  confirmButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 20px",
+    backgroundColor: "#059669",
+    color: "#fff",
     border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  rejectButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 20px",
+    backgroundColor: "#dc2626",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  messageButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 20px",
+    backgroundColor: "#f8fafc",
+    color: "#374151",
+    border: "1px solid #e5e7eb",
     borderRadius: "8px",
     fontSize: "14px",
     fontWeight: 500,
     cursor: "pointer",
-  },
-  detailRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "12px 0",
-    borderBottom: "1px solid #f1f5f9",
-  },
-  detailLabel: {
-    fontSize: "14px",
-    color: "#64748b",
-  },
-  detailValue: {
-    fontSize: "14px",
-    fontWeight: 500,
-    color: "#1e293b",
+    marginLeft: "auto",
   },
 };
 

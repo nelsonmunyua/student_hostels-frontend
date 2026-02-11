@@ -1,9 +1,10 @@
+import React, { useEffect, useRef, Component } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
-import { useEffect, useRef } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 import store from "./redux/store";
 import { getCurrentUser } from "./redux/slices/Thunks/authThunks";
 import "./index.css";
@@ -13,36 +14,80 @@ import App from "./App.jsx";
 // Export toast for use in components
 export { toast };
 
-// Auth initialization component - handles auth check ONCE on mount
+// ---------------- Error Boundary ----------------
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("React Error Boundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+            padding: "20px",
+            textAlign: "center",
+          }}
+        >
+          <h1>Oops! Something went wrong</h1>
+          <p>Please refresh the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: "12px 24px",
+              backgroundColor: "white",
+              color: "#667eea",
+              border: "none",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------- Auth Initializer ----------------
 const AuthInitializer = ({ children }) => {
   const initialized = useRef(false);
 
   useEffect(() => {
-    // Prevent multiple executions
     if (initialized.current) return;
     initialized.current = true;
 
     const checkAuth = async () => {
       const token = localStorage.getItem("token");
-      
-      // Clear mock tokens - these are not valid JWT tokens
-      if (token && token.startsWith("mock-token-")) {
+      if (!token) return;
+
+      try {
+        await store.dispatch(getCurrentUser());
+      } catch (error) {
+        console.warn("Auth check failed:", error.message);
         localStorage.removeItem("token");
-        localStorage.removeItem("user");
         localStorage.removeItem("refreshToken");
-        return;
-      }
-      
-      if (token) {
-        // Verify token with backend
-        try {
-          await store.dispatch(getCurrentUser()).unwrap();
-        } catch (error) {
-          // Token invalid or expired - clear storage
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          localStorage.removeItem("user");
-        }
+        localStorage.removeItem("user");
       }
     };
 
@@ -52,25 +97,29 @@ const AuthInitializer = ({ children }) => {
   return children;
 };
 
+// ---------------- Render App ----------------
 createRoot(document.getElementById("root")).render(
-  <Provider store={store}>
-    <BrowserRouter>
-      <AuthInitializer>
-        <ToastContainer
-          position="top-right"
-          autoClose={3000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-        />
-        <App />
-      </AuthInitializer>
-    </BrowserRouter>
-  </Provider>,
+  <React.StrictMode>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <BrowserRouter>
+          <AuthInitializer>
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+            <App />
+          </AuthInitializer>
+        </BrowserRouter>
+      </Provider>
+    </ErrorBoundary>
+  </React.StrictMode>
 );
 

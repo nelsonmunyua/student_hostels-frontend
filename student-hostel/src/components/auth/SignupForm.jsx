@@ -12,8 +12,7 @@ const SignupForm = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
 
-  // Get auth state from Redux
-  const { loading, error } = useSelector((state) => state.auth);
+  const { error } = useSelector((state) => state.auth);
 
   const {
     register,
@@ -26,15 +25,11 @@ const SignupForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      // Dispatch signup action with Redux
       const result = await dispatch(signupUser(data)).unwrap();
-
-      // Role-based redirect after successful signup
       const redirectPath = getRedirectPath(result.user.role);
       navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Signup failed:", err);
-      // Error is handled by Redux state
     }
   };
 
@@ -168,7 +163,6 @@ const SignupForm = () => {
               <option value="student">Student</option>
               <option value="host">Host</option>
               <option value="admin">Admin</option>
-
             </select>
             <span className="input-icon">
               <Icons.User />
@@ -280,15 +274,8 @@ const SignupForm = () => {
           </span>
         )}
 
-        <button type="submit" className="auth-button" disabled={loading}>
-          {loading ? (
-            <>
-              <span className="spinner spinner-sm"></span>
-              Creating Account...
-            </>
-          ) : (
-            "Create Account"
-          )}
+        <button type="submit" className="auth-button">
+          Create Account
         </button>
       </form>
 

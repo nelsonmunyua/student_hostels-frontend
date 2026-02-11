@@ -12,15 +12,12 @@ const LoginForm = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
 
-  const { isAuthenticated, user, loading, error } = useSelector(
-    (state) => state.auth,
-  );
+  const { isAuthenticated, user, error } = useSelector((state) => state.auth);
 
-  // Check for verification status from URL params
   const verified = searchParams.get("verified");
   const verificationError = searchParams.get("error");
   const errorMessage = searchParams.get("message");
-  
+
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
@@ -28,7 +25,6 @@ const LoginForm = () => {
       setSuccessMessage("Email verified successfully! You can now log in.");
     }
     if (verificationError === "verification_failed") {
-      // Error is shown via Redux error state
     }
   }, [verified, verificationError]);
 
@@ -40,7 +36,6 @@ const LoginForm = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      // Role-based redirect after login
       const redirectPath = getRedirectPath(user.role);
       navigate(redirectPath, { replace: true });
     }
@@ -48,10 +43,7 @@ const LoginForm = () => {
 
   const onSubmit = async (data) => {
     const result = await dispatch(loginUser(data));
-    
-    // If login failed, result.payload will contain the error
     if (loginUser.fulfilled.match(result)) {
-      // Redirect handled by useEffect
     }
   };
 
@@ -158,15 +150,8 @@ const LoginForm = () => {
           </Link>
         </div>
 
-        <button type="submit" className="auth-button" disabled={loading}>
-          {loading ? (
-            <>
-              <span className="spinner spinner-sm"></span>
-              Signing in...
-            </>
-          ) : (
-            "Sign In"
-          )}
+        <button type="submit" className="auth-button">
+          Sign In
         </button>
       </form>
 
@@ -181,4 +166,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-

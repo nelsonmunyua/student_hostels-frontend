@@ -1,427 +1,347 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import BookingCalendar from '../components/booking/BookingCalendar';
-import BookingSummary from '../components/booking/BookingSummary';
-import StripeCheckout from '../components/payment/StripeCheckout';
-import MpesaPayment from '../components/payment/MpesaPayment';
-import CardPayment from '../components/payment/CardPayment';
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Calendar,
+  MapPin,
+  Users,
+  CreditCard,
+  ChevronLeft,
+  Shield,
+  Clock,
+} from "lucide-react";
+import { fetchAccommodationById } from "../redux/slices/Thunks/accommodationThunks";
+import { createBooking } from "../redux/slices/Thunks/bookingThunks";
+import BookingCalendar from "../components/booking/BookingCalendar";
+import BookingSummary from "../components/booking/BookingSummary";
+import StripeCheckout from "../components/payment/StripeCheckout";
+import MpesaPayment from "../components/payment/MpesaPayment";
+import "./BookingPage.css";
 
 const BookingPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { accommodation, bookingData: initialBooking } = location.state || {};
-  
-  const [step, setStep] = useState(1); // 1: Dates, 2: Details, 3: Payment, 4: Confirmation
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
-  const [bookingData, setBookingData] = useState(initialBooking || {
-    accommodation_id: accommodation?.id,
-    check_in_date: '',
-    check_out_date: '',
-    number_of_guests: 1,
-    total_price: 0,
+  const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+  const accommodationId = searchParams.get("accommodation_id");
+  const { currentAccommodation } = useSelector((state) => state.accommodation);
+  const { user } = useSelector((state) => state.auth);
+
+  const [step, setStep] = useState(1);
+  const [selectedDates, setSelectedDates] = useState({
+    checkIn: null,
+    checkOut: null,
   });
+  const [guests, setGuests] = useState(1);
+  const [specialRequests, setSpecialRequests] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("stripe");
+  const [bookingData, setBookingData] = useState(null);
+  const [paymentComplete, setPaymentComplete] = useState(false);
 
-  if (!accommodation) {
-    return (
-      <div style={styles.error}>
-        <h2 style={{ marginBottom: '16px' }}>No accommodation selected</h2>
-        <button onClick={() => navigate('/accommodations')} style={styles.button}>
-          Browse Accommodations
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (accommodationId) {
+      dispatch(fetchAccommodationById(accommodationId));
+    }
+  }, [dispatch, accommodationId]);
 
-  const steps = [
-    { number: 1, label: 'Select Dates', icon: '📅' },
-    { number: 2, label: 'Guest Details', icon: '👤' },
-    { number: 3, label: 'Payment', icon: '💳' },
-  ];
-
-  const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+  const handleDateSelect = (dates) => {
+    setSelectedDates(dates);
   };
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+  const calculateNights = () => {
+    if (!selectedDates.checkIn || !selectedDates.checkOut) return 0;
+    const diff =
+      new Date(selectedDates.checkOut) - new Date(selectedDates.checkIn);
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const handlePaymentSuccess = (payment) => {
-    navigate('/payment/success', { state: { booking: bookingData, payment } });
+  const calculateTotal = () => {
+    if (!currentAccommodation || calculateNights() === 0) return 0;
+    const pricePerNight =
+      currentAccommodation.price_per_night || currentAccommodation.price || 0;
+    const subtotal = pricePerNight * calculateNights();
+    const serviceFee = Math.round(subtotal * 0.1);
+    return subtotal + serviceFee;
   };
+
+  const handleContinueToPayment = () => {
+    if (!selectedDates.checkIn || !selectedDates.checkOut) {
+      alert("Please select check-in and check-out dates");
+      return;
+    }
+
+    const nights = calculateNights();
+    const total = calculateTotal();
+
+    setBookingData({
+      accommodation_id: accommodationId,
+      accommodation: currentAccommodation,
+      check_in: selectedDates.checkIn,
+      check_out: selectedDates.checkOut,
+      guests,
+      special_requests: specialRequests,
+      nights,
+      subtotal: currentAccommodation?.price_per_night * nights,
+      service_fee: Math.round(
+        (currentAccommodation?.price_per_night || 0) * nights * 0.1,
+      ),
+      total_price: total,
+    });
+
+    setStep(2);
+  };
+
+  const handlePaymentSuccess = (paymentResult) => {
+    setPaymentComplete(true);
+    setStep(3);
+  };
+
+  const handleCreateBooking = async () => {
+    try {
+      const result = await dispatch(
+        createBooking({
+          ...bookingData,
+          payment_status: "paid",
+          status: "confirmed",
+        }),
+      );
+
+      if (!result.error) {
+        navigate("/booking/success", {
+          state: { booking: result.payload.booking },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create booking:", error);
+    }
+  };
+
+  const mockAccommodation = {
+    id: accommodationId || 1,
+    name: "University View Hostel",
+    location: "123 College Ave, Nairobi",
+    price_per_night: 8500,
+    max_guests: 4,
+    amenities: ["WiFi", "Security", "Study Room", "Parking"],
+    images: ["https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"],
+    rating: 4.5,
+    review_count: 28,
+    is_verified: true,
+  };
+
+  const accommodation = currentAccommodation || mockAccommodation;
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
-        <button style={styles.backButton} onClick={() => navigate(-1)}>
+    <div className="booking-page">
+      <div className="booking-header">
+        <button className="back-btn" onClick={() => navigate(-1)}>
           <ChevronLeft size={20} />
           Back
         </button>
-        <h1 style={styles.title}>Complete Your Booking</h1>
-      </div>
-
-      {/* Progress Steps */}
-      <div style={styles.stepsContainer}>
-        {steps.map((s, index) => (
-          <div key={s.number} style={styles.stepWrapper}>
-            <div style={{
-              ...styles.step,
-              ...(s.number === step && styles.stepActive),
-              ...(s.number < step && styles.stepComplete),
-            }}>
-              {s.number < step ? <Check size={20} /> : <span style={styles.stepIcon}>{s.icon}</span>}
-            </div>
-            <span style={{
-              ...styles.stepLabel,
-              ...(s.number === step && styles.stepLabelActive),
-            }}>{s.label}</span>
-            {index < steps.length - 1 && <div style={styles.stepLine} />}
+        <div className="booking-steps">
+          <div className={`step ${step >= 1 ? "active" : ""}`}>
+            <span className="step-number">1</span>
+            <span className="step-label">Dates & Guests</span>
           </div>
-        ))}
+          <div className="step-line"></div>
+          <div className={`step ${step >= 2 ? "active" : ""}`}>
+            <span className="step-number">2</span>
+            <span className="step-label">Payment</span>
+          </div>
+          <div className="step-line"></div>
+          <div className={`step ${step >= 3 ? "active" : ""}`}>
+            <span className="step-number">3</span>
+            <span className="step-label">Confirmation</span>
+          </div>
+        </div>
       </div>
 
-      {/* Content */}
-      <div style={styles.content}>
-        <div style={styles.main}>
+      <div className="booking-content">
+        <div className="booking-main">
           {step === 1 && (
-            <div style={styles.stepContent}>
-              <h2 style={styles.stepTitle}>Select Your Dates</h2>
+            <div className="booking-section">
+              <h2 className="section-title">Select Dates</h2>
               <BookingCalendar
                 accommodationId={accommodation.id}
-                onDatesSelected={(dates) => setBookingData({ ...bookingData, ...dates })}
+                onDateSelect={handleDateSelect}
+                selectedDates={selectedDates}
               />
-              <div style={styles.actions}>
-                <button
-                  style={styles.nextButton}
-                  onClick={handleNext}
-                  disabled={!bookingData.check_in_date || !bookingData.check_out_date}
-                >
-                  Continue
-                  <ChevronRight size={20} />
-                </button>
-              </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div style={styles.stepContent}>
-              <h2 style={styles.stepTitle}>Guest Information</h2>
-              <div style={styles.form}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Number of Guests</label>
-                  <select
-                    style={styles.input}
-                    value={bookingData.number_of_guests}
-                    onChange={(e) => setBookingData({ ...bookingData, number_of_guests: e.target.value })}
+              <h2 className="section-title">Number of Guests</h2>
+              <div className="guests-selector">
+                <Users size={20} />
+                <div className="guest-controls">
+                  <button
+                    className="guest-btn"
+                    onClick={() => setGuests(Math.max(1, guests - 1))}
+                    disabled={guests <= 1}
                   >
-                    {[...Array(accommodation.max_guests || 4)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
-                    ))}
-                  </select>
+                    -
+                  </button>
+                  <span className="guest-count">
+                    {guests} Guest{guests > 1 ? "s" : ""}
+                  </span>
+                  <button
+                    className="guest-btn"
+                    onClick={() =>
+                      setGuests(
+                        Math.min(accommodation.max_guests || 4, guests + 1),
+                      )
+                    }
+                    disabled={guests >= (accommodation.max_guests || 4)}
+                  >
+                    +
+                  </button>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Special Requests (Optional)</label>
-                  <textarea
-                    style={{ ...styles.input, minHeight: '100px', resize: 'vertical' }}
-                    placeholder="Any special requirements or requests..."
-                    onChange={(e) => setBookingData({ ...bookingData, special_requests: e.target.value })}
-                  />
-                </div>
+                <span className="max-guests">
+                  Max {accommodation.max_guests || 4} guests
+                </span>
               </div>
-              <div style={styles.actions}>
-                <button style={styles.backBtn} onClick={handleBack}>
-                  <ChevronLeft size={20} />
-                  Back
-                </button>
-                <button style={styles.nextButton} onClick={handleNext}>
-                  Continue to Payment
-                  <ChevronRight size={20} />
-                </button>
-              </div>
+
+              <h2 className="section-title">Special Requests (Optional)</h2>
+              <textarea
+                className="special-requests"
+                placeholder="Any special requests or requirements..."
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+              />
+
+              <button
+                className="continue-btn"
+                onClick={handleContinueToPayment}
+              >
+                Continue to Payment
+              </button>
             </div>
           )}
 
-          {step === 3 && (
-            <div style={styles.stepContent}>
-              <h2 style={styles.stepTitle}>Payment Method</h2>
-              
-              {/* Payment Method Selection */}
-              <div style={styles.paymentMethods}>
+          {step === 2 && bookingData && (
+            <div className="booking-section">
+              <h2 className="section-title">Choose Payment Method</h2>
+
+              <div className="payment-methods">
                 <button
-                  style={{ ...styles.paymentMethod, ...(paymentMethod === 'stripe' && styles.paymentMethodActive) }}
-                  onClick={() => setPaymentMethod('stripe')}
+                  className={`payment-method ${paymentMethod === "stripe" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("stripe")}
                 >
-                  <span style={{ fontSize: '24px' }}>💳</span>
-                  <span>Stripe</span>
+                  <CreditCard size={24} />
+                  <div className="payment-method-info">
+                    <span className="payment-method-name">
+                      Credit/Debit Card
+                    </span>
+                    <span className="payment-method-desc">
+                      Pay securely with Visa, Mastercard
+                    </span>
+                  </div>
                 </button>
+
                 <button
-                  style={{ ...styles.paymentMethod, ...(paymentMethod === 'mpesa' && styles.paymentMethodActive) }}
-                  onClick={() => setPaymentMethod('mpesa')}
+                  className={`payment-method ${paymentMethod === "mpesa" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("mpesa")}
                 >
-                  <span style={{ fontSize: '24px' }}>📱</span>
-                  <span>M-Pesa</span>
-                </button>
-                <button
-                  style={{ ...styles.paymentMethod, ...(paymentMethod === 'card' && styles.paymentMethodActive) }}
-                  onClick={() => setPaymentMethod('card')}
-                >
-                  <span style={{ fontSize: '24px' }}>💳</span>
-                  <span>Card</span>
+                  <div className="mpesa-logo">M</div>
+                  <div className="payment-method-info">
+                    <span className="payment-method-name">M-Pesa</span>
+                    <span className="payment-method-desc">
+                      Pay with M-Pesa mobile money
+                    </span>
+                  </div>
                 </button>
               </div>
 
-              {/* Payment Component */}
-              {paymentMethod === 'stripe' && (
+              {paymentMethod === "stripe" ? (
                 <StripeCheckout
                   bookingData={bookingData}
                   onSuccess={handlePaymentSuccess}
-                  onCancel={handleBack}
+                  onCancel={() => setStep(1)}
                 />
-              )}
-              {paymentMethod === 'mpesa' && (
+              ) : (
                 <MpesaPayment
                   bookingData={bookingData}
                   onSuccess={handlePaymentSuccess}
-                  onCancel={handleBack}
+                  onCancel={() => setStep(1)}
                 />
               )}
-              {paymentMethod === 'card' && (
-                <CardPayment
-                  bookingData={bookingData}
-                  onSuccess={handlePaymentSuccess}
-                  onCancel={handleBack}
-                />
-              )}
+            </div>
+          )}
+
+          {step === 3 && paymentComplete && (
+            <div className="booking-section confirmation-section">
+              <div className="confirmation-icon">✓</div>
+              <h2>Booking Confirmed!</h2>
+              <p>Your reservation has been successfully processed.</p>
+
+              <div className="confirmation-details">
+                <h3>Booking Details</h3>
+                <div className="detail-row">
+                  <span>Booking ID:</span>
+                  <span>
+                    #BK{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Property:</span>
+                  <span>{accommodation.name}</span>
+                </div>
+                <div className="detail-row">
+                  <span>Check-in:</span>
+                  <span>
+                    {new Date(selectedDates.checkIn).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Check-out:</span>
+                  <span>
+                    {new Date(selectedDates.checkOut).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="detail-row">
+                  <span>Guests:</span>
+                  <span>{guests}</span>
+                </div>
+                <div className="detail-row total">
+                  <span>Total Paid:</span>
+                  <span>KSh {calculateTotal().toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="confirmation-actions">
+                <button
+                  className="primary-btn"
+                  onClick={() => navigate("/student/my-bookings")}
+                >
+                  View My Bookings
+                </button>
+                <button className="secondary-btn" onClick={() => navigate("/")}>
+                  Back to Home
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Booking Summary Sidebar */}
-        <aside style={styles.sidebar}>
-          <BookingSummary accommodation={accommodation} bookingData={bookingData} />
+        <aside className="booking-sidebar">
+          <BookingSummary
+            accommodation={accommodation}
+            selectedDates={selectedDates}
+            guests={guests}
+            calculateNights={calculateNights}
+            calculateTotal={calculateTotal}
+          />
+
+          <div className="trust-badges">
+            <div className="trust-badge">
+              <Shield size={16} />
+              <span>Secure Payment</span>
+            </div>
+            <div className="trust-badge">
+              <Clock size={16} />
+              <span>Instant Confirmation</span>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
   );
 };
 
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
-    padding: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-  },
-  backButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 500,
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#1e293b',
-  },
-  stepsContainer: {
-    maxWidth: '800px',
-    margin: '40px auto',
-    padding: '0 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stepWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  step: {
-    width: '60px',
-    height: '60px',
-    borderRadius: '50%',
-    backgroundColor: '#f1f5f9',
-    border: '2px solid #e5e7eb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '12px',
-    transition: 'all 0.3s',
-    fontSize: '24px',
-  },
-  stepActive: {
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    borderColor: '#3b82f6',
-  },
-  stepComplete: {
-    backgroundColor: '#059669',
-    color: '#ffffff',
-    borderColor: '#059669',
-  },
-  stepIcon: {},
-  stepLabel: {
-    fontSize: '14px',
-    color: '#64748b',
-    fontWeight: 500,
-  },
-  stepLabelActive: {
-    color: '#3b82f6',
-    fontWeight: 600,
-  },
-  stepLine: {
-    position: 'absolute',
-    top: '30px',
-    left: '50%',
-    width: '100%',
-    height: '2px',
-    backgroundColor: '#e5e7eb',
-    zIndex: -1,
-  },
-  content: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '40px 20px',
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
-    gap: '40px',
-  },
-  main: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '32px',
-    border: '1px solid #e5e7eb',
-  },
-  stepContent: {
-    minHeight: '400px',
-  },
-  stepTitle: {
-    fontSize: '24px',
-    fontWeight: 700,
-    color: '#1e293b',
-    marginBottom: '24px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    marginBottom: '32px',
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  label: {
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#374151',
-  },
-  input: {
-    padding: '12px 16px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
-    outline: 'none',
-    fontFamily: 'inherit',
-  },
-  actions: {
-    display: 'flex',
-    gap: '12px',
-    justifyContent: 'flex-end',
-    marginTop: '24px',
-  },
-  backBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 500,
-  },
-  nextButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 24px',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: 600,
-    fontSize: '14px',
-  },
-  paymentMethods: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '16px',
-    marginBottom: '32px',
-  },
-  paymentMethod: {
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    border: '2px solid #e5e7eb',
-    borderRadius: '12px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '8px',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    fontSize: '14px',
-    fontWeight: 500,
-  },
-  paymentMethodActive: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#eff6ff',
-  },
-  sidebar: {
-    position: 'sticky',
-    top: '20px',
-    height: 'fit-content',
-  },
-  error: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    gap: '20px',
-    color: '#64748b',
-    fontSize: '18px',
-  },
-  button: {
-    padding: '12px 24px',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 600,
-  },
-};
-
 export default BookingPage;
-

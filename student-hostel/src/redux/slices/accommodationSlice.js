@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchAccommodations,
   fetchAccommodationById,
@@ -9,7 +9,8 @@ import {
   uploadAccommodationImages,
   fetchMyListings,
   fetchFeaturedAccommodations,
-} from './Thunks/accommodationThunks';
+  quickSearch,
+} from "./Thunks/accommodationThunks";
 
 const initialState = {
   accommodations: [],
@@ -17,14 +18,37 @@ const initialState = {
   myListings: [],
   featuredAccommodations: [],
   searchResults: [],
+  quickSearchResults: [],
   filters: {
-    location: '',
-    property_type: '',
+    // Basic search
+    query: "",
+    location: "",
+
+    // Dates and guests
+    check_in: "",
+    check_out: "",
+    guests: 1,
+
+    // Property filters
+    property_type: "",
+
+    // Price range
     min_price: 0,
     max_price: 100000,
-    max_guests: 1,
-    check_in: null,
-    check_out: null,
+
+    // Amenities
+    amenities: "",
+
+    // Rating
+    min_rating: 0,
+
+    // Distance/university
+    max_distance: 0,
+    university: "",
+
+    // Sorting
+    sort_by: "relevance",
+    sort_order: "desc",
   },
   pagination: {
     page: 1,
@@ -34,12 +58,13 @@ const initialState = {
   },
   loading: false,
   searchLoading: false,
+  quickSearchLoading: false,
   error: null,
   successMessage: null,
 };
 
 const accommodationSlice = createSlice({
-  name: 'accommodation',
+  name: "accommodation",
   initialState,
   reducers: {
     // Clear error messages
@@ -50,11 +75,11 @@ const accommodationSlice = createSlice({
     clearSuccessMessage: (state) => {
       state.successMessage = null;
     },
-    // Set filters
+    // Set filters - merges with existing filters
     setFilters: (state, action) => {
       state.filters = { ...state.filters, ...action.payload };
     },
-    // Clear filters
+    // Clear all filters
     clearFilters: (state) => {
       state.filters = initialState.filters;
     },
@@ -69,6 +94,15 @@ const accommodationSlice = createSlice({
     // Clear search results
     clearSearchResults: (state) => {
       state.searchResults = [];
+    },
+    // Update a single filter
+    updateFilter: (state, action) => {
+      const { key, value } = action.payload;
+      state.filters[key] = value;
+    },
+    // Clear quick search results
+    clearQuickSearchResults: (state) => {
+      state.quickSearchResults = [];
     },
   },
   extraReducers: (builder) => {
@@ -90,7 +124,7 @@ const accommodationSlice = createSlice({
       })
       .addCase(fetchAccommodations.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch accommodations';
+        state.error = action.payload || "Failed to fetch accommodations";
       });
 
     // Fetch Single Accommodation
@@ -105,7 +139,7 @@ const accommodationSlice = createSlice({
       })
       .addCase(fetchAccommodationById.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch accommodation details';
+        state.error = action.payload || "Failed to fetch accommodation details";
       });
 
     // Search Accommodations
@@ -126,7 +160,7 @@ const accommodationSlice = createSlice({
       })
       .addCase(searchAccommodations.rejected, (state, action) => {
         state.searchLoading = false;
-        state.error = action.payload || 'Search failed';
+        state.error = action.payload || "Search failed";
       });
 
     // Create Accommodation (Host)
@@ -138,11 +172,11 @@ const accommodationSlice = createSlice({
       .addCase(createAccommodation.fulfilled, (state, action) => {
         state.loading = false;
         state.myListings.push(action.payload.accommodation);
-        state.successMessage = 'Accommodation created successfully';
+        state.successMessage = "Accommodation created successfully";
       })
       .addCase(createAccommodation.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to create accommodation';
+        state.error = action.payload || "Failed to create accommodation";
       });
 
     // Update Accommodation (Host)
@@ -154,19 +188,21 @@ const accommodationSlice = createSlice({
       .addCase(updateAccommodation.fulfilled, (state, action) => {
         state.loading = false;
         const index = state.myListings.findIndex(
-          (item) => item.id === action.payload.accommodation.id
+          (item) => item.id === action.payload.accommodation.id,
         );
         if (index !== -1) {
           state.myListings[index] = action.payload.accommodation;
         }
-        if (state.currentAccommodation?.id === action.payload.accommodation.id) {
+        if (
+          state.currentAccommodation?.id === action.payload.accommodation.id
+        ) {
           state.currentAccommodation = action.payload.accommodation;
         }
-        state.successMessage = 'Accommodation updated successfully';
+        state.successMessage = "Accommodation updated successfully";
       })
       .addCase(updateAccommodation.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to update accommodation';
+        state.error = action.payload || "Failed to update accommodation";
       });
 
     // Delete Accommodation (Host)
@@ -178,13 +214,13 @@ const accommodationSlice = createSlice({
       .addCase(deleteAccommodation.fulfilled, (state, action) => {
         state.loading = false;
         state.myListings = state.myListings.filter(
-          (item) => item.id !== action.payload.id
+          (item) => item.id !== action.payload.id,
         );
-        state.successMessage = 'Accommodation deleted successfully';
+        state.successMessage = "Accommodation deleted successfully";
       })
       .addCase(deleteAccommodation.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to delete accommodation';
+        state.error = action.payload || "Failed to delete accommodation";
       });
 
     // Upload Images
@@ -195,11 +231,11 @@ const accommodationSlice = createSlice({
       })
       .addCase(uploadAccommodationImages.fulfilled, (state, action) => {
         state.loading = false;
-        state.successMessage = 'Images uploaded successfully';
+        state.successMessage = "Images uploaded successfully";
       })
       .addCase(uploadAccommodationImages.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to upload images';
+        state.error = action.payload || "Failed to upload images";
       });
 
     // Fetch My Listings (Host)
@@ -214,7 +250,7 @@ const accommodationSlice = createSlice({
       })
       .addCase(fetchMyListings.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch listings';
+        state.error = action.payload || "Failed to fetch listings";
       });
 
     // Fetch Featured Accommodations
@@ -229,7 +265,22 @@ const accommodationSlice = createSlice({
       })
       .addCase(fetchFeaturedAccommodations.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || 'Failed to fetch featured accommodations';
+        state.error =
+          action.payload || "Failed to fetch featured accommodations";
+      });
+
+    // Quick Search
+    builder
+      .addCase(quickSearch.pending, (state) => {
+        state.quickSearchLoading = true;
+      })
+      .addCase(quickSearch.fulfilled, (state, action) => {
+        state.quickSearchLoading = false;
+        state.quickSearchResults = action.payload.suggestions || [];
+      })
+      .addCase(quickSearch.rejected, (state) => {
+        state.quickSearchLoading = false;
+        state.quickSearchResults = [];
       });
   },
 });
@@ -242,6 +293,8 @@ export const {
   setPagination,
   clearCurrentAccommodation,
   clearSearchResults,
+  updateFilter,
+  clearQuickSearchResults,
 } = accommodationSlice.actions;
 
 export default accommodationSlice.reducer;
