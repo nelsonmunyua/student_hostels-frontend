@@ -10,7 +10,6 @@ import AdminDashboard from "./components/Dashboard/admin/AdminDashboard";
 import HostDashboard from "./components/Dashboard/host/HostDashboard";
 
 // Public pages imports
-import Home from "./pages/Home";
 import AccommodationListPage from "./pages/AccommodationListPage";
 import AccommodationDetailPage from "./pages/AccommodationDetailPage";
 import SearchPage from "./pages/SearchPage";
@@ -71,8 +70,8 @@ import "./App.css";
 function App() {
   return (
     <Routes>
-      {/* Public routes - accessible without authentication */}
-      <Route path="/" element={<Home />} />
+      {/* Public routes - redirect root to login */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* Public accommodation routes */}
       <Route path="/accommodations" element={<AccommodationListPage />} />
