@@ -228,14 +228,9 @@ const Settings = () => {
                 <button
                   style={styles.saveBtn}
                   onClick={() => handleSaveSettings("General Settings")}
-                  disabled={isSaving}
                 >
-                  {isSaving ? (
-                    <span className="spinner spinner-sm"></span>
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  <Save size={18} />
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -339,14 +334,9 @@ const Settings = () => {
                 <button
                   style={styles.saveBtn}
                   onClick={() => handleSaveSettings("Profile Settings")}
-                  disabled={isSaving}
                 >
-                  {isSaving ? (
-                    <span className="spinner spinner-sm"></span>
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  <Save size={18} />
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -495,14 +485,9 @@ const Settings = () => {
                 <button
                   style={styles.saveBtn}
                   onClick={() => handleSaveSettings("Notification Preferences")}
-                  disabled={isSaving}
                 >
-                  {isSaving ? (
-                    <span className="spinner spinner-sm"></span>
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  {isSaving ? "Saving..." : "Save Preferences"}
+                  <Save size={18} />
+                  Save Preferences
                 </button>
               </div>
             </div>
@@ -626,14 +611,9 @@ const Settings = () => {
                 <button
                   style={styles.saveBtn}
                   onClick={() => handleSaveSettings("Security Settings")}
-                  disabled={isSaving}
                 >
-                  {isSaving ? (
-                    <span className="spinner spinner-sm"></span>
-                  ) : (
-                    <Save size={18} />
-                  )}
-                  {isSaving ? "Saving..." : "Update Security"}
+                  <Save size={18} />
+                  Update Security
                 </button>
               </div>
             </div>

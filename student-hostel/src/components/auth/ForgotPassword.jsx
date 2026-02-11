@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
@@ -8,7 +7,6 @@ import { forgotPassword } from "../../redux/slices/Thunks/authThunks";
 
 const ForgotPassword = () => {
   const dispatch = useDispatch();
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,17 +17,13 @@ const ForgotPassword = () => {
   } = useForm();
 
   const onSubmit = async (data) => {
-    setIsLoading(true);
     setError("");
 
     try {
-      // Call the actual API via Redux thunk
       await dispatch(forgotPassword({ email: data.email })).unwrap();
       setIsSuccess(true);
     } catch (err) {
       setError(err || "Failed to send reset email. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -113,15 +107,8 @@ const ForgotPassword = () => {
           )}
         </div>
 
-        <button type="submit" className="auth-button" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <span className="spinner spinner-sm"></span>
-              Sending...
-            </>
-          ) : (
-            "Send Reset Link"
-          )}
+        <button type="submit" className="auth-button">
+          Send Reset Link
         </button>
       </form>
 
@@ -133,4 +120,3 @@ const ForgotPassword = () => {
 };
 
 export default ForgotPassword;
-

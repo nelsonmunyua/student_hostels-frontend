@@ -1,51 +1,11 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import bookingApi from '../../../api/Bookingapi';
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import bookingApi from "../../../api/Bookingapi";
 
 /**
- * Fetch all bookings
- */
-export const fetchBookings = createAsyncThunk(
-  'booking/fetchAll',
-  async (params = {}, { rejectWithValue }) => {
-    try {
-      const response = await bookingApi.getAll(params);
-      return response;
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        'Failed to fetch bookings';
-      return rejectWithValue(message);
-    }
-  }
-);
-
-/**
- * Fetch single booking by ID
- */
-export const fetchBookingById = createAsyncThunk(
-  'booking/fetchById',
-  async (id, { rejectWithValue }) => {
-    try {
-      const response = await bookingApi.getById(id);
-      return response;
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        'Failed to fetch booking details';
-      return rejectWithValue(message);
-    }
-  }
-);
-
-/**
- * Create new booking
+ * Create a new booking
  */
 export const createBooking = createAsyncThunk(
-  'booking/create',
+  "booking/create",
   async (bookingData, { rejectWithValue }) => {
     try {
       const response = await bookingApi.create(bookingData);
@@ -55,77 +15,57 @@ export const createBooking = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to create booking';
+        "Failed to create booking";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Cancel booking
+ * Fetch all bookings (Admin)
  */
-export const cancelBooking = createAsyncThunk(
-  'booking/cancel',
-  async ({ id, reason }, { rejectWithValue }) => {
+export const fetchBookings = createAsyncThunk(
+  "booking/fetchAll",
+  async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.cancel(id, { reason });
+      const response = await bookingApi.getAll(params);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to cancel booking';
+        "Failed to fetch bookings";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Check booking availability
+ * Fetch single booking by ID
  */
-export const checkAvailability = createAsyncThunk(
-  'booking/checkAvailability',
-  async (params, { rejectWithValue }) => {
+export const fetchBookingById = createAsyncThunk(
+  "booking/fetchById",
+  async (id, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.checkAvailability(params);
+      const response = await bookingApi.getById(id);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to check availability';
+        "Failed to fetch booking details";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Calculate booking price
- */
-export const calculateBookingPrice = createAsyncThunk(
-  'booking/calculatePrice',
-  async (params, { rejectWithValue }) => {
-    try {
-      const response = await bookingApi.calculatePrice(params);
-      return response;
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        'Failed to calculate price';
-      return rejectWithValue(message);
-    }
-  }
-);
-
-/**
- * Fetch student bookings (Student dashboard)
+ * Fetch student's bookings
  */
 export const fetchStudentBookings = createAsyncThunk(
-  'booking/fetchStudentBookings',
+  "booking/fetchStudentBookings",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await bookingApi.getStudentBookings(params);
@@ -135,17 +75,17 @@ export const fetchStudentBookings = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch student bookings';
+        "Failed to fetch your bookings";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Fetch host bookings (Host dashboard)
+ * Fetch host's bookings
  */
 export const fetchHostBookings = createAsyncThunk(
-  'booking/fetchHostBookings',
+  "booking/fetchHostBookings",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await bookingApi.getHostBookings(params);
@@ -155,17 +95,57 @@ export const fetchHostBookings = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch host bookings';
+        "Failed to fetch bookings";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Accept booking (Host only)
+ * Update booking status
+ */
+export const updateBooking = createAsyncThunk(
+  "booking/update",
+  async ({ id, data }, { rejectWithValue }) => {
+    try {
+      const response = await bookingApi.update(id, data);
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to update booking";
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Cancel booking
+ */
+export const cancelBooking = createAsyncThunk(
+  "booking/cancel",
+  async ({ id, reason }, { rejectWithValue }) => {
+    try {
+      const response = await bookingApi.cancel(id, reason);
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to cancel booking";
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Accept booking (Host)
  */
 export const acceptBooking = createAsyncThunk(
-  'booking/accept',
+  "booking/accept",
   async (id, { rejectWithValue }) => {
     try {
       const response = await bookingApi.accept(id);
@@ -175,88 +155,154 @@ export const acceptBooking = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to accept booking';
+        "Failed to accept booking";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Reject booking (Host only)
+ * Reject booking (Host)
  */
 export const rejectBooking = createAsyncThunk(
-  'booking/reject',
+  "booking/reject",
   async ({ id, reason }, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.reject(id, { reason });
+      const response = await bookingApi.reject(id, reason);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to reject booking';
+        "Failed to reject booking";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Complete booking
+ * Check accommodation availability
  */
-export const completeBooking = createAsyncThunk(
-  'booking/complete',
+export const checkAvailability = createAsyncThunk(
+  "booking/checkAvailability",
+  async ({ accommodationId, params }, { rejectWithValue }) => {
+    try {
+      const response = await bookingApi.checkAvailability(
+        accommodationId,
+        params,
+      );
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to check availability";
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Calculate booking price
+ */
+export const calculateBookingPrice = createAsyncThunk(
+  "booking/calculatePrice",
+  async (params, { rejectWithValue }) => {
+    try {
+      const response = await bookingApi.calculatePrice(params);
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to calculate price";
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Get booking calendar
+ */
+export const fetchBookingCalendar = createAsyncThunk(
+  "booking/fetchCalendar",
+  async ({ accommodationId, month }, { rejectWithValue }) => {
+    try {
+      const response = await bookingApi.getBookingCalendar(
+        accommodationId,
+        month,
+      );
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to fetch calendar";
+      return rejectWithValue(message);
+    }
+  },
+);
+
+/**
+ * Download booking receipt
+ */
+export const downloadBookingReceipt = createAsyncThunk(
+  "booking/downloadReceipt",
   async (id, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.complete(id);
+      const response = await bookingApi.downloadReceipt(id);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to complete booking';
+        "Failed to download receipt";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Get upcoming bookings
+ * Request booking modification
  */
-export const fetchUpcomingBookings = createAsyncThunk(
-  'booking/fetchUpcoming',
-  async (limit = 5, { rejectWithValue }) => {
+export const requestBookingModification = createAsyncThunk(
+  "booking/requestModification",
+  async ({ id, modifications }, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.getUpcoming(limit);
+      const response = await bookingApi.requestModification(id, modifications);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch upcoming bookings';
+        "Failed to request modification";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Get active bookings
+ * Report booking issue
  */
-export const fetchActiveBookings = createAsyncThunk(
-  'booking/fetchActive',
-  async (_, { rejectWithValue }) => {
+export const reportBookingIssue = createAsyncThunk(
+  "booking/reportIssue",
+  async ({ id, issueData }, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.getActive();
+      const response = await bookingApi.reportIssue(id, issueData);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch active bookings';
+        "Failed to report issue";
       return rejectWithValue(message);
     }
-  }
+  },
 );

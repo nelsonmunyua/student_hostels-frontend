@@ -1,11 +1,15 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
-import useAuth from "../../../../hooks/useAuth.jsx";
+import { useSelector, useDispatch } from "react-redux";
+import { updateProfile } from "../../../../redux/slices/Thunks/authThunks";
 
 const StudentProfile = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const dispatch = useDispatch();
+  const { user, loading } = useSelector((state) => state.auth);
+  const fileInputRef = useRef(null);
+
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     first_name: user?.first_name || "",
@@ -13,7 +17,6 @@ const StudentProfile = () => {
     email: user?.email || "",
     phone: user?.phone || "",
   });
-  const fileInputRef = useRef(null);
 
   // Store original values for reset
   const originalData = useRef({
@@ -22,6 +25,20 @@ const StudentProfile = () => {
     email: user?.email || "",
     phone: user?.phone || "",
   });
+
+  // Update form data when user data changes
+  useEffect(() => {
+    if (user) {
+      const newData = {
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      };
+      setFormData(newData);
+      originalData.current = newData;
+    }
+  }, [user]);
 
   // Handle input change
   const handleInputChange = (e) => {
@@ -36,11 +53,10 @@ const StudentProfile = () => {
   const handleSaveChanges = async () => {
     try {
       setIsSaving(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      alert("Profile updated successfully! (Demo)");
+      await dispatch(updateProfile(formData));
       // Update original data after successful save
       originalData.current = { ...formData };
+      alert("Profile updated successfully!");
     } catch (error) {
       console.error("Failed to save profile:", error);
       alert("Failed to save profile");
@@ -63,7 +79,9 @@ const StudentProfile = () => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      alert(`Photo "${file.name}" selected. This would be uploaded to the server.`);
+      alert(
+        `Photo "${file.name}" selected. This would be uploaded to the server.`,
+      );
     }
   };
 
@@ -77,7 +95,7 @@ const StudentProfile = () => {
         accept="image/*"
         style={{ display: "none" }}
       />
-      
+
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
         <p style={styles.subtitle}>

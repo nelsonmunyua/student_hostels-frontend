@@ -1,312 +1,286 @@
-import { useNavigate } from 'react-router-dom';
-import { Heart, MapPin, Star, Wifi, Car, Coffee, BookOpen, Shield } from 'lucide-react';
+import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { Heart, Star, MapPin, Wifi, Car, Shield, Eye } from "lucide-react";
+import { toggleWishlist } from "../../redux/slices/Thunks/wishlistThunks";
+import "./AccommodationCard.css";
+import "./ImageLoading.css";
 
-const AccommodationCard = ({ accommodation, layout = 'grid' }) => {
-  const navigate = useNavigate();
-  
-  const defaultImage = 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
-  const image = accommodation.images?.[0] || accommodation.image || defaultImage;
+// Default placeholder image
+const DEFAULT_PLACEHOLDER =
+  "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80";
 
-  const getAmenityIcon = (amenity) => {
-    const icons = {
-      wifi: Wifi,
-      parking: Car,
-      breakfast: Coffee,
-      study: BookOpen,
-      security: Shield,
-    };
-    const Icon = icons[amenity?.toLowerCase()] || Wifi;
-    return <Icon size={14} />;
-  };
+// Fallback images for different accommodations
+const FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80",
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80",
+  "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800&q=80",
+  "https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=800&q=80",
+  "https://images.unsplash.com/photo-1590508794514-f2a3c8b8edd4?w=800&q=80",
+  "https://images.unsplash.com/photo-1630699144867-37acec97df5a?w=800&q=80",
+  "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800&q=80",
+  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
+  "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80",
+  "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800&q=80",
+  "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800&q=80",
+];
 
-  const handleClick = () => {
-    navigate(`/accommodations/${accommodation.id}`);
-  };
+// Helper to get image URL from accommodation
+const getImageUrl = (accommodation, index = 0) => {
+  if (!accommodation) return FALLBACK_IMAGES[0];
 
-  if (layout === 'list') {
-    return (
-      <div style={styles.listCard} onClick={handleClick}>
-        <div style={styles.listImageContainer}>
-          <img src={image} alt={accommodation.name} style={styles.listImage} />
-          {accommodation.is_verified && <span style={styles.verifiedBadge}>Verified</span>}
-        </div>
-        <div style={styles.listContent}>
-          <div style={styles.listHeader}>
-            <h3 style={styles.listTitle}>{accommodation.name}</h3>
-            {accommodation.rating > 0 && (
-              <div style={styles.rating}>
-                <Star size={16} color="#f59e0b" fill="#f59e0b" />
-                <span>{accommodation.rating}</span>
-                <span style={styles.reviewCount}>({accommodation.review_count || 0})</span>
-              </div>
-            )}
-          </div>
-          <div style={styles.listLocation}>
-            <MapPin size={14} color="#64748b" />
-            <span>{accommodation.location}</span>
-          </div>
-          <div style={styles.listAmenities}>
-            {accommodation.amenities?.slice(0, 4).map((amenity, idx) => (
-              <span key={idx} style={styles.amenity}>
-                {getAmenityIcon(amenity)}
-                <span style={{ textTransform: 'capitalize' }}>{amenity}</span>
-              </span>
-            ))}
-          </div>
-          <div style={styles.listFooter}>
-            <div style={styles.price}>
-              <span style={styles.priceValue}>KSh {accommodation.price_per_night?.toLocaleString() || accommodation.price?.toLocaleString()}</span>
-              <span style={styles.pricePeriod}>/night</span>
-            </div>
-            <button style={styles.viewButton}>View Details</button>
-          </div>
-        </div>
-      </div>
+  // Check for images array
+  if (Array.isArray(accommodation.images) && accommodation.images.length > 0) {
+    const img = accommodation.images[index];
+    if (typeof img === "string") {
+      return img.includes("?") ? img : `${img}?w=800&q=80`;
+    }
+    if (img && img.url) {
+      return img.url.includes("?") ? img.url : `${img.url}?w=800&q=80`;
+    }
+  }
+
+  // Check for single image string
+  if (accommodation.image && typeof accommodation.image === "string") {
+    return accommodation.image.includes("?")
+      ? accommodation.image
+      : `${accommodation.image}?w=800&q=80`;
+  }
+
+  // Use default placeholder
+  return FALLBACK_IMAGES[0];
+};
+
+// Helper to get all images from accommodation
+const getAllImages = (accommodation) => {
+  if (!accommodation) return [];
+
+  // Return images array if it exists
+  if (Array.isArray(accommodation.images) && accommodation.images.length > 0) {
+    return accommodation.images.map((img) =>
+      typeof img === "string" ? img : img.url || img,
     );
   }
 
+  // Return single image as array
+  if (accommodation.image) {
+    return [accommodation.image];
+  }
+
+  return [];
+};
+
+const AccommodationCard = ({ accommodation, layout = "grid" }) => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const { user } = useSelector((state) => state.auth);
+
+  const [imageIndex, setImageIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const isInWishlist = wishlistItems.some(
+    (item) => item.accommodation_id === accommodation.id,
+  );
+
+  const handleWishlistClick = (e) => {
+    e.stopPropagation();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    dispatch(toggleWishlist(accommodation.id));
+  };
+
+  const handleCardClick = () => {
+    navigate(`/accommodations/${accommodation.id}`);
+  };
+
+  const formatPropertyType = (type) => {
+    const types = {
+      hostel: "Hostel",
+      bedsitter: "Bedsitter",
+      apartment: "Apartment",
+      single: "Single Room",
+      studio: "Studio",
+      shared: "Shared Room",
+    };
+    return types[type] || type;
+  };
+
+  const getAmenityIcon = (amenity) => {
+    const icons = {
+      wifi: <Wifi size={14} />,
+      parking: <Car size={14} />,
+      security: <Shield size={14} />,
+    };
+    return icons[amenity?.toLowerCase()] || null;
+  };
+
+  const defaultImage =
+    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800";
+  const images = getAllImages(accommodation);
+  const currentImage = getImageUrl(accommodation, imageIndex);
+
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = DEFAULT_PLACEHOLDER;
+  };
+
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
   return (
-    <div style={styles.gridCard} onClick={handleClick}>
-      <div style={styles.gridImageContainer}>
-        <img src={image} alt={accommodation.name} style={styles.gridImage} />
-        <button 
-          style={styles.wishlistButton}
-          onClick={(e) => { e.stopPropagation(); }}
-        >
-          <Heart size={20} color="#fff" fill="none" />
-        </button>
-        {accommodation.is_verified && <span style={styles.verifiedBadge}>Verified</span>}
-      </div>
-      <div style={styles.gridContent}>
-        <div style={styles.gridHeader}>
-          <h3 style={styles.gridTitle}>{accommodation.name}</h3>
-          {accommodation.rating > 0 && (
-            <div style={styles.rating}>
-              <Star size={14} color="#f59e0b" fill="#f59e0b" />
-              <span>{accommodation.rating}</span>
-            </div>
-          )}
-        </div>
-        <div style={styles.gridLocation}>
-          <MapPin size={14} color="#64748b" />
-          <span>{accommodation.location}</span>
-        </div>
-        <div style={styles.gridAmenities}>
-          {accommodation.amenities?.slice(0, 3).map((amenity, idx) => (
-            <span key={idx} style={styles.amenity}>
-              {getAmenityIcon(amenity)}
-            </span>
-          ))}
-          {(accommodation.amenities?.length || 0) > 3 && (
-            <span style={styles.moreAmenities}>+{accommodation.amenities.length - 3}</span>
-          )}
-        </div>
-        <div style={styles.gridFooter}>
-          <div style={styles.price}>
-            <span style={styles.priceValue}>KSh {accommodation.price_per_night?.toLocaleString() || accommodation.price?.toLocaleString()}</span>
-            <span style={styles.pricePeriod}>/night</span>
+    <div
+      className={`accommodation-card ${layout}`}
+      onClick={handleCardClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Image Section */}
+      <div className="card-image">
+        {/* Loading skeleton */}
+        {!imageLoaded && (
+          <div
+            className="image-skeleton"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        )}
+        <img
+          src={currentImage}
+          alt={accommodation.name || "Accommodation"}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          className={imageLoaded ? "image-fade-in loaded" : "image-fade-in"}
+        />
+
+        {/* Image Navigation */}
+        {images.length > 1 && (
+          <div className="image-nav">
+            {images.map((_, index) => (
+              <button
+                key={index}
+                className={`nav-dot ${index === imageIndex ? "active" : ""}`}
+                onMouseEnter={() => setImageIndex(index)}
+              />
+            ))}
           </div>
+        )}
+
+        {/* Wishlist Button */}
+        <button
+          className={`wishlist-btn ${isInWishlist ? "active" : ""}`}
+          onClick={handleWishlistClick}
+        >
+          <Heart
+            size={20}
+            fill={isInWishlist ? "#ef4444" : "none"}
+            color={isInWishlist ? "#ef4444" : "#fff"}
+          />
+        </button>
+
+        {/* Badges */}
+        <div className="card-badges">
+          {accommodation.is_verified && (
+            <span className="badge verified">Verified</span>
+          )}
+          {accommodation.featured && (
+            <span className="badge featured">Featured</span>
+          )}
+          {accommodation.discount && (
+            <span className="badge discount">
+              {accommodation.discount}% OFF
+            </span>
+          )}
+        </div>
+
+        {/* Quick View on Hover */}
+        {isHovered && (
+          <div className="quick-view">
+            <button onClick={handleCardClick}>
+              <Eye size={16} />
+              Quick View
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Content Section */}
+      <div className="card-content">
+        {/* Header */}
+        <div className="card-header">
+          <div className="card-title-row">
+            <h3 className="card-title">{accommodation.name}</h3>
+            {accommodation.rating && (
+              <div className="card-rating">
+                <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                <span>{accommodation.rating}</span>
+                {accommodation.review_count > 0 && (
+                  <span className="review-count">
+                    ({accommodation.review_count})
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="card-location">
+            <MapPin size={14} />
+            <span>{accommodation.location}</span>
+          </div>
+        </div>
+
+        {/* Property Type */}
+        <div className="property-type">
+          {formatPropertyType(accommodation.property_type)}
+        </div>
+
+        {/* Amenities Preview */}
+        {accommodation.amenities && accommodation.amenities.length > 0 && (
+          <div className="card-amenities">
+            {accommodation.amenities.slice(0, 3).map((amenity, index) => (
+              <span key={index} className="amenity-tag">
+                {getAmenityIcon(amenity)}
+                {amenity.charAt(0).toUpperCase() +
+                  amenity.slice(1).replace(/_/g, " ")}
+              </span>
+            ))}
+            {accommodation.amenities.length > 3 && (
+              <span className="amenity-more">
+                +{accommodation.amenities.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="card-footer">
+          <div className="card-price">
+            <span className="price">
+              KSh{" "}
+              {(
+                accommodation.price_per_night ||
+                accommodation.price ||
+                0
+              ).toLocaleString()}
+            </span>
+            <span className="period">/night</span>
+          </div>
+
+          <button className="book-btn">View Details</button>
         </div>
       </div>
     </div>
   );
 };
 
-const styles = {
-  // Grid layout styles
-  gridCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid #e5e7eb',
-    overflow: 'hidden',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  gridImageContainer: {
-    position: 'relative',
-    height: '200px',
-  },
-  gridImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  wishlistButton: {
-    position: 'absolute',
-    top: '12px',
-    right: '12px',
-    padding: '8px',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    border: 'none',
-    borderRadius: '50%',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    top: '12px',
-    left: '12px',
-    padding: '4px 10px',
-    backgroundColor: '#10b981',
-    color: '#fff',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: 600,
-  },
-  gridContent: {
-    padding: '16px',
-  },
-  gridHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '8px',
-  },
-  gridTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#1e293b',
-    margin: 0,
-  },
-  rating: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '14px',
-    fontWeight: 600,
-    color: '#1e293b',
-  },
-  reviewCount: {
-    fontSize: '12px',
-    color: '#64748b',
-    fontWeight: 400,
-  },
-  gridLocation: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '13px',
-    color: '#64748b',
-    marginBottom: '12px',
-  },
-  gridAmenities: {
-    display: 'flex',
-    gap: '8px',
-    marginBottom: '16px',
-  },
-  amenity: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    padding: '4px 8px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: '6px',
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  moreAmenities: {
-    padding: '4px 8px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: '6px',
-    fontSize: '12px',
-    color: '#64748b',
-  },
-  gridFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: '12px',
-    borderTop: '1px solid #f1f5f9',
-  },
-  price: {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: '4px',
-  },
-  priceValue: {
-    fontSize: '18px',
-    fontWeight: 700,
-    color: '#1e293b',
-  },
-  pricePeriod: {
-    fontSize: '14px',
-    color: '#64748b',
-  },
-  
-  // List layout styles
-  listCard: {
-    display: 'flex',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    border: '1px solid #e5e7eb',
-    overflow: 'hidden',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  listImageContainer: {
-    position: 'relative',
-    width: '280px',
-    height: '200px',
-    flexShrink: 0,
-  },
-  listImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  listContent: {
-    flex: 1,
-    padding: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  listHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '8px',
-  },
-  listTitle: {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#1e293b',
-    margin: 0,
-  },
-  listLocation: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '14px',
-    color: '#64748b',
-    marginBottom: '12px',
-  },
-  listAmenities: {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap',
-    marginBottom: '16px',
-  },
-  listFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 'auto',
-    paddingTop: '16px',
-    borderTop: '1px solid #f1f5f9',
-  },
-  viewButton: {
-    padding: '10px 20px',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-};
-
 export default AccommodationCard;
-

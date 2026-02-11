@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect fill="#e2e8f0" width="400" height="300"/>
+  <path fill="#94a3b8" d="M200 60l-80 80v140h160V140l-80-80zm0 30l50 50v90H150V140l50-50z"/>
+  <text x="200" y="200" text-anchor="middle" fill="#64748b" font-family="sans-serif" font-size="16" font-weight="500">No Image</text>
+</svg>

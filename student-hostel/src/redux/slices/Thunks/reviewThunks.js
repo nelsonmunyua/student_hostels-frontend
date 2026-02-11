@@ -1,63 +1,89 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import reviewApi from '../../../api/Reviewapi.api';
-
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import reviewApi from "../../../api/Reviewapi.api";
 
 export const fetchReviewsByAccommodation = createAsyncThunk(
-  'review/fetchByAccommodation',
+  "review/fetchByAccommodation",
   async ({ accommodationId, params = {} }, { rejectWithValue }) => {
     try {
-      const response = await reviewApi.getByAccommodation(accommodationId, params);
+      const response = await reviewApi.getByAccommodation(
+        accommodationId,
+        params,
+      );
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch reviews');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch reviews",
+      );
     }
-  }
+  },
 );
 
 export const createReview = createAsyncThunk(
-  'review/create',
+  "review/create",
   async (reviewData, { rejectWithValue }) => {
     try {
       const response = await reviewApi.create(reviewData);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to create review');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create review",
+      );
     }
-  }
+  },
 );
 
 export const updateReview = createAsyncThunk(
-  'review/update',
+  "review/update",
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const response = await reviewApi.update(id, data);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to update review');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update review",
+      );
     }
-  }
+  },
 );
 
 export const deleteReview = createAsyncThunk(
-  'review/delete',
+  "review/delete",
   async (id, { rejectWithValue }) => {
     try {
       await reviewApi.delete(id);
       return { id };
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to delete review');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete review",
+      );
     }
-  }
+  },
 );
 
 export const fetchMyReviews = createAsyncThunk(
-  'review/fetchMyReviews',
+  "review/fetchMyReviews",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await reviewApi.getMyReviews(params);
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch reviews');
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch reviews",
+      );
     }
-  }
+  },
+);
+
+export const fetchPendingReviews = createAsyncThunk(
+  "review/fetchPendingReviews",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await reviewApi.getPendingReviews();
+      return response.bookings || [];
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch pending reviews",
+      );
+    }
+  },
 );

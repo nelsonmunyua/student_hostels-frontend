@@ -8,14 +8,18 @@ const StudentBookings = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { studentBookings, loading, error } = useSelector((state) => state.booking);
+  const { studentBookings, loading, error } = useSelector(
+    (state) => state.booking,
+  );
   const [filter, setFilter] = useState("all"); // all, active, completed, cancelled
 
   useEffect(() => {
-    dispatch(fetchStudentBookings({ status: filter !== "all" ? filter : undefined }));
+    dispatch(
+      fetchStudentBookings({ status: filter !== "all" ? filter : undefined }),
+    );
   }, [dispatch, filter]);
 
-  // Use bookings from Redux store, fallback to empty array
+  // Use bookings from Redux store only - no mock fallback
   const bookings = studentBookings || [];
 
   const getStatusStyle = (status) => {

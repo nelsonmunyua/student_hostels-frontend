@@ -1,15 +1,17 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 import {
   fetchReviewsByAccommodation,
   createReview,
   updateReview,
   deleteReview,
   fetchMyReviews,
-} from './Thunks/reviewThunks';
+  fetchPendingReviews,
+} from "./Thunks/reviewThunks";
 
 const initialState = {
   reviews: [],
   myReviews: [],
+  pendingReviews: [],
   currentReview: null,
   loading: false,
   error: null,
@@ -17,7 +19,7 @@ const initialState = {
 };
 
 const reviewSlice = createSlice({
-  name: 'review',
+  name: "review",
   initialState,
   reducers: {
     clearError: (state) => {
@@ -45,21 +47,35 @@ const reviewSlice = createSlice({
     builder
       .addCase(createReview.fulfilled, (state, action) => {
         state.myReviews.push(action.payload.review);
-        state.successMessage = 'Review submitted successfully';
+        state.successMessage = "Review submitted successfully";
       })
       .addCase(createReview.rejected, (state, action) => {
         state.error = action.payload;
       });
 
-    builder
-      .addCase(fetchMyReviews.fulfilled, (state, action) => {
-        state.myReviews = action.payload.reviews || [];
-      });
+    builder.addCase(fetchMyReviews.fulfilled, (state, action) => {
+      state.myReviews = action.payload.reviews || [];
+    });
+
+    builder.addCase(deleteReview.fulfilled, (state, action) => {
+      state.myReviews = state.myReviews.filter(
+        (r) => r.id !== action.payload.id,
+      );
+      state.successMessage = "Review deleted";
+    });
 
     builder
-      .addCase(deleteReview.fulfilled, (state, action) => {
-        state.myReviews = state.myReviews.filter((r) => r.id !== action.payload.id);
-        state.successMessage = 'Review deleted';
+      .addCase(fetchPendingReviews.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPendingReviews.fulfilled, (state, action) => {
+        state.loading = false;
+        state.pendingReviews = action.payload;
+      })
+      .addCase(fetchPendingReviews.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
