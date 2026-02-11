@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, Heart, Star, MapPin } from "lucide-react";
 import { useSelector } from "react-redux";
+import studentApi from "../../../../api/studentApi";
 
 const StudentOverview = () => {
   const navigate = useNavigate();
@@ -14,76 +15,39 @@ const StudentOverview = () => {
   });
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   // Use ref to prevent double-fetching in React Strict Mode
   const fetchRef = useRef(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      // Try to fetch from API, but use mock data on failure
-      const response = await fetch("/api/student/dashboard-stats");
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.stats || data);
-        setRecentBookings(data.recentBookings || []);
-      } else {
-        // Use mock data when API fails
-        setStats({
-          totalBookings: 3,
-          activeBookings: 1,
-          wishlistCount: 5,
-          reviewsGiven: 2,
-        });
-        setRecentBookings([
-          {
-            id: 1,
-            accommodation_title: "University View Hostel",
-            check_in: "2024-03-01",
-            check_out: "2024-03-15",
-            status: "confirmed",
-            location: "123 College Ave",
-            total_price: 450,
-          },
-          {
-            id: 2,
-            accommodation_title: "Central Student Living",
-            check_in: "2024-02-01",
-            check_out: "2024-02-28",
-            status: "completed",
-            location: "456 Main St",
-            total_price: 380,
-          },
-        ]);
-      }
-    } catch (error) {
-      console.log("Using mock data - API not available");
-      // Use mock data when API is not available
+      setError(null);
+      console.log("Fetching dashboard stats...");
+      const data = await studentApi.getDashboardStats();
+      console.log("Dashboard stats received:", data);
+
+      // Map backend field names to frontend field names
       setStats({
-        totalBookings: 3,
-        activeBookings: 1,
-        wishlistCount: 5,
-        reviewsGiven: 2,
+        totalBookings: data.stats?.total_bookings || 0,
+        activeBookings: data.stats?.active_bookings || 0,
+        wishlistCount: data.stats?.wishlist_count || 0,
+        reviewsGiven: data.stats?.reviews_given || 0,
       });
-      setRecentBookings([
-        {
-          id: 1,
-          accommodation_title: "University View Hostel",
-          check_in: "2024-03-01",
-          check_out: "2024-03-15",
-          status: "confirmed",
-          location: "123 College Ave",
-          total_price: 450,
-        },
-        {
-          id: 2,
-          accommodation_title: "Central Student Living",
-          check_in: "2024-02-01",
-          check_out: "2024-02-28",
-          status: "completed",
-          location: "456 Main St",
-          total_price: 380,
-        },
-      ]);
+      setRecentBookings(data.recent_bookings || []);
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      setError(error.response?.data?.message || "Failed to load dashboard data");
+      // Use mock data when API fails
+      setStats({
+        totalBookings: 0,
+        activeBookings: 0,
+        wishlistCount: 0,
+        reviewsGiven: 0,
+      });
+      setRecentBookings([]);
     } finally {
       setLoading(false);
       fetchRef.current = false;
@@ -92,11 +56,12 @@ const StudentOverview = () => {
 
   useEffect(() => {
     // Prevent double-fetching in React Strict Mode
-    if (!fetchRef.current) {
+    // Only fetch if user is authenticated
+    if (!fetchRef.current && user) {
       fetchRef.current = true;
       fetchDashboardData();
     }
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, user]);
 
   // Handle action card click
   const handleAction = (action) => {
@@ -137,6 +102,27 @@ const StudentOverview = () => {
       <div style={styles.loadingContainer}>
         <div style={styles.spinner}></div>
         <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.errorContainer}>
+          <h2 style={styles.errorTitle}>Something went wrong</h2>
+          <p style={styles.errorText}>{error}</p>
+          <button
+            style={styles.retryButton}
+            onClick={() => {
+              fetchRef.current = false;
+              fetchDashboardData();
+            }}
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -224,18 +210,21 @@ const StudentOverview = () => {
             description="Browse available hostels near your campus"
             icon="🔍"
             action="browse"
+            onAction={handleGetStarted}
           />
           <ActionCard
             title="View Wishlist"
             description="Check your saved accommodations"
             icon="❤️"
             action="wishlist"
+            onAction={handleGetStarted}
           />
           <ActionCard
             title="Leave a Review"
             description="Share your experience with others"
             icon="⭐"
             action="review"
+            onAction={handleGetStarted}
           />
         </div>
       </div>
@@ -301,14 +290,14 @@ const BookingItem = ({ booking }) => {
   );
 };
 
-const ActionCard = ({ title, description, icon, action }) => (
+const ActionCard = ({ title, description, icon, action, onAction }) => (
   <div style={styles.actionCard}>
     <span style={styles.actionIcon}>{icon}</span>
     <h3 style={styles.actionTitle}>{title}</h3>
     <p style={styles.actionDescription}>{description}</p>
     <button
       style={styles.actionButton}
-      onClick={() => handleGetStarted(action)}
+      onClick={() => onAction(action)}
     >
       Get Started
     </button>
@@ -318,6 +307,7 @@ const ActionCard = ({ title, description, icon, action }) => (
 const styles = {
   container: {
     maxWidth: "1200px",
+    margin: "0 auto",
   },
   loadingContainer: {
     display: "flex",
@@ -341,12 +331,12 @@ const styles = {
   welcomeTitle: {
     fontSize: "28px",
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "#1e293b",
     marginBottom: "8px",
   },
   welcomeSubtitle: {
     fontSize: "16px",
-    color: "#6b7280",
+    color: "#64748b",
   },
   statsGrid: {
     display: "grid",
@@ -355,12 +345,14 @@ const styles = {
     marginBottom: "32px",
   },
   statCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "20px",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: "1px solid #e2e8f0",
     display: "flex",
     alignItems: "center",
     gap: "16px",
-    padding: "20px",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
   },
   statIconContainer: {
     width: "48px",
@@ -370,18 +362,20 @@ const styles = {
     justifyContent: "center",
     backgroundColor: "#fff",
     borderRadius: "10px",
+    boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
   },
   statContent: {
     flex: 1,
   },
   statTitle: {
     fontSize: "14px",
-    color: "#6b7280",
+    color: "#64748b",
     marginBottom: "4px",
   },
   statValue: {
     fontSize: "24px",
     fontWeight: 700,
+    color: "#1e293b",
   },
   section: {
     marginBottom: "32px",
@@ -395,7 +389,7 @@ const styles = {
   sectionTitle: {
     fontSize: "20px",
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "#1e293b",
   },
   viewAllLink: {
     fontSize: "14px",
@@ -408,9 +402,10 @@ const styles = {
     padding: 0,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     borderRadius: "12px",
-    border: "1px solid #e5e7eb",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: "1px solid #e2e8f0",
     padding: "24px",
   },
   bookingsList: {
@@ -423,9 +418,9 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     padding: "16px",
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#f8fafc",
     borderRadius: "8px",
-    border: "1px solid #e5e7eb",
+    border: "1px solid #e2e8f0",
   },
   bookingInfo: {
     flex: 1,
@@ -433,14 +428,14 @@ const styles = {
   bookingTitle: {
     fontSize: "16px",
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "#1e293b",
     marginBottom: "8px",
   },
   bookingDetails: {
     display: "flex",
     gap: "16px",
     fontSize: "14px",
-    color: "#6b7280",
+    color: "#64748b",
   },
   bookingDate: {
     display: "flex",
@@ -468,7 +463,7 @@ const styles = {
   bookingPrice: {
     fontSize: "18px",
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "#1e293b",
   },
   emptyState: {
     display: "flex",
@@ -480,7 +475,7 @@ const styles = {
   emptyStateText: {
     fontSize: "16px",
     fontWeight: 600,
-    color: "#6b7280",
+    color: "#64748b",
     marginTop: "16px",
   },
   emptyStateSubtext: {
@@ -494,11 +489,13 @@ const styles = {
     gap: "20px",
   },
   actionCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     padding: "24px",
     borderRadius: "12px",
-    border: "1px solid #e5e7eb",
+    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+    border: "1px solid #e2e8f0",
     textAlign: "center",
+    transition: "all 0.2s",
   },
   actionIcon: {
     fontSize: "48px",
@@ -508,12 +505,12 @@ const styles = {
   actionTitle: {
     fontSize: "18px",
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "#1e293b",
     marginBottom: "8px",
   },
   actionDescription: {
     fontSize: "14px",
-    color: "#6b7280",
+    color: "#64748b",
     marginBottom: "16px",
   },
   actionButton: {
@@ -527,6 +524,48 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.2s",
+  },
+  // Error state styles
+  errorContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "48px 24px",
+    textAlign: "center",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    marginTop: "24px",
+  },
+  errorTitle: {
+    fontSize: "18px",
+    fontWeight: 600,
+    color: "#1e293b",
+    marginBottom: "8px",
+  },
+  errorText: {
+    fontSize: "14px",
+    color: "#64748b",
+    marginBottom: "16px",
+  },
+  retryButton: {
+    padding: "10px 24px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  // Add hover effects for better UX
+  actionCardHover: {
+    transform: "translateY(-2px)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+  },
+  actionButtonHover: {
+    backgroundColor: "#2563eb",
   },
 };
 

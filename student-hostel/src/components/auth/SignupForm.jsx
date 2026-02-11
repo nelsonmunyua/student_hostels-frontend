@@ -167,7 +167,6 @@ const SignupForm = () => {
               <option value="">Select your role</option>
               <option value="student">Student</option>
               <option value="host">Host</option>
-              <option value="admin">Admin</option>
 
             </select>
             <span className="input-icon">

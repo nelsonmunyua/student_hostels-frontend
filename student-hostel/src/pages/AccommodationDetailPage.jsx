@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { MapPin, Users, Star, Heart, Share2, ChevronLeft } from 'lucide-react';
-import { fetchAccommodationById } from '../redux/slices/Thunks/accommodationThunks';
-import { fetchReviewsByAccommodation } from '../redux/slices/Thunks/reviewThunks';
+import { MapPin, Users, Star, Heart, Share2, ChevronLeft, Loader } from 'lucide-react';
+import studentApi from '../api/studentApi';
 import { toggleWishlist } from '../redux/slices/Thunks/wishlistThunks';
+import { createBooking } from '../redux/slices/Thunks/bookingThunks';
+import { clearCurrentBooking } from '../redux/slices/bookingSlice';
 import ReviewList from '../components/review/ReviewList';
 import BookingForm from '../components/booking/BookingForm';
 
@@ -13,20 +14,72 @@ const AccommodationDetailPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  const { currentAccommodation, loading } = useSelector((state) => state.accommodation);
-  const { reviews } = useSelector((state) => state.review);
+  const { user } = useSelector((state) => state.auth);
   const { items: wishlistItems } = useSelector((state) => state.wishlist);
+  const { currentBooking, loading: bookingLoading } = useSelector((state) => state.booking);
   
-  const isInWishlist = wishlistItems.some(item => item.accommodation_id === parseInt(id));
+  const [accommodation, setAccommodation] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  const isInWishlist = wishlistItems.some(item => item.hostel_id === parseInt(id));
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch accommodation details using studentApi
+        const accommodationData = await studentApi.getAccommodationDetail(id);
+        setAccommodation(accommodationData);
+        
+        // Fetch reviews
+        const reviewsData = await studentApi.getMyReviews({});
+        setReviews(reviewsData.reviews || []);
+      } catch (err) {
+        console.error("Error fetching accommodation:", err);
+        setError("Failed to load accommodation details");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     if (id) {
-      dispatch(fetchAccommodationById(id));
-      dispatch(fetchReviewsByAccommodation(id));
+      fetchData();
     }
+    
+    // Cleanup on unmount
+    return () => {
+      dispatch(clearCurrentBooking());
+    };
   }, [id, dispatch]);
 
-  if (loading || !currentAccommodation) {
+  // Redirect to payment page when booking is created
+  useEffect(() => {
+    if (currentBooking && currentBooking.id) {
+      navigate(`/student/payment/checkout/${currentBooking.id}`, {
+        state: {
+          booking: currentBooking,
+          accommodation: accommodation
+        }
+      });
+    }
+  }, [currentBooking, navigate, accommodation]);
+
+  const handleWishlistToggle = async () => {
+    try {
+      await studentApi.toggleWishlist(id);
+    } catch (err) {
+      console.error("Error toggling wishlist:", err);
+    }
+    // Toggle locally for UI responsiveness
+    dispatch(toggleWishlist(id));
+  };
+
+  // Handle loading and error states
+  if (loading) {
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.spinner}></div>
@@ -35,7 +88,34 @@ const AccommodationDetailPage = () => {
     );
   }
 
-  const accommodation = currentAccommodation;
+  if (error) {
+    return (
+      <div style={styles.loadingContainer}>
+        <p style={{ color: '#ef4444' }}>{error}</p>
+        <button 
+          style={styles.backButton} 
+          onClick={() => navigate(-1)}
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  if (!accommodation) {
+    return (
+      <div style={styles.loadingContainer}>
+        <p>Accommodation not found</p>
+        <button 
+          style={styles.backButton} 
+          onClick={() => navigate(-1)}
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   const defaultImage = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800';
   const mainImage = accommodation.images?.[0] || accommodation.image || defaultImage;
 
@@ -54,7 +134,7 @@ const AccommodationDetailPage = () => {
             <Share2 size={20} />
             Share
           </button>
-          <button style={styles.iconButton} onClick={() => dispatch(toggleWishlist(id))}>
+          <button style={styles.iconButton} onClick={handleWishlistToggle}>
             <Heart size={20} fill={isInWishlist ? '#ef4444' : 'none'} color={isInWishlist ? '#ef4444' : '#64748b'} />
             Save
           </button>
@@ -129,7 +209,24 @@ const AccommodationDetailPage = () => {
               <span style={styles.price}>KSh {accommodation.price_per_night?.toLocaleString() || accommodation.price?.toLocaleString()}</span>
               <span style={styles.priceLabel}>/night</span>
             </div>
-            <BookingForm accommodation={accommodation} />
+            
+            {/* Show loading indicator while booking is being created */}
+            {bookingLoading && (
+              <div style={styles.bookingLoading}>
+                <Loader size={20} className="spin" />
+                <span>Processing your booking...</span>
+              </div>
+            )}
+            
+            {!bookingLoading && (
+              <BookingForm 
+                accommodation={accommodation} 
+                onBookingCreated={(booking) => {
+                  // This will trigger the redirect via the useEffect hook
+                  console.log('Booking created:', booking);
+                }}
+              />
+            )}
           </div>
         </aside>
       </div>
@@ -319,6 +416,18 @@ const styles = {
   priceLabel: {
     fontSize: '16px',
     color: '#64748b',
+  },
+  bookingLoading: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    padding: '20px',
+    backgroundColor: '#f0f9ff',
+    borderRadius: '12px',
+    color: '#0369a1',
+    fontSize: '14px',
+    fontWeight: 500,
   },
 };
 

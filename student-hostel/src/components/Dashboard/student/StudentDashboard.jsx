@@ -111,6 +111,7 @@ const styles = {
     left: 0,
     width: "280px",
     height: "calc(100vh - 72px)",
+    zIndex: 900,
   },
   mainContent: {
     flex: 1,
@@ -118,6 +119,26 @@ const styles = {
     marginTop: "72px",
     minHeight: "calc(100vh - 72px)",
     backgroundColor: "#f8fafc",
+    padding: "24px",
+    overflowY: "auto",
+  },
+  // Responsive design for mobile/tablet
+  "@media (max-width: 1024px)": {
+    sidebarWrapper: {
+      width: "240px",
+    },
+    mainContent: {
+      marginLeft: "240px",
+    },
+  },
+  "@media (max-width: 768px)": {
+    sidebarWrapper: {
+      display: "none", // Hide sidebar on mobile, could be toggled later
+    },
+    mainContent: {
+      marginLeft: "0",
+      padding: "16px",
+    },
   },
 };
 

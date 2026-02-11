@@ -90,8 +90,9 @@ const bookingSlice = createSlice({
       })
       .addCase(createBooking.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentBooking = action.payload.booking;
-        state.bookings.push(action.payload.booking);
+        // Set currentBooking for redirect purposes
+        state.currentBooking = action.payload.booking || action.payload;
+        state.bookings.push(action.payload.booking || action.payload);
         state.successMessage = 'Booking created successfully';
       })
       .addCase(createBooking.rejected, (state, action) => {

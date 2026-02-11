@@ -193,6 +193,31 @@ const bookingApi = {
     const response = await axios.get('/bookings/active');
     return response.data;
   },
+
+  /**
+   * Check room availability
+   * @param {Object} params - Availability parameters
+   * @param {number} params.hostel_id - Hostel ID
+   * @param {number} params.room_id - Room ID (optional)
+   * @param {Date} params.start_date - Check-in date
+   * @param {Date} params.end_date - Check-out date
+   * @returns {Promise} Response with availability status
+   */
+  checkAvailability: async (params) => {
+    const response = await axios.post('/bookings/check-availability', params);
+    return response.data;
+  },
+
+  /**
+   * Cancel a booking
+   * @param {number} id - Booking ID
+   * @param {string} reason - Cancellation reason
+   * @returns {Promise} Response confirming cancellation
+   */
+  cancelBooking: async (id, reason = '') => {
+    const response = await axios.post(`/bookings/${id}/cancel`, { reason });
+    return response.data;
+  },
 };
 
 export default bookingApi;

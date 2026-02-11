@@ -58,6 +58,9 @@ import PaymentCheckout from "./components/Dashboard/student/pages/PaymentCheckou
 import PaymentSuccess from "./components/payment/PaymentSuccess";
 import AccommodationReviews from "./components/Dashboard/student/pages/AccommodationReviews";
 
+// Error Boundary for catching component errors
+import ErrorBoundary from "./components/ui/ErrorBoundary";
+
 import "./App.css";
 
 function App() {
@@ -93,8 +96,15 @@ function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
 
         {/* Nested student routes */}
-        <Route path="dashboard" element={<StudentOverview />} />
-        <Route path="find-accommodation" element={<FindAccommodation />} />
+<Route path="dashboard" element={<StudentOverview />} />
+        <Route
+          path="find-accommodation"
+          element={
+            <ErrorBoundary componentName="FindAccommodation">
+              <FindAccommodation />
+            </ErrorBoundary>
+          }
+        />
         <Route path="my-bookings" element={<StudentBookings />} />
         <Route path="payments" element={<StudentPayments />} />
         <Route path="wishlist" element={<StudentWishlist />} />

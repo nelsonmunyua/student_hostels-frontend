@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { LogOut, Bell, Shield, User as UserIcon, Home } from "lucide-react";
 import { useSelector } from "react-redux";
+import studentApi from "../../../../api/studentApi";
 
 // Theme colors based on userType
 const getTheme = (userType) => {
@@ -38,8 +41,37 @@ const getTheme = (userType) => {
 
 const DashboardHeader = ({ userType = "student", onLogout }) => {
   const { user } = useSelector((state) => state.auth);
+  const navigate = useNavigate();
   const theme = getTheme(userType);
   const RoleIcon = theme.roleIcon;
+  
+  // Dynamic notification count
+  const [notificationCount, setNotificationCount] = useState(0);
+  
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        // Only fetch for student role
+        if (userType === "student") {
+          const response = await studentApi.getNotifications({ limit: 1 });
+          if (response.unread_count !== undefined) {
+            setNotificationCount(response.unread_count);
+          } else {
+            // Fallback: try to get from response
+            setNotificationCount(0);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch notification count:", error);
+        // Silently fail - keep using current count
+      }
+    };
+    
+    // Only fetch if user is logged in
+    if (user) {
+      fetchNotificationCount();
+    }
+  }, [user, userType]);
 
   // Get current date
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -86,9 +118,19 @@ const DashboardHeader = ({ userType = "student", onLogout }) => {
               backgroundColor: `${theme.primary}25`,
               borderColor: `${theme.primary}50`,
             }}
+            onClick={() => {
+              // Navigate to notifications page
+              if (userType === "student") {
+                navigate("/student/notifications");
+              }
+            }}
           >
             <Bell size={20} color={theme.primary} />
-            <span style={styles.notificationBadge}>3</span>
+            {notificationCount > 0 && (
+              <span style={styles.notificationBadge}>
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            )}
           </button>
 
           {/* User Badge */}

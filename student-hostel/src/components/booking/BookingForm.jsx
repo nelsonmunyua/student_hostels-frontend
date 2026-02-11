@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Users, Calendar } from 'lucide-react';
-import { calculateBookingPrice, checkAvailability } from '../../redux/slices/Thunks/bookingThunks';
+import { calculateBookingPrice, checkAvailability, createBooking } from '../../redux/slices/Thunks/bookingThunks';
 import BookingCalendar from './BookingCalendar';
 
-const BookingForm = ({ accommodation, onSubmit }) => {
+const BookingForm = ({ accommodation, onSubmit, onBookingCreated }) => {
   const dispatch = useDispatch();
-  const { priceCalculation, priceLoading, availability } = useSelector(state => state.booking);
+  const { priceCalculation, priceLoading, availability, loading, currentBooking } = useSelector(state => state.booking);
   
   const [formData, setFormData] = useState({
     checkIn: null,
@@ -24,18 +24,38 @@ const BookingForm = ({ accommodation, onSubmit }) => {
     }
   }, [formData.checkIn, formData.checkOut, accommodation.id, dispatch]);
 
+  // Handle booking creation success and redirect to payment
+  useEffect(() => {
+    if (currentBooking && onBookingCreated) {
+      onBookingCreated(currentBooking);
+    }
+  }, [currentBooking, onBookingCreated]);
+
   const handleDateSelect = (dates) => {
     setFormData({ ...formData, checkIn: dates.checkIn, checkOut: dates.checkOut });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit({
+    
+    // Prepare booking data
+    const bookingData = {
       accommodation_id: accommodation.id,
       check_in: formData.checkIn,
       check_out: formData.checkOut,
+      number_of_guests: formData.guests,
       total_price: priceCalculation?.total_price || 0,
-    });
+    };
+    
+    // Call parent's onSubmit callback if provided
+    if (onSubmit) {
+      onSubmit(bookingData);
+    }
+    
+    // If onBookingCreated callback is provided, create booking and redirect to payment
+    if (onBookingCreated) {
+      dispatch(createBooking(bookingData));
+    }
   };
 
   const isFormValid = formData.checkIn && formData.checkOut && formData.guests > 0;

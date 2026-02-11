@@ -1,6 +1,9 @@
 import { NavLink } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const DashboardSidebar = ({ menuItems = [], userType = "student" }) => {
+  const { user } = useSelector((state) => state.auth);
+
   // Get the icon component based on icon name
   const getIcon = (iconName) => {
     // Simple icon mapping - can be replaced with lucide-react or react-icons
@@ -38,6 +41,40 @@ const DashboardSidebar = ({ menuItems = [], userType = "student" }) => {
   };
 
   const roleColor = getRoleColor();
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
+    }
+    if (user?.first_name) {
+      return user.first_name.substring(0, 2).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    // Fallback to role-based initials
+    return userType === "student" ? "ST" : userType === "host" ? "HO" : "AD";
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user?.first_name) {
+      return user.first_name;
+    }
+    if (user?.email) {
+      return user.email.split("@")[0];
+    }
+    // Fallback to role-based name
+    return userType === "student"
+      ? "Student User"
+      : userType === "host"
+      ? "Host User"
+      : "Admin User";
+  };
 
   return (
     <aside style={styles.sidebar}>
@@ -78,16 +115,10 @@ const DashboardSidebar = ({ menuItems = [], userType = "student" }) => {
       <div style={styles.footer}>
         <div style={styles.userInfo}>
           <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>
-            {userType === "student" ? "ST" : userType === "host" ? "HO" : "AD"}
+            {getUserInitials()}
           </div>
           <div style={styles.userText}>
-            <span style={styles.userName}>
-              {userType === "student"
-                ? "Student User"
-                : userType === "host"
-                ? "Host User"
-                : "Admin User"}
-            </span>
+            <span style={styles.userName}>{getUserDisplayName()}</span>
             <span style={styles.userRole}>
               {userType.charAt(0).toUpperCase() + userType.slice(1)}
             </span>

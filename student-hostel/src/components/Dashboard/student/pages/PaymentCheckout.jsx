@@ -1,25 +1,62 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { ArrowLeft, CreditCard, Smartphone, Lock } from 'lucide-react';
+import { ArrowLeft, CreditCard, Smartphone, Lock, Loader, AlertCircle } from 'lucide-react';
 import { StripeCheckout, MpesaPayment, CardPayment } from '../../../payment';
+import { fetchBookingById } from '../../../../redux/slices/Thunks/bookingThunks';
 
 const PaymentCheckout = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
   
-  const [paymentMethod, setPaymentMethod] = useState('card'); // card, mpesa, stripe
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState('card'); // card, mpesa, stripe
   
-  // Get booking data from Redux store
+  // Get booking data from navigation state (from AccommodationDetailPage redirect)
+  const locationState = location.state?.booking;
+  const locationAccommodation = location.state?.accommodation;
+  
+  // Get booking data from Redux store as fallback
   const { studentBookings } = useSelector((state) => state.booking);
-  const booking = studentBookings?.find(b => b.id === parseInt(bookingId)) || {
+  const reduxBooking = studentBookings?.find(b => b.id === parseInt(bookingId));
+  
+  // Build booking object with fallback to location state, then Redux, then defaults
+  const booking = locationState || reduxBooking || {
     id: parseInt(bookingId),
-    total_price: 5000, // Default for demo
-    accommodation_title: 'Demo Accommodation',
-    location: 'Nairobi, Kenya',
+    total_price: locationState?.total_amount || 5000, // Default for demo
+    accommodation_title: locationAccommodation?.title || locationAccommodation?.name || 'Demo Accommodation',
+    location: locationAccommodation?.location || 'Nairobi, Kenya',
+    check_in: locationState?.start_date,
+    check_out: locationState?.end_date,
+    hostel_name: locationState?.hostel_name,
   };
+
+  // Fetch booking details if we don't have enough data from state
+  useEffect(() => {
+    const fetchBookingDetails = async () => {
+      // If we only have basic data from navigation, fetch full details
+      const needsFetch = !booking.total_amount || booking.total_amount === 5000;
+      
+      if (needsFetch && bookingId) {
+        try {
+          setLoading(true);
+          await dispatch(fetchBookingById(bookingId)).unwrap();
+          setLoading(false);
+        } catch (err) {
+          console.error('Failed to fetch booking:', err);
+          setLoading(false);
+          // Continue with existing booking data
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    fetchBookingDetails();
+  }, [bookingId, dispatch, booking.total_amount]);
 
   const handlePaymentSuccess = (paymentResult) => {
     navigate('/student/payment/success', {
@@ -31,7 +68,12 @@ const PaymentCheckout = () => {
   };
 
   const handleCancel = () => {
-    navigate('/student/my-bookings');
+    // Check if we came from an accommodation page
+    if (locationAccommodation) {
+      navigate(-2);
+    } else {
+      navigate('/student/my-bookings');
+    }
   };
 
   const containerStyle = {
@@ -200,15 +242,50 @@ const PaymentCheckout = () => {
     color: '#059669',
   };
 
+  const loadingContainerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '400px',
+    gap: '16px',
+  };
+
+  const loadingTextStyle = {
+    fontSize: '16px',
+    color: '#64748b',
+  };
+
+  const errorContainerStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '400px',
+    gap: '16px',
+    padding: '20px',
+    backgroundColor: '#fef2f2',
+    borderRadius: '12px',
+    border: '1px solid #fecaca',
+  };
+
+  const errorTextStyle = {
+    fontSize: '16px',
+    color: '#dc2626',
+    textAlign: 'center',
+  };
+
   // Render the appropriate payment component
   const renderPaymentComponent = () => {
     const bookingData = {
       id: booking.id,
       booking_id: booking.id,
-      total_price: booking.total_price,
-      amount: booking.total_price,
-      accommodation_title: booking.accommodation_title,
+      total_price: booking.total_amount || booking.total_price,
+      amount: booking.total_amount || booking.total_price,
+      accommodation_title: booking.accommodation_title || booking.hostel_name,
       location: booking.location,
+      check_in: booking.start_date || booking.check_in,
+      check_out: booking.end_date || booking.check_out,
     };
 
     switch (selectedProvider) {
@@ -221,6 +298,20 @@ const PaymentCheckout = () => {
         return <CardPayment bookingData={bookingData} onSuccess={handlePaymentSuccess} onCancel={handleCancel} />;
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div style={containerStyle}>
+        <div style={maxWidthContainerStyle}>
+          <div style={loadingContainerStyle}>
+            <Loader size={48} className="spin" color="#3b82f6" />
+            <p style={loadingTextStyle}>Loading booking details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={containerStyle}>
@@ -279,7 +370,7 @@ const PaymentCheckout = () => {
               
               <div style={summaryItemStyle}>
                 <span style={summaryLabelStyle}>Accommodation</span>
-                <span style={summaryValueStyle}>{booking.accommodation_title}</span>
+                <span style={summaryValueStyle}>{booking.accommodation_title || booking.hostel_name}</span>
               </div>
               
               <div style={summaryItemStyle}>
@@ -287,20 +378,20 @@ const PaymentCheckout = () => {
                 <span style={summaryValueStyle}>{booking.location}</span>
               </div>
               
-              {booking.check_in && (
+              {(booking.check_in || booking.start_date) && (
                 <div style={summaryItemStyle}>
                   <span style={summaryLabelStyle}>Check-in</span>
                   <span style={summaryValueStyle}>
-                    {new Date(booking.check_in).toLocaleDateString()}
+                    {new Date(booking.check_in || booking.start_date).toLocaleDateString()}
                   </span>
                 </div>
               )}
               
-              {booking.check_out && (
+              {(booking.check_out || booking.end_date) && (
                 <div style={summaryItemStyle}>
                   <span style={summaryLabelStyle}>Check-out</span>
                   <span style={summaryValueStyle}>
-                    {new Date(booking.check_out).toLocaleDateString()}
+                    {new Date(booking.check_out || booking.end_date).toLocaleDateString()}
                   </span>
                 </div>
               )}
@@ -315,7 +406,7 @@ const PaymentCheckout = () => {
               <div style={totalRowStyle}>
                 <span style={totalLabelStyle}>Total Amount</span>
                 <span style={totalValueStyle}>
-                  KSh {(booking.total_price || 0).toLocaleString()}
+                  KSh {((booking.total_amount || booking.total_price) || 0).toLocaleString()}
                 </span>
               </div>
               
