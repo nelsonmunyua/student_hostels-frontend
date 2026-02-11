@@ -8,11 +8,14 @@ const StudentProfile = () => {
   const navigate = useNavigate();
   const { user, updateProfile } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    first_name: user?.first_name || "",
-    last_name: user?.last_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
   });
   const [originalData, setOriginalData] = useState({...formData});
   const fileInputRef = useRef(null);
@@ -52,9 +55,12 @@ const StudentProfile = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear messages when user starts typing
+    setError("");
+    setSuccess("");
   };
 
-  // Handle save changes
+  // Handle save changes - real API call
   const handleSaveChanges = async () => {
     try {
       setIsSaving(true);
@@ -109,6 +115,17 @@ const StudentProfile = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner}></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       {/* Hidden file input for photo upload */}
@@ -126,6 +143,18 @@ const StudentProfile = () => {
           Manage your personal information and preferences
         </p>
       </div>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div style={styles.errorMessage}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={styles.successMessage}>
+          {success}
+        </div>
+      )}
 
       <div style={styles.card}>
         <div style={styles.avatarSection}>
@@ -156,6 +185,7 @@ const StudentProfile = () => {
                 value={formData.first_name}
                 onChange={handleInputChange}
                 style={styles.input}
+                placeholder="Enter your first name"
               />
             </div>
             <div style={styles.inputGroup}>
@@ -166,6 +196,7 @@ const StudentProfile = () => {
                 value={formData.last_name}
                 onChange={handleInputChange}
                 style={styles.input}
+                placeholder="Enter your last name"
               />
             </div>
           </div>
@@ -178,7 +209,10 @@ const StudentProfile = () => {
               value={formData.email}
               onChange={handleInputChange}
               style={styles.input}
+              placeholder="Enter your email"
+              disabled
             />
+            <span style={styles.hint}>Email cannot be changed</span>
           </div>
 
           <div style={styles.inputGroup}>
@@ -189,18 +223,26 @@ const StudentProfile = () => {
               value={formData.phone}
               onChange={handleInputChange}
               style={styles.input}
+              placeholder="Enter your phone number"
             />
           </div>
 
           <div style={styles.actions}>
             <button
-              style={styles.saveButton}
+              style={{
+                ...styles.saveButton,
+                opacity: isSaving ? 0.7 : 1
+              }}
               onClick={handleSaveChanges}
               disabled={isSaving}
             >
               {isSaving ? "Saving..." : "Save Changes"}
             </button>
-            <button style={styles.cancelButton} onClick={handleCancel}>
+            <button 
+              style={styles.cancelButton} 
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
               Cancel
             </button>
           </div>
@@ -212,6 +254,22 @@ const StudentProfile = () => {
 
 const styles = {
   container: { maxWidth: "800px" },
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 0",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid #e5e7eb",
+    borderTop: "3px solid #3b82f6",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+    marginBottom: "16px",
+  },
   header: { marginBottom: "32px" },
   title: {
     fontSize: "28px",
@@ -220,6 +278,24 @@ const styles = {
     marginBottom: "8px",
   },
   subtitle: { fontSize: "16px", color: "#6b7280" },
+  errorMessage: {
+    padding: "12px 16px",
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    borderRadius: "8px",
+    fontSize: "14px",
+    marginBottom: "24px",
+    border: "1px solid #fecaca",
+  },
+  successMessage: {
+    padding: "12px 16px",
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+    borderRadius: "8px",
+    fontSize: "14px",
+    marginBottom: "24px",
+    border: "1px solid #86efac",
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -288,6 +364,13 @@ const styles = {
     borderRadius: "8px",
     fontSize: "14px",
     color: "#1a1a1a",
+    outline: "none",
+    transition: "border-color 0.2s",
+  },
+  hint: {
+    fontSize: "12px",
+    color: "#9ca3af",
+    fontStyle: "italic",
   },
   actions: {
     display: "flex",
@@ -317,3 +400,4 @@ const styles = {
 };
 
 export default StudentProfile;
+

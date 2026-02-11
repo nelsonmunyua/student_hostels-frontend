@@ -1,57 +1,144 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { Plus, Eye, Edit, Trash2, MapPin, Users, Star } from "lucide-react";
-import {
-  deleteAccommodation,
-  fetchMyListings,
-} from "../../../../redux/slices/Thunks/accommodationThunks";
+import { Plus, X, Star } from "lucide-react";
+import hostApi from "../../../../api/hostApi";
 
 const HostListings = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
-  const { myListings, loading, error, successMessage } = useSelector(
-    (state) => state.accommodation,
-  );
-
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    description: '',
+    price: '',
+    room_type: 'single',
+    capacity: 1,
+    available_units: 1
+  });
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    location: '',
+    description: '',
+    price: '',
+    room_type: 'single',
+    capacity: 1,
+    available_units: 1
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
   const [filter, setFilter] = useState("all");
   const [localError, setLocalError] = useState(null);
   const [localSuccess, setLocalSuccess] = useState(null);
 
-  // Fetch listings on mount
-  useEffect(() => {
-    dispatch(fetchMyListings());
-  }, [dispatch]);
-
-  // Handle Redux error/success messages
-  useEffect(() => {
-    if (error) {
-      setLocalError(error);
-      setTimeout(() => setLocalError(null), 5000);
+  // Helper function to safely capitalize status
+  const capitalizeStatus = (status) => {
+    if (!status) return 'Unknown';
+    if (typeof status === 'boolean') {
+      return status ? 'Active' : 'Inactive';
     }
-    if (successMessage) {
-      setLocalSuccess(successMessage);
-      setTimeout(() => setLocalSuccess(null), 5000);
-    }
-  }, [error, successMessage]);
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
 
-  // Use Redux data only - no mock fallback
-  const listings = myListings || [];
-  
+  // Helper function to check if status is active
+  const isStatusActive = (status) => {
+    if (typeof status === 'boolean') {
+      return status;
+    }
+    return status === 'active';
+  };
+
+  // Helper function to get price with fallback
+  const getPrice = (listing) => {
+    return listing.price || listing.total_rooms * 100 || 0;
+  };
+
+  // Helper function to get bookings count with fallback
+  const getBookings = (listing) => {
+    return listing.bookings || listing.total_reviews || 0;
+  };
+
+  // Helper function to get rating with fallback
+  const getRating = (listing) => {
+    return listing.rating !== undefined ? listing.rating : (listing.avg_rating || 0);
+  };
+
+  // Fetch listings from API
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        const data = await hostApi.getListings();
+        setListings(data.hostels || []);
+      } catch (error) {
+        console.error("Failed to fetch listings:", error);
+        
+        const errorMessage = error.response?.data?.message || error.message || "";
+        const isAuthError = 
+          error.response?.status === 401 || 
+          errorMessage.toLowerCase().includes("unauthorized") ||
+          errorMessage.toLowerCase().includes("authentication") ||
+          errorMessage.toLowerCase().includes("jwt") ||
+          errorMessage.toLowerCase().includes("token");
+        
+        if (isAuthError) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          window.location.href = "/login?session_expired=true";
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
+
+  const handleEdit = (listing) => {
+    setSelectedListing(listing);
+    setEditFormData({
+      name: listing.name || '',
+      location: listing.location || '',
+      description: listing.description || '',
+      price: listing.price ? listing.price.toString() : '',
+      room_type: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].room_type : 'single',
+      capacity: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].capacity : 1,
+      available_units: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].available_units : 1
+    });
+    setShowEditModal(true);
+  };
+
+  const handleDeleteClick = (listing) => {
+    setSelectedListing(listing);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (selectedListing && window.confirm("Are you sure you want to delete this listing?")) {
+      try {
+        await hostApi.deleteListing(selectedListing.id);
+        setListings(listings.filter(l => l.id !== selectedListing.id));
+        setShowDeleteModal(false);
+        setSelectedListing(null);
+      } catch (error) {
+        console.error("Failed to delete listing:", error);
+        alert("Failed to delete listing. Please try again.");
+      }
+    }
+  };
+
   const filteredListings =
     filter === "all"
       ? listings
       : filter === "active"
         ? listings.filter((l) => l.is_active)
         : listings.filter((l) => !l.is_active);
-
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this listing?")) {
-      await dispatch(deleteAccommodation(id));
-    }
-    setShowMenu(null);
-  };
 
   const formatPropertyType = (type) => {
     const types = {
@@ -63,6 +150,111 @@ const HostListings = () => {
       hostel: "Hostel",
     };
     return types[type] || type;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const listingData = {
+        name: formData.name,
+        location: formData.location,
+        description: formData.description,
+        latitude: 0,
+        longitude: 0,
+        amenities: [],
+        rules: '',
+        images: [],
+        is_verified: false,
+        is_active: true
+      };
+
+      const roomData = {
+        room_type: formData.room_type,
+        price: parseFloat(formData.price),
+        capacity: parseInt(formData.capacity),
+        available_units: parseInt(formData.available_units),
+        is_available: true
+      };
+
+      const listingResponse = await hostApi.createListing(listingData);
+      const listingId = listingResponse.hostel.id;
+
+      await hostApi.addRoom(listingId, roomData);
+
+      const data = await hostApi.getListings();
+      setListings(data.hostels || []);
+
+      resetAddForm();
+      setShowAddModal(false);
+      alert('Listing created successfully!');
+    } catch (error) {
+      console.error('Failed to create listing:', error);
+      alert('Failed to create listing. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle edit form input changes
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditingSubmitting(true);
+
+    try {
+      const listingData = {
+        name: editFormData.name,
+        location: editFormData.location,
+        description: editFormData.description
+      };
+
+      await hostApi.updateListing(selectedListing.id, listingData);
+
+      const data = await hostApi.getListings();
+      setListings(data.hostels || []);
+
+      setShowEditModal(false);
+      setSelectedListing(null);
+      alert('Listing updated successfully!');
+    } catch (error) {
+      console.error('Failed to update listing:', error);
+      alert('Failed to update listing. Please try again.');
+    } finally {
+      setEditingSubmitting(false);
+    }
+  };
+
+  // Reset add form
+  const resetAddForm = () => {
+    setFormData({
+      name: '',
+      location: '',
+      description: '',
+      price: '',
+      room_type: 'single',
+      capacity: 1,
+      available_units: 1
+    });
   };
 
   return (
@@ -179,80 +371,351 @@ const HostListings = () => {
                 <span
                   style={{
                     ...styles.statusBadge,
-                    ...(listing.is_active
+                    ...(isStatusActive(listing.is_active)
                       ? styles.statusActive
                       : styles.statusInactive),
                   }}
                 >
-                  {listing.is_active ? "Active" : "Inactive"}
+                  {capitalizeStatus(listing.is_active)}
                 </span>
                 <div style={styles.listingActions}>
                   <button
-                    style={styles.actionButton}
-                    onClick={() => navigate(`/accommodations/${listing.id}`)}
-                    title="View"
-                  >
-                    <Eye size={18} />
-                  </button>
-                  <button
-                    style={styles.actionButton}
-                    onClick={() =>
-                      navigate(`/host/listings/${listing.id}/edit`)
-                    }
+                    style={{...styles.actionButton, ...styles.actionEdit}}
+                    onClick={() => handleEdit(listing)}
                     title="Edit"
                   >
-                    <Edit size={18} />
+                    <Plus size={16} />
                   </button>
                   <button
-                    style={{ ...styles.actionButton, ...styles.actionDelete }}
-                    onClick={() => handleDelete(listing.id)}
+                    style={{...styles.actionButton, ...styles.actionDelete}}
+                    onClick={() => handleDeleteClick(listing)}
                     title="Delete"
                   >
-                    <Trash2 size={18} />
+                    <X size={16} />
                   </button>
                 </div>
               </div>
-
               <div style={styles.listingContent}>
                 <div style={styles.listingHeader}>
                   <h3 style={styles.listingTitle}>{listing.name}</h3>
-                  {listing.rating && (
+                  {getRating(listing) > 0 && (
                     <div style={styles.rating}>
                       <Star size={14} color="#f59e0b" fill="#f59e0b" />
-                      <span>{listing.rating}</span>
+                      <span>{getRating(listing).toFixed(1)}</span>
                     </div>
                   )}
                 </div>
-
-                <div style={styles.listingLocation}>
-                  <MapPin size={14} />
-                  <span>{listing.location}</span>
-                </div>
-
+                <p style={styles.listingLocation}>📍 {listing.location}</p>
                 <div style={styles.listingMeta}>
                   <span style={styles.propertyType}>
-                    {formatPropertyType(listing.property_type)}
+                    {formatPropertyType(listing.room_type || listing.rooms?.[0]?.room_type || 'single')}
                   </span>
-                  <span style={styles.price}>
-                    KSh {listing.price_per_night?.toLocaleString()}/night
-                  </span>
+                  <span style={styles.price}>KES {getPrice(listing).toLocaleString()}/mo</span>
                 </div>
-
                 <div style={styles.listingStats}>
-                  <div style={styles.stat}>
-                    <Users size={14} />
-                    <span>{listing.total_bookings || 0} bookings</span>
-                  </div>
+                  <span style={styles.stat}>
+                    📅 {getBookings(listing)} bookings
+                  </span>
                   <button
                     style={styles.manageButton}
-                    onClick={() => navigate(`/host/availability/${listing.id}`)}
+                    onClick={() => navigate(`/host/listings/${listing.id}`)}
                   >
-                    Manage Availability
+                    Manage
                   </button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Add New Listing</h2>
+              <button style={styles.closeBtn} onClick={() => setShowAddModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div style={styles.modalContent}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Property Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    style={styles.input}
+                    placeholder="Enter property name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Description</label>
+                  <textarea
+                    name="description"
+                    style={styles.textarea}
+                    placeholder="Enter property description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Room Type</label>
+                    <select
+                      name="room_type"
+                      style={styles.select}
+                      value={formData.room_type}
+                      onChange={handleInputChange}
+                    >
+                      <option value="single">Single</option>
+                      <option value="double">Double</option>
+                      <option value="bed_sitter">Bed Sitter</option>
+                      <option value="studio">Studio</option>
+                      <option value="apartment">Apartment</option>
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Price (KES/month)</label>
+                    <input
+                      type="number"
+                      name="price"
+                      style={styles.input}
+                      placeholder="Enter price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    style={styles.input}
+                    placeholder="Enter address"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Capacity</label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      style={styles.input}
+                      placeholder="Room capacity"
+                      value={formData.capacity}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Available Units</label>
+                    <input
+                      type="number"
+                      name="available_units"
+                      style={styles.input}
+                      placeholder="Available units"
+                      value={formData.available_units}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  style={styles.cancelBtn}
+                  onClick={() => setShowAddModal(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={styles.submitBtn}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Creating...' : 'Add Listing'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedListing && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Edit Listing</h2>
+              <button style={styles.closeBtn} onClick={() => setShowEditModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div style={styles.modalContent}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Property Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    style={styles.input}
+                    placeholder="Enter property name"
+                    value={editFormData.name}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Description</label>
+                  <textarea
+                    name="description"
+                    style={styles.textarea}
+                    placeholder="Enter property description"
+                    value={editFormData.description}
+                    onChange={handleEditInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Room Type</label>
+                    <select
+                      name="room_type"
+                      style={styles.select}
+                      value={editFormData.room_type}
+                      onChange={handleEditInputChange}
+                    >
+                      <option value="single">Single</option>
+                      <option value="double">Double</option>
+                      <option value="bed_sitter">Bed Sitter</option>
+                      <option value="studio">Studio</option>
+                      <option value="apartment">Apartment</option>
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Price (KES/month)</label>
+                    <input
+                      type="number"
+                      name="price"
+                      style={styles.input}
+                      placeholder="Enter price"
+                      value={editFormData.price}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    style={styles.input}
+                    placeholder="Enter address"
+                    value={editFormData.location}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Capacity</label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      style={styles.input}
+                      placeholder="Room capacity"
+                      value={editFormData.capacity}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Available Units</label>
+                    <input
+                      type="number"
+                      name="available_units"
+                      style={styles.input}
+                      placeholder="Available units"
+                      value={editFormData.available_units}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  style={styles.cancelBtn}
+                  onClick={() => setShowEditModal(false)}
+                  disabled={editingSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={styles.submitBtn}
+                  disabled={editingSubmitting}
+                >
+                  {editingSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedListing && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Confirm Delete</h2>
+              <button style={styles.closeBtn} onClick={() => setShowDeleteModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div style={styles.modalContent}>
+              <p style={styles.deleteMessage}>
+                Are you sure you want to delete <strong>{selectedListing.name}</strong>? 
+                This action cannot be undone.
+              </p>
+            </div>
+            <div style={styles.modalFooter}>
+              <button
+                style={styles.cancelBtn}
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                style={styles.deleteBtn}
+                onClick={handleDelete}
+              >
+                Delete Listing
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -261,7 +724,9 @@ const HostListings = () => {
 
 const styles = {
   container: {
-    padding: "32px",
+    padding: "24px",
+    backgroundColor: "#f8fafc",
+    minHeight: "100%",
   },
   header: {
     display: "flex",
@@ -380,7 +845,7 @@ const styles = {
     right: "12px",
     display: "flex",
     gap: "8px",
-    opacity: 0,
+    opacity: 1,
     transition: "opacity 0.2s",
   },
   actionButton: {
@@ -394,6 +859,9 @@ const styles = {
     justifyContent: "center",
     cursor: "pointer",
     transition: "background-color 0.2s",
+  },
+  actionEdit: {
+    color: "#3b82f6",
   },
   actionDelete: {
     color: "#dc2626",
@@ -419,6 +887,7 @@ const styles = {
     gap: "4px",
     fontSize: "14px",
     fontWeight: 600,
+    color: "#64748b",
   },
   listingLocation: {
     display: "flex",
@@ -499,10 +968,9 @@ const styles = {
     marginBottom: "16px",
   },
   emptyButton: {
-    display: "flex",
+    display: "inline-flex",
     alignItems: "center",
     gap: "8px",
-    margin: "20px auto 0",
     padding: "12px 24px",
     backgroundColor: "#3b82f6",
     color: "#fff",
@@ -511,7 +979,150 @@ const styles = {
     fontSize: "14px",
     fontWeight: 600,
     cursor: "pointer",
+    marginTop: "16px",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modal: {
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    width: "100%",
+    maxWidth: "500px",
+    maxHeight: "90vh",
+    overflow: "auto",
+  },
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px 24px",
+    borderBottom: "1px solid #e5e7eb",
+  },
+  modalTitle: {
+    fontSize: "18px",
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  closeBtn: {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color: "#64748b",
+    padding: "4px",
+    borderRadius: "4px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalContent: {
+    padding: "24px",
+  },
+  formGroup: {
+    marginBottom: "16px",
+  },
+  formRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+  },
+  label: {
+    display: "block",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#374151",
+    marginBottom: "6px",
+  },
+  input: {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#334155",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  select: {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#334155",
+    outline: "none",
+    boxSizing: "border-box",
+    backgroundColor: "#fff",
+    cursor: "pointer",
+  },
+  textarea: {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#334155",
+    outline: "none",
+    boxSizing: "border-box",
+    resize: "vertical",
+    fontFamily: "inherit",
+  },
+  modalFooter: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "12px",
+    padding: "16px 24px",
+    borderTop: "1px solid #e5e7eb",
+    backgroundColor: "#f9fafb",
+    borderRadius: "0 0 12px 12px",
+  },
+  cancelBtn: {
+    padding: "10px 20px",
+    backgroundColor: "#fff",
+    color: "#374151",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  submitBtn: {
+    padding: "10px 20px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  deleteBtn: {
+    padding: "10px 20px",
+    backgroundColor: "#dc2626",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  deleteMessage: {
+    fontSize: "14px",
+    color: "#64748b",
+    margin: 0,
+    lineHeight: 1.6,
   },
 };
 
 export default HostListings;
+

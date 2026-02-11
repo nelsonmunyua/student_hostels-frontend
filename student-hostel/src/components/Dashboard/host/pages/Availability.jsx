@@ -1,400 +1,485 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  Save,
-  Check,
-  X,
-} from "lucide-react";
-import {
-  fetchAccommodationAvailability,
-  updateAccommodation,
-} from "../../../../redux/slices/Thunks/accommodationThunks";
+import { AlertCircle, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import hostApi from "../../../../api/hostApi";
 
 const HostAvailability = () => {
-  const { id } = useParams();
-  const dispatch = useDispatch();
-  const { currentAccommodation, loading, error } = useSelector(
-    (state) => state.accommodation,
-  );
-
+  const [hostels, setHostels] = useState([]);
+  const [selectedHostel, setSelectedHostel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [availability, setAvailability] = useState({});
-  const [pricing, setPricing] = useState({
-    basePrice: 8500,
-    weekendPrice: 9500,
-    seasonalPrice: 10000,
-  });
-  const [minStay, setMinStay] = useState(1);
-  const [maxStay, setMaxStay] = useState(30);
-  const [isSaving, setIsSaving] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-  // Fetch availability on mount
   useEffect(() => {
-    if (id) {
-      dispatch(fetchAccommodationAvailability({ id }));
-    }
-  }, [dispatch, id]);
+    fetchAvailability();
+  }, []);
 
-  // Mock listing info - use real data from Redux when available
-  const listing = currentAccommodation || {
-    name: currentAccommodation?.name || "University View Hostel",
-    price: currentAccommodation?.price_per_night || 8500,
+  const fetchAvailability = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await hostApi.getAvailability();
+      setHostels(data.hostels || []);
+      if (data.hostels && data.hostels.length > 0) {
+        setSelectedHostel(data.hostels[0]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch availability:", error);
+      setError(error.response?.data?.message || "Failed to load availability");
+      // Use mock data if API fails
+      setHostels([
+        {
+          id: 1,
+          name: "University View Hostel",
+          location: "Near Main Campus",
+          rooms: [
+            { id: 101, room_type: "Single", price: 8000, is_available: true },
+            { id: 102, room_type: "Double", price: 6000, is_available: true },
+            { id: 103, room_type: "Studio", price: 10000, is_available: false },
+          ]
+        },
+        {
+          id: 2,
+          name: "Central Student Living",
+          location: "City Center",
+          rooms: [
+            { id: 201, room_type: "Single", price: 8500, is_available: true },
+            { id: 202, room_type: "Bed Sitter", price: 7000, is_available: true },
+          ]
+        }
+      ]);
+      setSelectedHostel({
+        id: 1,
+        name: "University View Hostel",
+        location: "Near Main Campus",
+        rooms: [
+          { id: 101, room_type: "Single", price: 8000, is_available: true },
+          { id: 102, room_type: "Double", price: 6000, is_available: true },
+          { id: 103, room_type: "Studio", price: 10000, is_available: false },
+        ]
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleAvailability = async (roomId, currentStatus) => {
+    try {
+      setUpdating(true);
+      const newStatus = !currentStatus;
+      await hostApi.updateAvailability(roomId, new Date().toISOString().split('T')[0], newStatus);
+      
+      // Update local state
+      setHostels(prev => prev.map(h => {
+        if (h.id === selectedHostel.id) {
+          return {
+            ...h,
+            rooms: h.rooms.map(r => 
+              r.id === roomId ? { ...r, is_available: newStatus } : r
+            )
+          };
+        }
+        return h;
+      }));
+      
+      setSelectedHostel(prev => ({
+        ...prev,
+        rooms: prev.rooms.map(r => 
+          r.id === roomId ? { ...r, is_available: newStatus } : r
+        )
+      }));
+    } catch (error) {
+      console.error("Failed to update availability:", error);
+      alert("Failed to update availability. Please try again.");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    return { daysInMonth, startingDayOfWeek };
+    const days = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: days }, (_, i) => new Date(year, month, i + 1));
   };
 
-  const formatDate = (year, month, day) => {
-    const date = new Date(year, month, day);
-    return date.toISOString().split("T")[0];
+  const formatDate = (date) => date.toISOString().split('T')[0];
+
+  const isDateAvailable = (room, date) => {
+    // Simplified logic: room is available if is_available is true
+    return room.is_available;
   };
 
-  const handleDateToggle = (dateStr) => {
-    setAvailability((prev) => ({
-      ...prev,
-      [dateStr]: !prev[dateStr],
-    }));
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Save availability to backend via Redux
-      await dispatch(
-        updateAccommodation({
-          id,
-          data: {
-            availability,
-            pricing: {
-              base_price: pricing.basePrice,
-              weekend_price: pricing.weekendPrice,
-              seasonal_price: pricing.seasonalPrice,
-            },
-            min_stay: minStay,
-            max_stay: maxStay,
-          },
-        }),
-      );
-      alert("Availability settings saved successfully!");
-    } catch (error) {
-      console.error("Error saving availability:", error);
-      alert("Failed to save availability settings");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const previousMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
+  if (loading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingState}>
+          <div style={styles.spinner}></div>
+          <p>Loading availability...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const nextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.errorState}>
+          <AlertCircle size={24} style={{ color: '#dc2626' }} />
+          <span>{error}</span>
+          <button 
+            style={styles.retryButton}
+            onClick={() => fetchAvailability()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     );
-  };
-
-  const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
-  const monthName = currentMonth.toLocaleString("default", { month: "long" });
-  const year = currentMonth.getFullYear();
-
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  }
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Availability Management</h1>
-          <p style={styles.subtitle}>{listing.name}</p>
+          <h1 style={styles.title}>Availability Calendar</h1>
+          <p style={styles.subtitle}>Manage your room availability and bookings</p>
         </div>
-        <button style={styles.saveButton} onClick={handleSave}>
-          <Save size={18} />
-          Save Changes
-        </button>
       </div>
 
-      <div style={styles.content}>
-        <div style={styles.calendarSection}>
+      {/* Hostel Selector */}
+      {hostels.length > 1 && (
+        <div style={styles.hostelSelector}>
+          <label style={styles.selectorLabel}>Select Property:</label>
+          <select
+            style={styles.selector}
+            value={selectedHostel?.id || ""}
+            onChange={(e) => {
+              const hostel = hostels.find(h => h.id === parseInt(e.target.value));
+              setSelectedHostel(hostel);
+            }}
+          >
+            {hostels.map(hostel => (
+              <option key={hostel.id} value={hostel.id}>
+                {hostel.name} - {hostel.location}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {selectedHostel ? (
+        <>
+          {/* Selected Hostel Info */}
+          <div style={styles.hostelInfo}>
+            <h2 style={styles.hostelName}>{selectedHostel.name}</h2>
+            <p style={styles.hostelLocation}>📍 {selectedHostel.location}</p>
+          </div>
+
+          {/* Rooms Overview */}
+          <div style={styles.roomsSection}>
+            <h3 style={styles.sectionTitle}>Your Rooms</h3>
+            <div style={styles.roomsGrid}>
+              {selectedHostel.rooms.map(room => (
+                <div key={room.id} style={styles.roomCard}>
+                  <div style={styles.roomHeader}>
+                    <span style={styles.roomType}>{room.room_type}</span>
+                    <span style={{
+                      ...styles.availabilityBadge,
+                      backgroundColor: room.is_available ? '#dcfce7' : '#fee2e2',
+                      color: room.is_available ? '#16a34a' : '#dc2626',
+                    }}>
+                      {room.is_available ? 'Available' : 'Booked'}
+                    </span>
+                  </div>
+                  <div style={styles.roomDetails}>
+                    <span style={styles.roomPrice}>KES {room.price.toLocaleString()}/month</span>
+                    <span style={styles.roomId}>Room {room.id}</span>
+                  </div>
+                  <button
+                    style={{
+                      ...styles.toggleButton,
+                      opacity: updating ? 0.5 : 1,
+                    }}
+                    onClick={() => handleToggleAvailability(room.id, room.is_available)}
+                    disabled={updating}
+                  >
+                    {room.is_available ? (
+                      <>
+                        <XCircle size={16} style={{ marginRight: '8px' }} />
+                        Mark as Unavailable
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={16} style={{ marginRight: '8px' }} />
+                        Mark as Available
+                      </>
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Calendar */}
-          <div style={styles.calendarCard}>
+          <div style={styles.calendarSection}>
             <div style={styles.calendarHeader}>
-              <button onClick={previousMonth} style={styles.navButton}>
+              <button 
+                style={styles.calendarNav}
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+              >
                 <ChevronLeft size={20} />
               </button>
-              <div style={styles.calendarTitle}>
-                <Calendar size={20} />
-                <span>
-                  {monthName} {year}
-                </span>
-              </div>
-              <button onClick={nextMonth} style={styles.navButton}>
+              <h3 style={styles.calendarTitle}>
+                <Calendar size={20} style={{ marginRight: '8px' }} />
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button 
+                style={styles.calendarNav}
+                onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+              >
                 <ChevronRight size={20} />
               </button>
             </div>
 
-            <div style={styles.weekDays}>
-              {weekDays.map((day) => (
-                <div key={day} style={styles.weekDay}>
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div style={styles.daysGrid}>
-              {Array.from({ length: startingDayOfWeek }).map((_, index) => (
-                <div key={`empty-${index}`} style={styles.emptyDay} />
+            <div style={styles.calendarGrid}>
+              {/* Day headers */}
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} style={styles.dayHeader}>{day}</div>
               ))}
 
-              {Array.from({ length: daysInMonth }).map((_, index) => {
-                const day = index + 1;
-                const dateStr = formatDate(year, currentMonth.getMonth(), day);
-                const isUnavailable = availability[dateStr] === false;
-                const date = new Date(year, currentMonth.getMonth(), day);
-                const isPast = date < new Date().setHours(0, 0, 0, 0);
-
+              {/* Calendar days */}
+              {getDaysInMonth(currentMonth).map((date, index) => {
+                const dateStr = formatDate(date);
+                const isToday = dateStr === formatDate(new Date());
+                
                 return (
-                  <button
-                    key={day}
-                    onClick={() => !isPast && handleDateToggle(dateStr)}
-                    disabled={isPast}
+                  <div 
+                    key={dateStr} 
                     style={{
-                      ...styles.day,
-                      ...(isPast && styles.dayPast),
-                      ...(!isPast && isUnavailable && styles.dayUnavailable),
-                      ...(!isPast && !isUnavailable && styles.dayAvailable),
+                      ...styles.calendarDay,
+                      backgroundColor: isToday ? '#f0f9ff' : '#ffffff',
+                      borderColor: isToday ? '#0369a1' : '#e5e7eb',
                     }}
                   >
-                    <span style={styles.dayNumber}>{day}</span>
-                    {!isPast && (
-                      <span style={styles.dayStatus}>
-                        {isUnavailable ? <X size={12} /> : <Check size={12} />}
-                      </span>
-                    )}
-                  </button>
+                    <span style={styles.dayNumber}>{date.getDate()}</span>
+                    <div style={styles.dayRooms}>
+                      {selectedHostel.rooms.slice(0, 3).map(room => (
+                        <div
+                          key={room.id}
+                          style={{
+                            ...styles.dayRoomDot,
+                            backgroundColor: isDateAvailable(room, date) ? '#16a34a' : '#dc2626',
+                          }}
+                          title={`Room ${room.id}: ${room.room_type}`}
+                        />
+                      ))}
+                      {selectedHostel.rooms.length > 3 && (
+                        <span style={styles.moreRooms}>+{selectedHostel.rooms.length - 3}</span>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
+          </div>
 
-            <div style={styles.legend}>
-              <div style={styles.legendItem}>
-                <div style={{ ...styles.legendBox, ...styles.dayAvailable }} />
-                <span>Available</span>
-              </div>
-              <div style={styles.legendItem}>
-                <div
-                  style={{ ...styles.legendBox, ...styles.dayUnavailable }}
-                />
-                <span>Unavailable</span>
-              </div>
-              <div style={styles.legendItem}>
-                <div style={{ ...styles.legendBox, ...styles.dayPast }} />
-                <span>Past</span>
-              </div>
+          {/* Legend */}
+          <div style={styles.legend}>
+            <div style={styles.legendItem}>
+              <div style={{ ...styles.legendDot, backgroundColor: '#16a34a' }} />
+              <span>Available</span>
+            </div>
+            <div style={styles.legendItem}>
+              <div style={{ ...styles.legendDot, backgroundColor: '#dc2626' }} />
+              <span>Booked/Unavailable</span>
             </div>
           </div>
+        </>
+      ) : (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>🏠</div>
+          <h3 style={styles.emptyTitle}>No Properties Found</h3>
+          <p style={styles.emptyText}>
+            You don&apos;t have any properties yet. Add your first property to manage availability.
+          </p>
         </div>
+      )}
 
-        <div style={styles.settingsSection}>
-          {/* Quick Actions */}
-          <div style={styles.settingsCard}>
-            <h3 style={styles.cardTitle}>Quick Actions</h3>
-            <div style={styles.actionButtons}>
-              <button
-                style={styles.actionBtn}
-                onClick={() => {
-                  // Mark all dates as available
-                  const newAvailability = { ...availability };
-                  Object.keys(newAvailability).forEach((key) => {
-                    newAvailability[key] = true;
-                  });
-                  setAvailability(newAvailability);
-                }}
-              >
-                <Check size={18} />
-                Mark All Available
-              </button>
-              <button
-                style={styles.actionBtn}
-                onClick={() => {
-                  // Set range unavailable (example: next 7 days)
-                  const newAvailability = { ...availability };
-                  for (let i = 0; i < 7; i++) {
-                    const date = new Date();
-                    date.setDate(date.getDate() + i);
-                    const dateStr = date.toISOString().split("T")[0];
-                    newAvailability[dateStr] = false;
-                  }
-                  setAvailability(newAvailability);
-                }}
-              >
-                <X size={18} />
-                Block Next 7 Days
-              </button>
-            </div>
-          </div>
-
-          {/* Pricing Settings */}
-          <div style={styles.settingsCard}>
-            <h3 style={styles.cardTitle}>Pricing</h3>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Base Price (KSh/night)</label>
-              <input
-                type="number"
-                value={pricing.basePrice}
-                onChange={(e) =>
-                  setPricing({
-                    ...pricing,
-                    basePrice: parseInt(e.target.value),
-                  })
-                }
-                style={styles.input}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Weekend Price (KSh/night)</label>
-              <input
-                type="number"
-                value={pricing.weekendPrice}
-                onChange={(e) =>
-                  setPricing({
-                    ...pricing,
-                    weekendPrice: parseInt(e.target.value),
-                  })
-                }
-                style={styles.input}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Seasonal Price (KSh/night)</label>
-              <input
-                type="number"
-                value={pricing.seasonalPrice}
-                onChange={(e) =>
-                  setPricing({
-                    ...pricing,
-                    seasonalPrice: parseInt(e.target.value),
-                  })
-                }
-                style={styles.input}
-              />
-            </div>
-          </div>
-
-          {/* Stay Settings */}
-          <div style={styles.settingsCard}>
-            <h3 style={styles.cardTitle}>Stay Requirements</h3>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Min. Nights</label>
-                <input
-                  type="number"
-                  value={minStay}
-                  onChange={(e) => setMinStay(parseInt(e.target.value))}
-                  min="1"
-                  style={styles.input}
-                />
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Max. Nights</label>
-                <input
-                  type="number"
-                  value={maxStay}
-                  onChange={(e) => setMaxStay(parseInt(e.target.value))}
-                  min="1"
-                  style={styles.input}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Current Stats */}
-          <div style={styles.settingsCard}>
-            <h3 style={styles.cardTitle}>Availability Summary</h3>
-            <div style={styles.statsGrid}>
-              <div style={styles.statItem}>
-                <span style={styles.statValue}>365</span>
-                <span style={styles.statLabel}>Total Days</span>
-              </div>
-              <div style={styles.statItem}>
-                <span style={styles.statValue}>
-                  {365 -
-                    Object.values(availability).filter((v) => v === false)
-                      .length}
-                </span>
-                <span style={styles.statLabel}>Available</span>
-              </div>
-              <div style={styles.statItem}>
-                <span style={styles.statValue}>
-                  {
-                    Object.values(availability).filter((v) => v === false)
-                      .length
-                  }
-                </span>
-                <span style={styles.statLabel}>Blocked</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };
 
 const styles = {
   container: {
-    padding: "32px",
+    animation: "fadeIn 0.4s ease-out",
+  },
+  loadingState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 20px",
+    gap: "16px",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid #e5e7eb",
+    borderTopColor: "#0369a1",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+  errorState: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: "#fee2e2",
+    borderRadius: "8px",
+    marginBottom: "24px",
+    color: "#dc2626",
+  },
+  retryButton: {
+    marginLeft: "auto",
+    padding: "8px 16px",
+    backgroundColor: "#dc2626",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
   },
   header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: "32px",
   },
   title: {
     fontSize: "28px",
-    fontWeight: 700,
-    color: "#1e293b",
-    marginBottom: "4px",
+    fontWeight: "700",
+    color: "#1a1a1a",
+    margin: "0 0 8px 0",
   },
   subtitle: {
-    fontSize: "14px",
-    color: "#64748b",
+    fontSize: "16px",
+    color: "#6b7280",
+    margin: 0,
   },
-  saveButton: {
+  hostelSelector: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    padding: "12px 24px",
-    backgroundColor: "#059669",
-    color: "#fff",
-    border: "none",
+    gap: "12px",
+    marginBottom: "24px",
+    padding: "16px",
+    backgroundColor: "#ffffff",
     borderRadius: "8px",
+    border: "1px solid #e5e7eb",
+  },
+  selectorLabel: {
     fontSize: "14px",
-    fontWeight: 600,
+    fontWeight: "500",
+    color: "#374151",
+  },
+  selector: {
+    flex: 1,
+    padding: "10px 16px",
+    borderRadius: "8px",
+    border: "1px solid #e5e7eb",
+    fontSize: "14px",
+    color: "#374151",
+    backgroundColor: "#ffffff",
     cursor: "pointer",
   },
-  content: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1fr",
-    gap: "32px",
+  hostelInfo: {
+    marginBottom: "24px",
   },
-  calendarSection: {},
-  calendarCard: {
-    backgroundColor: "#fff",
+  hostelName: {
+    fontSize: "24px",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    margin: "0 0 8px 0",
+  },
+  hostelLocation: {
+    fontSize: "14px",
+    color: "#6b7280",
+    margin: 0,
+  },
+  roomsSection: {
+    marginBottom: "32px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: "16px",
+  },
+  roomsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "16px",
+  },
+  roomCard: {
+    padding: "20px",
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    border: "1px solid #e5e7eb",
+  },
+  roomHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+  },
+  roomType: {
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    textTransform: "capitalize",
+  },
+  availabilityBadge: {
+    padding: "4px 10px",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: "500",
+  },
+  roomDetails: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "16px",
+  },
+  roomPrice: {
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "#16a34a",
+  },
+  roomId: {
+    fontSize: "14px",
+    color: "#6b7280",
+  },
+  toggleButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    padding: "10px",
+    backgroundColor: "#f3f4f6",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    color: "#374151",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  calendarSection: {
+    backgroundColor: "#ffffff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
     padding: "24px",
@@ -408,173 +493,103 @@ const styles = {
   calendarTitle: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
     fontSize: "18px",
-    fontWeight: 600,
-    color: "#1e293b",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    margin: 0,
   },
-  navButton: {
-    width: "40px",
-    height: "40px",
+  calendarNav: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8fafc",
+    width: "36px",
+    height: "36px",
+    backgroundColor: "#f3f4f6",
     border: "1px solid #e5e7eb",
     borderRadius: "8px",
     cursor: "pointer",
+    color: "#374151",
   },
-  weekDays: {
+  calendarGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(7, 1fr)",
     gap: "4px",
-    marginBottom: "8px",
   },
-  weekDay: {
+  dayHeader: {
+    padding: "8px",
     textAlign: "center",
     fontSize: "12px",
-    fontWeight: 600,
-    color: "#64748b",
-    padding: "12px 0",
+    fontWeight: "600",
+    color: "#6b7280",
+    textTransform: "uppercase",
   },
-  daysGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(7, 1fr)",
-    gap: "4px",
-  },
-  emptyDay: {
-    padding: "12px",
-  },
-  day: {
+  calendarDay: {
+    minHeight: "60px",
     padding: "8px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: "4px",
     borderRadius: "8px",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    border: "none",
-    backgroundColor: "#f8fafc",
-  },
-  dayPast: {
-    backgroundColor: "#f1f5f9",
-    color: "#94a3b8",
-    cursor: "not-allowed",
-  },
-  dayAvailable: {
-    backgroundColor: "#ecfdf5",
-    color: "#059669",
-  },
-  dayUnavailable: {
-    backgroundColor: "#fef2f2",
-    color: "#dc2626",
+    border: "1px solid",
   },
   dayNumber: {
+    display: "block",
     fontSize: "14px",
-    fontWeight: 500,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: "4px",
   },
-  dayStatus: {
+  dayRooms: {
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    gap: "2px",
+    flexWrap: "wrap",
+  },
+  dayRoomDot: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+  },
+  moreRooms: {
+    fontSize: "10px",
+    color: "#6b7280",
   },
   legend: {
     display: "flex",
     gap: "24px",
     marginTop: "24px",
-    paddingTop: "24px",
-    borderTop: "1px solid #e5e7eb",
+    padding: "16px",
+    backgroundColor: "#f9fafb",
+    borderRadius: "8px",
   },
   legendItem: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    fontSize: "13px",
-    color: "#64748b",
+    fontSize: "14px",
+    color: "#6b7280",
   },
-  legendBox: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "4px",
+  legendDot: {
+    width: "12px",
+    height: "12px",
+    borderRadius: "50%",
   },
-  settingsSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-  },
-  settingsCard: {
-    backgroundColor: "#fff",
+  emptyState: {
+    textAlign: "center",
+    padding: "60px 20px",
+    backgroundColor: "#ffffff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
-    padding: "24px",
   },
-  cardTitle: {
-    fontSize: "16px",
-    fontWeight: 600,
-    color: "#1e293b",
-    marginBottom: "20px",
-  },
-  actionButtons: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  actionBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    padding: "12px 16px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e5e7eb",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: 500,
-    color: "#374151",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  formGroup: {
+  emptyIcon: {
+    fontSize: "48px",
     marginBottom: "16px",
   },
-  formRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "16px",
-  },
-  label: {
-    display: "block",
-    fontSize: "13px",
-    fontWeight: 500,
-    color: "#374151",
+  emptyTitle: {
+    fontSize: "20px",
+    fontWeight: "600",
+    color: "#1a1a1a",
     marginBottom: "8px",
   },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #e5e7eb",
-    borderRadius: "8px",
+  emptyText: {
     fontSize: "14px",
-    outline: "none",
-  },
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "16px",
-  },
-  statItem: {
-    textAlign: "center",
-  },
-  statValue: {
-    display: "block",
-    fontSize: "24px",
-    fontWeight: 700,
-    color: "#1e293b",
-    marginBottom: "4px",
-  },
-  statLabel: {
-    fontSize: "12px",
-    color: "#64748b",
+    color: "#6b7280",
   },
 };
 
