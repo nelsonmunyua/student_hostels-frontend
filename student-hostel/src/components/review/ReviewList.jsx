@@ -1,23 +1,21 @@
-import { useState, useMemo } from 'react';
-import { Star, Filter, ChevronDown } from 'lucide-react';
-import ReviewCard from './ReviewCard';
+import { useState, useMemo } from "react";
+import { Star, Filter, ChevronDown } from "lucide-react";
+import ReviewCard from "./ReviewCard";
 
-const ReviewList = ({ 
-  reviews = [], 
-  loading = false,
+const ReviewList = ({
+  reviews = [],
   averageRating = 0,
   totalReviews = 0,
   onLike,
   onReport,
   onDelete,
   canDelete = false,
-  showFilters = true
+  showFilters = true,
 }) => {
-  const [sortBy, setSortBy] = useState('recent'); // recent, highest, lowest
-  const [filterRating, setFilterRating] = useState(0); // 0 = all, 1-5 = specific rating
+  const [sortBy, setSortBy] = useState("recent");
+  const [filterRating, setFilterRating] = useState(0);
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
 
-  // Calculate rating distribution
   const ratingDistribution = useMemo(() => {
     const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     reviews.forEach((review) => {
@@ -29,22 +27,24 @@ const ReviewList = ({
     return distribution;
   }, [reviews]);
 
-  // Filter and sort reviews
   const filteredReviews = useMemo(() => {
     let filtered = [...reviews];
 
-    // Filter by rating
     if (filterRating > 0) {
-      filtered = filtered.filter((review) => Math.floor(review.rating) === filterRating);
+      filtered = filtered.filter(
+        (review) => Math.floor(review.rating) === filterRating,
+      );
     }
 
-    // Sort
     filtered.sort((a, b) => {
-      if (sortBy === 'recent') {
-        return new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt);
-      } else if (sortBy === 'highest') {
+      if (sortBy === "recent") {
+        return (
+          new Date(b.created_at || b.createdAt) -
+          new Date(a.created_at || a.createdAt)
+        );
+      } else if (sortBy === "highest") {
         return b.rating - a.rating;
-      } else if (sortBy === 'lowest') {
+      } else if (sortBy === "lowest") {
         return a.rating - b.rating;
       }
       return 0;
@@ -52,15 +52,6 @@ const ReviewList = ({
 
     return filtered;
   }, [reviews, sortBy, filterRating]);
-
-  if (loading) {
-    return (
-      <div style={loadingContainerStyle}>
-        <div style={spinnerStyle} />
-        <p style={loadingTextStyle}>Loading reviews...</p>
-      </div>
-    );
-  }
 
   if (reviews.length === 0) {
     return (
@@ -75,192 +66,191 @@ const ReviewList = ({
   }
 
   const containerStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
   };
 
   const summaryStyle = {
-    display: 'grid',
-    gridTemplateColumns: '200px 1fr',
-    gap: '32px',
-    padding: '24px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
+    display: "grid",
+    gridTemplateColumns: "200px 1fr",
+    gap: "32px",
+    padding: "24px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
   };
 
   const averageRatingStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '8px',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
   };
 
   const ratingNumberStyle = {
-    fontSize: '48px',
+    fontSize: "48px",
     fontWeight: 700,
-    color: '#1e293b',
+    color: "#1e293b",
     lineHeight: 1,
   };
 
   const starsStyle = {
-    display: 'flex',
-    gap: '4px',
+    display: "flex",
+    gap: "4px",
   };
 
   const totalReviewsStyle = {
-    fontSize: '14px',
-    color: '#64748b',
+    fontSize: "14px",
+    color: "#64748b",
     margin: 0,
   };
 
   const distributionStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   };
 
   const distributionRowStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
   };
 
   const distributionLabelStyle = {
-    fontSize: '14px',
+    fontSize: "14px",
     fontWeight: 500,
-    color: '#64748b',
-    width: '40px',
+    color: "#64748b",
+    width: "40px",
   };
 
   const distributionBarStyle = {
     flex: 1,
-    height: '8px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: '4px',
-    overflow: 'hidden',
+    height: "8px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "4px",
+    overflow: "hidden",
   };
 
   const distributionFillStyle = {
-    height: '100%',
-    backgroundColor: '#f59e0b',
-    borderRadius: '4px',
-    transition: 'width 0.3s',
+    height: "100%",
+    backgroundColor: "#f59e0b",
+    borderRadius: "4px",
+    transition: "width 0.3s",
   };
 
   const distributionCountStyle = {
-    fontSize: '14px',
+    fontSize: "14px",
     fontWeight: 500,
-    color: '#64748b',
-    width: '30px',
-    textAlign: 'right',
+    color: "#64748b",
+    width: "30px",
+    textAlign: "right",
   };
 
   const controlsStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '16px',
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "16px",
   };
 
   const filterButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '10px 16px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 16px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
     fontWeight: 500,
-    color: '#334155',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    color: "#334155",
+    cursor: "pointer",
+    transition: "all 0.2s",
   };
 
   const sortSelectStyle = {
-    padding: '10px 16px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
-    color: '#334155',
-    cursor: 'pointer',
-    outline: 'none',
+    padding: "10px 16px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#334155",
+    cursor: "pointer",
+    outline: "none",
   };
 
   const filterPanelStyle = {
-    padding: '16px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
+    padding: "16px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
   };
 
   const filterLabelStyle = {
-    fontSize: '14px',
+    fontSize: "14px",
     fontWeight: 600,
-    color: '#374151',
-    marginBottom: '12px',
+    color: "#374151",
+    marginBottom: "12px",
   };
 
   const ratingFiltersStyle = {
-    display: 'flex',
-    gap: '8px',
-    flexWrap: 'wrap',
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
   };
 
   const ratingFilterButtonStyle = {
-    padding: '8px 16px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '6px',
-    fontSize: '14px',
+    padding: "8px 16px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "6px",
+    fontSize: "14px",
     fontWeight: 500,
-    color: '#64748b',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    color: "#64748b",
+    cursor: "pointer",
+    transition: "all 0.2s",
   };
 
   const ratingFilterButtonActiveStyle = {
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    borderColor: '#3b82f6',
+    backgroundColor: "#3b82f6",
+    color: "#ffffff",
+    borderColor: "#3b82f6",
   };
 
   const reviewsListStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
   };
 
   const noResultsStyle = {
-    padding: '40px',
-    textAlign: 'center',
-    color: '#64748b',
+    padding: "40px",
+    textAlign: "center",
+    color: "#64748b",
   };
 
   const loadMoreStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    paddingTop: '16px',
+    display: "flex",
+    justifyContent: "center",
+    paddingTop: "16px",
   };
 
   const loadMoreButtonStyle = {
-    padding: '12px 24px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
+    padding: "12px 24px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
     fontWeight: 600,
-    color: '#3b82f6',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    color: "#3b82f6",
+    cursor: "pointer",
+    transition: "all 0.2s",
   };
 
   return (
     <div style={containerStyle}>
-      {/* Rating Summary */}
       <div style={summaryStyle}>
         <div style={averageRatingStyle}>
           <div style={ratingNumberStyle}>{averageRating.toFixed(1)}</div>
@@ -269,18 +259,23 @@ const ReviewList = ({
               <Star
                 key={star}
                 size={20}
-                color={star <= Math.round(averageRating) ? '#f59e0b' : '#e5e7eb'}
-                fill={star <= Math.round(averageRating) ? '#f59e0b' : 'none'}
+                color={
+                  star <= Math.round(averageRating) ? "#f59e0b" : "#e5e7eb"
+                }
+                fill={star <= Math.round(averageRating) ? "#f59e0b" : "none"}
               />
             ))}
           </div>
-          <p style={totalReviewsStyle}>{totalReviews} review{totalReviews !== 1 ? 's' : ''}</p>
+          <p style={totalReviewsStyle}>
+            {totalReviews} review{totalReviews !== 1 ? "s" : ""}
+          </p>
         </div>
 
         <div style={distributionStyle}>
           {[5, 4, 3, 2, 1].map((rating) => {
             const count = ratingDistribution[rating] || 0;
-            const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+            const percentage =
+              totalReviews > 0 ? (count / totalReviews) * 100 : 0;
 
             return (
               <div key={rating} style={distributionRowStyle}>
@@ -300,7 +295,6 @@ const ReviewList = ({
         </div>
       </div>
 
-      {/* Filters and Sort */}
       {showFilters && (
         <div style={controlsStyle}>
           <button
@@ -312,8 +306,8 @@ const ReviewList = ({
             <ChevronDown
               size={16}
               style={{
-                transform: showFiltersPanel ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s',
+                transform: showFiltersPanel ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
               }}
             />
           </button>
@@ -330,7 +324,6 @@ const ReviewList = ({
         </div>
       )}
 
-      {/* Filter Panel */}
       {showFilters && showFiltersPanel && (
         <div style={filterPanelStyle}>
           <p style={filterLabelStyle}>Filter by rating:</p>
@@ -360,7 +353,6 @@ const ReviewList = ({
         </div>
       )}
 
-      {/* Reviews List */}
       <div style={reviewsListStyle}>
         {filteredReviews.length > 0 ? (
           filteredReviews.map((review) => (
@@ -380,68 +372,41 @@ const ReviewList = ({
         )}
       </div>
 
-      {/* Load More (if needed) */}
       {filteredReviews.length < reviews.length && (
         <div style={loadMoreStyle}>
-          <button style={loadMoreButtonStyle}>
-            Load More Reviews
-          </button>
+          <button style={loadMoreButtonStyle}>Load More Reviews</button>
         </div>
       )}
     </div>
   );
 };
 
-const loadingContainerStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '60px 20px',
-};
-
-const spinnerStyle = {
-  width: '40px',
-  height: '40px',
-  border: '4px solid #e5e7eb',
-  borderTop: '4px solid #3b82f6',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
-};
-
-const loadingTextStyle = {
-  marginTop: '16px',
-  fontSize: '14px',
-  color: '#64748b',
-};
-
 const emptyStateStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '60px 20px',
-  textAlign: 'center',
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "60px 20px",
+  textAlign: "center",
 };
 
 const emptyIconStyle = {
-  fontSize: '64px',
-  marginBottom: '16px',
+  fontSize: "64px",
+  marginBottom: "16px",
   opacity: 0.5,
 };
 
 const emptyTitleStyle = {
-  fontSize: '20px',
+  fontSize: "20px",
   fontWeight: 600,
-  color: '#1e293b',
-  marginBottom: '8px',
+  color: "#1e293b",
+  marginBottom: "8px",
 };
 
 const emptyTextStyle = {
-  fontSize: '14px',
-  color: '#64748b',
-  maxWidth: '400px',
+  fontSize: "14px",
+  color: "#64748b",
+  maxWidth: "400px",
 };
 
 export default ReviewList;
-

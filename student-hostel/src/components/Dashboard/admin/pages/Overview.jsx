@@ -91,8 +91,8 @@ const Overview = () => {
       new_bookings_today: 0,
       bookings_pending: 0,
       bookings_confirmed: 0,
-      bookings_completed: 0
-    }
+      bookings_completed: 0,
+    },
   });
 
   // Fetch dashboard stats from API
@@ -227,17 +227,9 @@ const Overview = () => {
           </p>
         </div>
         <div style={styles.headerActions}>
-          <button
-            style={styles.exportBtn}
-            onClick={handleExportReport}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <span className="spinner spinner-sm"></span>
-            ) : (
-              <TrendingUp size={18} />
-            )}
-            {isExporting ? "Exporting..." : "Export Report"}
+          <button style={styles.exportBtn} onClick={handleExportReport}>
+            <TrendingUp size={18} />
+            Export Report
           </button>
         </div>
       </div>
@@ -399,13 +391,13 @@ const Overview = () => {
             <div style={styles.trendStat}>
               <span style={styles.trendLabel}>This Month</span>
               <span style={styles.trendValue}>
-                {loading ? "..." : (stats.stats?.new_bookings_today || 0)}
+                {loading ? "..." : stats.stats?.new_bookings_today || 0}
               </span>
             </div>
             <div style={styles.trendStat}>
               <span style={styles.trendLabel}>Pending</span>
               <span style={styles.trendValue}>
-                {loading ? "..." : (stats.stats?.bookings_pending || 0)}
+                {loading ? "..." : stats.stats?.bookings_pending || 0}
               </span>
             </div>
             <div style={styles.trendGrowth}>
@@ -413,8 +405,7 @@ const Overview = () => {
               <span>
                 {loading
                   ? "Loading..."
-                  : `${((stats.stats?.bookings_confirmed || 0) / Math.max(stats.bookings, 1) * 100).toFixed(1)}% confirmed`
-                }
+                  : `${(((stats.stats?.bookings_confirmed || 0) / Math.max(stats.bookings, 1)) * 100).toFixed(1)}% confirmed`}
               </span>
             </div>
           </div>

@@ -1,6 +1,3 @@
-
-
-
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
@@ -12,14 +9,12 @@ const ResetPassword = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState("");
 
   const token = searchParams.get("token");
   const errorParam = searchParams.get("error");
 
-  // Handle errors from URL
   useEffect(() => {
     if (errorParam === "invalid_token") {
       setError("Invalid reset token. Please request a new password reset.");
@@ -40,20 +35,18 @@ const ResetPassword = () => {
   const password = watch("password");
 
   const onSubmit = async (data) => {
-    setIsLoading(true);
     setError("");
 
     try {
-      // Call the actual API via Redux thunk
-      await dispatch(resetPassword({ 
-        token: token, 
-        password: data.password 
-      })).unwrap();
+      await dispatch(
+        resetPassword({
+          token: token,
+          password: data.password,
+        }),
+      ).unwrap();
       setIsSuccess(true);
     } catch (err) {
       setError(err || "Failed to reset password. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -66,10 +59,14 @@ const ResetPassword = () => {
           </div>
           <h3>Password Reset Complete</h3>
           <p>
-            Your password has been reset successfully. You can now log in with your
-            new password.
+            Your password has been reset successfully. You can now log in with
+            your new password.
           </p>
-          <Link to="/login" className="auth-button" style={{ marginTop: "1rem" }}>
+          <Link
+            to="/login"
+            className="auth-button"
+            style={{ marginTop: "1rem" }}
+          >
             Go to Login
           </Link>
         </div>
@@ -82,7 +79,10 @@ const ResetPassword = () => {
       <div className="auth-form-wrapper">
         <div className="auth-message auth-error fade-in">
           <Icons.AlertCircle />
-          <span>{error || "Invalid reset link. Please request a new password reset."}</span>
+          <span>
+            {error ||
+              "Invalid reset link. Please request a new password reset."}
+          </span>
         </div>
         <p className="auth-footer">
           Remember your password? <Link to="/login">Sign in</Link>
@@ -163,15 +163,8 @@ const ResetPassword = () => {
           )}
         </div>
 
-        <button type="submit" className="auth-button" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <span className="spinner spinner-sm"></span>
-              Resetting...
-            </>
-          ) : (
-            "Reset Password"
-          )}
+        <button type="submit" className="auth-button">
+          Reset Password
         </button>
       </form>
 
@@ -183,5 +176,3 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
-
-

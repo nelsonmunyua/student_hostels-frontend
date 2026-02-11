@@ -23,10 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 .env
-AUTH_FIXES_TODO.md
-BOOKING_FIXES_TODO.md
-IMPORT_FIXES_TODO.md
-PROJECT_FIXES_TODO.md
-TODO_ROUTES.md
-VITE_FIXES_TODO.md
-TODO.md
+.env.production

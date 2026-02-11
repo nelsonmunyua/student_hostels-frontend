@@ -1,72 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { Plus, Eye, Edit, Trash2, MapPin, Users, Star } from "lucide-react";
+import {
+  deleteAccommodation,
+  fetchMyListings,
+} from "../../../../redux/slices/Thunks/accommodationThunks";
 
 const HostListings = () => {
   const navigate = useNavigate();
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedListing, setSelectedListing] = useState(null);
-  
-  const [listings] = useState([
-    {
-      id: 1,
-      name: "University View Hostel",
-      location: "123 College Ave",
-      status: "active",
-      price: 450,
-      bookings: 12,
-      rating: 4.8,
-      image: "/api/placeholder/100/100",
-    },
-    {
-      id: 2,
-      name: "Central Student Living",
-      location: "456 Main St",
-      status: "active",
-      price: 380,
-      bookings: 8,
-      rating: 4.5,
-      image: "/api/placeholder/100/100",
-    },
-    {
-      id: 3,
-      name: "Campus Edge Apartments",
-      location: "789 Campus Rd",
-      status: "pending",
-      price: 520,
-      bookings: 0,
-      rating: 0,
-      image: "/api/placeholder/100/100",
-    },
-  ]);
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { myListings, loading, error, successMessage } = useSelector(
+    (state) => state.accommodation,
+  );
 
-  // Modal handlers
-  const handleAddNew = () => {
-    setShowAddModal(true);
-  };
+  const [filter, setFilter] = useState("all");
+  const [localError, setLocalError] = useState(null);
+  const [localSuccess, setLocalSuccess] = useState(null);
 
-  const handleEdit = (listing) => {
-    setSelectedListing(listing);
-    setShowEditModal(true);
-  };
+  // Fetch listings on mount
+  useEffect(() => {
+    dispatch(fetchMyListings());
+  }, [dispatch]);
 
-  const handleView = (listing) => {
-    alert(`Viewing details for: ${listing.name}\n\nThis would open a detailed view modal.`);
-  };
-
-  const handleDelete = (listing) => {
-    setSelectedListing(listing);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = () => {
-    if (selectedListing) {
-      alert(`Deleting: ${selectedListing.name}\n\nThis would delete the listing and refresh the list.`);
-      setShowDeleteModal(false);
-      setSelectedListing(null);
+  // Handle Redux error/success messages
+  useEffect(() => {
+    if (error) {
+      setLocalError(error);
+      setTimeout(() => setLocalError(null), 5000);
     }
+    if (successMessage) {
+      setLocalSuccess(successMessage);
+      setTimeout(() => setLocalSuccess(null), 5000);
+    }
+  }, [error, successMessage]);
+
+  // Use Redux data only - no mock fallback
+  const listings = myListings || [];
+  
+  const filteredListings =
+    filter === "all"
+      ? listings
+      : filter === "active"
+        ? listings.filter((l) => l.is_active)
+        : listings.filter((l) => !l.is_active);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this listing?")) {
+      await dispatch(deleteAccommodation(id));
+    }
+    setShowMenu(null);
+  };
+
+  const formatPropertyType = (type) => {
+    const types = {
+      single: "Single Room",
+      double: "Double Room",
+      bed_sitter: "Bed Sitter",
+      studio: "Studio",
+      apartment: "Apartment",
+      hostel: "Hostel",
+    };
+    return types[type] || type;
   };
 
   return (
@@ -76,240 +72,187 @@ const HostListings = () => {
           <h1 style={styles.title}>My Listings</h1>
           <p style={styles.subtitle}>Manage your property listings</p>
         </div>
-        <button style={styles.addButton} onClick={handleAddNew}>
-          <span style={styles.addIcon}>+</span>
+        <button
+          style={styles.addButton}
+          onClick={() => navigate("/host/create-listing")}
+        >
+          <Plus size={20} />
           Add New Listing
         </button>
       </div>
 
+      {/* Stats Cards */}
+      <div style={styles.statsGrid}>
+        <div style={styles.statCard}>
+          <span style={styles.statValue}>{listings.length}</span>
+          <span style={styles.statLabel}>Total Listings</span>
+        </div>
+        <div style={styles.statCard}>
+          <span style={styles.statValue}>
+            {listings.filter((l) => l.is_active).length}
+          </span>
+          <span style={styles.statLabel}>Active</span>
+        </div>
+        <div style={styles.statCard}>
+          <span style={styles.statValue}>
+            {listings.reduce((acc, l) => acc + (l.total_bookings || 0), 0)}
+          </span>
+          <span style={styles.statLabel}>Total Bookings</span>
+        </div>
+        <div style={styles.statCard}>
+          <span style={styles.statValue}>
+            KSh{" "}
+            {listings
+              .reduce(
+                (acc, l) => acc + l.price_per_night * (l.total_bookings || 0),
+                0,
+              )
+              .toLocaleString()}
+          </span>
+          <span style={styles.statLabel}>Total Revenue</span>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div style={styles.filterTabs}>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "all" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("all")}
+        >
+          All Listings ({listings.length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "active" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("active")}
+        >
+          Active ({listings.filter((l) => l.is_active).length})
+        </button>
+        <button
+          style={{
+            ...styles.filterTab,
+            ...(filter === "inactive" && styles.filterTabActive),
+          }}
+          onClick={() => setFilter("inactive")}
+        >
+          Inactive ({listings.filter((l) => !l.is_active).length})
+        </button>
+      </div>
+
       {/* Listings Grid */}
-      <div style={styles.listingsGrid}>
-        {listings.map((listing) => (
-          <div key={listing.id} style={styles.listingCard}>
-            <div style={styles.listingImage}>
-              <span style={styles.imagePlaceholder}>🏠</span>
-            </div>
-            <div style={styles.listingContent}>
-              <div style={styles.listingHeader}>
-                <h3 style={styles.listingName}>{listing.name}</h3>
+      {loading ? (
+        <div style={styles.loading}>
+          <div style={styles.spinner}></div>
+          <p>Loading listings...</p>
+        </div>
+      ) : filteredListings.length === 0 ? (
+        <div style={styles.emptyState}>
+          <div style={styles.emptyIcon}>🏠</div>
+          <h3>No listings found</h3>
+          <p>Create your first listing to start accepting bookings</p>
+          <button
+            style={styles.emptyButton}
+            onClick={() => navigate("/host/create-listing")}
+          >
+            <Plus size={18} />
+            Create Listing
+          </button>
+        </div>
+      ) : (
+        <div style={styles.listingsGrid}>
+          {filteredListings.map((listing) => (
+            <div key={listing.id} style={styles.listingCard}>
+              <div style={styles.listingImage}>
+                <img
+                  src={
+                    listing.images?.[0] ||
+                    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"
+                  }
+                  alt={listing.name}
+                  style={styles.image}
+                />
                 <span
                   style={{
                     ...styles.statusBadge,
-                    ...(listing.status === "active"
+                    ...(listing.is_active
                       ? styles.statusActive
-                      : styles.statusPending),
+                      : styles.statusInactive),
                   }}
                 >
-                  {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                  {listing.is_active ? "Active" : "Inactive"}
                 </span>
-              </div>
-              <p style={styles.listingLocation}>📍 {listing.location}</p>
-              <div style={styles.listingStats}>
-                <span style={styles.listingPrice}>${listing.price}/mo</span>
-                <span style={styles.listingBookings}>
-                  📅 {listing.bookings} bookings
-                </span>
-              </div>
-              {listing.rating > 0 && (
-                <div style={styles.listingRating}>
-                  ⭐ {listing.rating.toFixed(1)} rating
+                <div style={styles.listingActions}>
+                  <button
+                    style={styles.actionButton}
+                    onClick={() => navigate(`/accommodations/${listing.id}`)}
+                    title="View"
+                  >
+                    <Eye size={18} />
+                  </button>
+                  <button
+                    style={styles.actionButton}
+                    onClick={() =>
+                      navigate(`/host/listings/${listing.id}/edit`)
+                    }
+                    title="Edit"
+                  >
+                    <Edit size={18} />
+                  </button>
+                  <button
+                    style={{ ...styles.actionButton, ...styles.actionDelete }}
+                    onClick={() => handleDelete(listing.id)}
+                    title="Delete"
+                  >
+                    <Trash2 size={18} />
+                  </button>
                 </div>
-              )}
-              <div style={styles.listingActions}>
-                <button style={styles.actionBtn} onClick={() => handleEdit(listing)}>Edit</button>
-                <button style={styles.actionBtn} onClick={() => handleView(listing)}>View</button>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Listings Table View */}
-      <div style={styles.tableSection}>
-        <h2 style={styles.sectionTitle}>All Listings Overview</h2>
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.tableHeader}>
-                <th style={styles.th}>Property</th>
-                <th style={styles.th}>Location</th>
-                <th style={styles.th}>Price</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Bookings</th>
-                <th style={styles.th}>Rating</th>
-                <th style={styles.th}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listings.map((listing) => (
-                <tr key={listing.id} style={styles.tableRow}>
-                  <td style={styles.td}>
-                    <div style={styles.propertyCell}>
-                      <span style={styles.propertyIcon}>🏠</span>
-                      <span style={styles.propertyName}>{listing.name}</span>
+              <div style={styles.listingContent}>
+                <div style={styles.listingHeader}>
+                  <h3 style={styles.listingTitle}>{listing.name}</h3>
+                  {listing.rating && (
+                    <div style={styles.rating}>
+                      <Star size={14} color="#f59e0b" fill="#f59e0b" />
+                      <span>{listing.rating}</span>
                     </div>
-                  </td>
-                  <td style={styles.td}>{listing.location}</td>
-                  <td style={styles.td}>${listing.price}/mo</td>
-                  <td style={styles.td}>
-                    <span
-                      style={{
-                        ...styles.tableBadge,
-                        ...(listing.status === "active"
-                          ? styles.badgeActive
-                          : styles.badgePending),
-                      }}
-                    >
-                      {listing.status}
-                    </span>
-                  </td>
-                  <td style={styles.td}>{listing.bookings}</td>
-                  <td style={styles.td}>
-                    {listing.rating > 0 ? `⭐ ${listing.rating.toFixed(1)}` : "-"}
-                  </td>
-                  <td style={styles.td}>
-                    <div style={styles.tableActions}>
-                      <button style={styles.tableBtn} onClick={() => handleEdit(listing)}>Edit</button>
-                      <button style={styles.tableBtn} onClick={() => handleDelete(listing)}>Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  )}
+                </div>
 
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+                <div style={styles.listingLocation}>
+                  <MapPin size={14} />
+                  <span>{listing.location}</span>
+                </div>
 
-      {/* Add Modal */}
-      {showAddModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Add New Listing</h2>
-              <button style={styles.closeBtn} onClick={() => setShowAddModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div style={styles.modalContent}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Property Name</label>
-                <input type="text" style={styles.input} placeholder="Enter property name" />
-              </div>
-              <div style={styles.formRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Type</label>
-                  <select style={styles.select}>
-                    <option>Hostel</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
-                  </select>
+                <div style={styles.listingMeta}>
+                  <span style={styles.propertyType}>
+                    {formatPropertyType(listing.property_type)}
+                  </span>
+                  <span style={styles.price}>
+                    KSh {listing.price_per_night?.toLocaleString()}/night
+                  </span>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
-                  <input type="number" style={styles.input} placeholder="Enter price" />
-                </div>
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input type="text" style={styles.input} placeholder="Enter address" />
-              </div>
-              <div style={styles.formRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Rooms</label>
-                  <input type="number" style={styles.input} placeholder="Number of rooms" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Capacity</label>
-                  <input type="number" style={styles.input} placeholder="Total capacity" />
-                </div>
-              </div>
-            </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button style={styles.submitBtn} onClick={() => {
-                alert("New listing would be created and list refreshed");
-                setShowAddModal(false);
-              }}>Add Listing</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* edit_file Modal */}
-      {showEditModal && selectedListing && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Edit Listing</h2>
-              <button style={styles.closeBtn} onClick={() => setShowEditModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div style={styles.modalContent}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Property Name</label>
-                <input type="text" style={styles.input} defaultValue={selectedListing.name} />
-              </div>
-              <div style={styles.formRow}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Type</label>
-                  <select style={styles.select} defaultValue={selectedListing.type || "Hostel"}>
-                    <option>Hostel</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
-                  </select>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
-                  <input type="number" style={styles.input} defaultValue={selectedListing.price} />
+                <div style={styles.listingStats}>
+                  <div style={styles.stat}>
+                    <Users size={14} />
+                    <span>{listing.total_bookings || 0} bookings</span>
+                  </div>
+                  <button
+                    style={styles.manageButton}
+                    onClick={() => navigate(`/host/availability/${listing.id}`)}
+                  >
+                    Manage Availability
+                  </button>
                 </div>
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input type="text" style={styles.input} defaultValue={selectedListing.location} />
-              </div>
             </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button style={styles.submitBtn} onClick={() => {
-                alert(`Listing "${selectedListing.name}" would be updated`);
-                setShowEditModal(false);
-              }}>Save Changes</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedListing && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>Confirm Delete</h2>
-              <button style={styles.closeBtn} onClick={() => setShowDeleteModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <div style={styles.modalContent}>
-              <p style={styles.deleteText}>
-                Are you sure you want to delete <strong>{selectedListing.name}</strong>?
-              </p>
-              <p style={styles.deleteWarning}>
-                This action cannot be undone.
-              </p>
-            </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={() => setShowDeleteModal(false)}>Cancel</button>
-              <button style={styles.deleteBtn} onClick={confirmDelete}>Delete Listing</button>
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
@@ -318,7 +261,7 @@ const HostListings = () => {
 
 const styles = {
   container: {
-    animation: "fadeIn 0.4s ease-out",
+    padding: "32px",
   },
   header: {
     display: "flex",
@@ -328,56 +271,132 @@ const styles = {
   },
   title: {
     fontSize: "28px",
-    fontWeight: "700",
-    color: "#1a1a1a",
-    margin: "0 0 8px 0",
+    fontWeight: 700,
+    color: "#1e293b",
+    marginBottom: "4px",
   },
   subtitle: {
-    fontSize: "16px",
-    color: "#6b7280",
-    margin: 0,
+    fontSize: "14px",
+    color: "#64748b",
   },
   addButton: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
     padding: "12px 24px",
-    backgroundColor: "#0369a1",
-    color: "#ffffff",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
     border: "none",
     borderRadius: "8px",
     fontSize: "14px",
-    fontWeight: "600",
+    fontWeight: 600,
     cursor: "pointer",
-    transition: "all 0.2s",
   },
-  addIcon: {
-    fontSize: "18px",
-    fontWeight: "700",
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "20px",
+    marginBottom: "32px",
+  },
+  statCard: {
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    padding: "24px",
+    border: "1px solid #e5e7eb",
+  },
+  statValue: {
+    display: "block",
+    fontSize: "28px",
+    fontWeight: 700,
+    color: "#1e293b",
+    marginBottom: "4px",
+  },
+  statLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  filterTabs: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "24px",
+    borderBottom: "1px solid #e5e7eb",
+    paddingBottom: "16px",
+  },
+  filterTab: {
+    padding: "8px 16px",
+    backgroundColor: "transparent",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#64748b",
+    cursor: "pointer",
+  },
+  filterTabActive: {
+    backgroundColor: "#eff6ff",
+    color: "#3b82f6",
   },
   listingsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
     gap: "24px",
-    marginBottom: "40px",
   },
   listingCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     borderRadius: "12px",
-    overflow: "hidden",
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
     border: "1px solid #e5e7eb",
-    transition: "transform 0.2s, box-shadow 0.2s",
+    overflow: "hidden",
+    transition: "all 0.2s",
   },
   listingImage: {
-    height: "160px",
-    backgroundColor: "#f3f4f6",
+    position: "relative",
+    height: "200px",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  statusBadge: {
+    position: "absolute",
+    top: "12px",
+    left: "12px",
+    padding: "4px 10px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: 600,
+  },
+  statusActive: {
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+  },
+  statusInactive: {
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+  },
+  listingActions: {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    display: "flex",
+    gap: "8px",
+    opacity: 0,
+    transition: "opacity 0.2s",
+  },
+  actionButton: {
+    width: "36px",
+    height: "36px",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    border: "none",
+    borderRadius: "8px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
   },
-  imagePlaceholder: {
-    fontSize: "48px",
+  actionDelete: {
+    color: "#dc2626",
   },
   listingContent: {
     padding: "20px",
@@ -388,276 +407,111 @@ const styles = {
     alignItems: "flex-start",
     marginBottom: "8px",
   },
-  listingName: {
+  listingTitle: {
     fontSize: "18px",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    margin: 0,
-  },
-  statusBadge: {
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "500",
-  },
-  statusActive: {
-    backgroundColor: "#dcfce7",
-    color: "#16a34a",
-  },
-  statusPending: {
-    backgroundColor: "#fef3c7",
-    color: "#d97706",
-  },
-  listingLocation: {
-    fontSize: "14px",
-    color: "#6b7280",
-    marginBottom: "12px",
-  },
-  listingStats: {
-    display: "flex",
-    gap: "16px",
-    marginBottom: "8px",
-  },
-  listingPrice: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#0369a1",
-  },
-  listingBookings: {
-    fontSize: "14px",
-    color: "#6b7280",
-  },
-  listingRating: {
-    fontSize: "14px",
-    color: "#6b7280",
-    marginBottom: "16px",
-  },
-  listingActions: {
-    display: "flex",
-    gap: "8px",
-  },
-  actionBtn: {
-    flex: 1,
-    padding: "8px 12px",
-    backgroundColor: "#f3f4f6",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#374151",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  tableSection: {
-    backgroundColor: "#ffffff",
-    borderRadius: "12px",
-    border: "1px solid #e5e7eb",
-    overflow: "hidden",
-  },
-  sectionTitle: {
-    fontSize: "18px",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    padding: "20px 24px",
-    margin: 0,
-    borderBottom: "1px solid #e5e7eb",
-  },
-  tableWrapper: {
-    overflowX: "auto",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-  tableHeader: {
-    backgroundColor: "#f9fafb",
-  },
-  th: {
-    padding: "14px 20px",
-    textAlign: "left",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#6b7280",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-  },
-  tableRow: {
-    borderBottom: "1px solid #e5e7eb",
-  },
-  td: {
-    padding: "16px 20px",
-    fontSize: "14px",
-    color: "#374151",
-  },
-  propertyCell: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-  },
-  propertyIcon: {
-    fontSize: "20px",
-  },
-  propertyName: {
-    fontWeight: "500",
-    color: "#1a1a1a",
-  },
-  tableBadge: {
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "500",
-    textTransform: "capitalize",
-  },
-  badgeActive: {
-    backgroundColor: "#dcfce7",
-    color: "#16a34a",
-  },
-  badgePending: {
-    backgroundColor: "#fef3c7",
-    color: "#d97706",
-  },
-  tableActions: {
-    display: "flex",
-    gap: "8px",
-  },
-  tableBtn: {
-    padding: "6px 12px",
-    backgroundColor: "#f3f4f6",
-    border: "none",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-    color: "#374151",
-    cursor: "pointer",
-    transition: "all 0.2s",
-  },
-  // Modal styles
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-  modal: {
-    backgroundColor: "#ffffff",
-    borderRadius: "16px",
-    width: "100%",
-    maxWidth: "500px",
-    maxHeight: "90vh",
-    overflow: "auto",
-  },
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  modalTitle: {
-    fontSize: "20px",
     fontWeight: 600,
     color: "#1e293b",
     margin: 0,
   },
-  closeBtn: {
-    backgroundColor: "transparent",
-    border: "none",
-    cursor: "pointer",
-    padding: "4px",
-    color: "#64748b",
-  },
-  modalContent: {
-    padding: "20px",
-  },
-  formGroup: {
-    marginBottom: "16px",
-  },
-  formRow: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "16px",
-  },
-  label: {
-    display: "block",
-    fontSize: "14px",
-    fontWeight: 500,
-    color: "#374151",
-    marginBottom: "6px",
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    color: "#334155",
-    outline: "none",
-    boxSizing: "border-box",
-  },
-  select: {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #e2e8f0",
-    borderRadius: "8px",
-    fontSize: "14px",
-    color: "#334155",
-    outline: "none",
-    backgroundColor: "#ffffff",
-    cursor: "pointer",
-  },
-  modalFooter: {
+  rating: {
     display: "flex",
-    justifyContent: "flex-end",
-    gap: "12px",
-    padding: "20px",
-    borderTop: "1px solid #e2e8f0",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "14px",
+    fontWeight: 600,
   },
-  cancelBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#f1f5f9",
+  listingLocation: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "13px",
     color: "#64748b",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-  submitBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#0369a1",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-  deleteBtn: {
-    padding: "10px 20px",
-    backgroundColor: "#dc2626",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: 500,
-    cursor: "pointer",
-  },
-  deleteText: {
-    fontSize: "16px",
-    color: "#1e293b",
     marginBottom: "12px",
   },
-  deleteWarning: {
-    fontSize: "14px",
+  listingMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
+  },
+  propertyType: {
+    padding: "4px 10px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "6px",
+    fontSize: "12px",
     color: "#64748b",
+  },
+  price: {
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#1e293b",
+  },
+  listingStats: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: "16px",
+    borderTop: "1px solid #f1f5f9",
+  },
+  stat: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  manageButton: {
+    padding: "8px 16px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
+    color: "#64748b",
+    cursor: "pointer",
+  },
+  loading: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px",
+    color: "#64748b",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#3b82f6",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+    marginBottom: "16px",
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: "60px 20px",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e5e7eb",
+  },
+  emptyIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+  },
+  emptyButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    margin: "20px auto 0",
+    padding: "12px 24px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
   },
 };
 
 export default HostListings;
-

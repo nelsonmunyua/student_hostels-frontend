@@ -1,24 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 
 const HostProfile = () => {
   const { user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState("personal");
   const [formData, setFormData] = useState({
-    firstName: user?.first_name || "Host",
-    lastName: user?.last_name || "User",
-    email: user?.email || "host@example.com",
-    phone: "+1 234 567 8900",
-    company: "StudentHostel Management",
-    address: "123 Business Ave, Suite 100",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States",
-    bankName: "Chase Bank",
-    accountNumber: "****4567",
-    routingNumber: "****8901",
-    taxId: "**-***7890",
+    firstName: user?.first_name || "",
+    lastName: user?.last_name || "",
+    email: user?.email || "",
+    phone: user?.phone || "",
+    company: user?.company || "",
+    address: user?.address || "",
+    city: user?.city || "",
+    state: user?.state || "",
+    zipCode: user?.zip_code || "",
+    country: user?.country || "",
+    bankName: user?.bank_name || "",
+    accountNumber: user?.account_number || "",
+    routingNumber: user?.routing_number || "",
+    taxId: user?.tax_id || "",
   });
 
   const [notifications, setNotifications] = useState({
@@ -28,6 +28,29 @@ const HostProfile = () => {
     pushNotifications: false,
     weeklyReports: true,
   });
+
+  // Update form data when user data changes
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        email: user.email || prev.email,
+        phone: user.phone || prev.phone,
+        company: user.company || prev.company,
+        address: user.address || prev.address,
+        city: user.city || prev.city,
+        state: user.state || prev.state,
+        zipCode: user.zip_code || prev.zipCode,
+        country: user.country || prev.country,
+        bankName: user.bank_name || prev.bankName,
+        accountNumber: user.account_number || prev.accountNumber,
+        routingNumber: user.routing_number || prev.routingNumber,
+        taxId: user.tax_id || prev.taxId,
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -42,7 +65,9 @@ const HostProfile = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
-        <p style={styles.subtitle}>Manage your account information and preferences</p>
+        <p style={styles.subtitle}>
+          Manage your account information and preferences
+        </p>
       </div>
 
       {/* Profile Header Card */}
@@ -100,7 +125,7 @@ const HostProfile = () => {
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)} Info
             </button>
-          )
+          ),
         )}
       </div>
 
@@ -290,7 +315,9 @@ const HostProfile = () => {
             </div>
             <div style={styles.securityItem}>
               <div style={styles.securityInfo}>
-                <span style={styles.securityTitle}>Two-Factor Authentication</span>
+                <span style={styles.securityTitle}>
+                  Two-Factor Authentication
+                </span>
                 <span style={styles.securityDesc}>
                   Add an extra layer of security
                 </span>
@@ -334,7 +361,9 @@ const HostProfile = () => {
               </div>
               <div style={styles.notificationItem}>
                 <div style={styles.notificationInfo}>
-                  <span style={styles.notificationTitle}>Review Notifications</span>
+                  <span style={styles.notificationTitle}>
+                    Review Notifications
+                  </span>
                   <span style={styles.notificationDesc}>
                     Get notified when guests leave reviews
                   </span>
@@ -681,4 +710,3 @@ const styles = {
 };
 
 export default HostProfile;
-

@@ -30,8 +30,6 @@ const FindAccommodation = () => {
 
   // State
   const [accommodations, setAccommodations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -59,9 +57,6 @@ const FindAccommodation = () => {
   // Fetch accommodations
   const fetchAccommodations = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const params = {
         page: pagination.page,
         limit: 12,
@@ -1152,4 +1147,3 @@ const styles = {
 };
 
 export default FindAccommodation;
-

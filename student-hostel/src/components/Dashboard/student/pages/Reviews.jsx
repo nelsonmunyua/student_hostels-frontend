@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Star,
@@ -6,25 +6,29 @@ import {
   Calendar,
   MapPin,
   Loader2,
-  Edit2,
   Trash2,
   CheckCircle,
   Clock,
   XCircle,
   Plus,
 } from "lucide-react";
-import { useSelector } from "react-redux";
-import studentApi from "../../../../api/studentApi";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchMyReviews,
+  fetchPendingReviews,
+  createReview,
+  deleteReview,
+} from "../../../../redux/slices/Thunks/reviewThunks";
 
 const StudentReviews = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { myReviews, pendingReviews, loading, error } = useSelector(
+    (state) => state.review,
+  );
 
   // State
-  const [reviews, setReviews] = useState([]);
-  const [pendingReviews, setPendingReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("reviews"); // reviews | pending
   const [pagination, setPagination] = useState({
     page: 1,
@@ -41,38 +45,11 @@ const StudentReviews = () => {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch reviews
-  const fetchReviews = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [reviewsRes, pendingRes] = await Promise.all([
-        studentApi.getMyReviews({ page: pagination.page, limit: 10 }),
-        studentApi.getPendingReviews(),
-      ]);
-
-      setReviews(reviewsRes.reviews || []);
-      setPagination((prev) => ({
-        ...prev,
-        total: reviewsRes.total,
-        pages: reviewsRes.pages,
-      }));
-      setPendingReviews(pendingRes.pending_reviews || []);
-    } catch (err) {
-      console.error("Error fetching reviews:", err);
-      setError("Failed to load reviews. Please try again.");
-      // Mock data for demo
-      setReviews(getMockReviews());
-      setPendingReviews(getMockPendingReviews());
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.page]);
-
+  // Fetch reviews on mount
   useEffect(() => {
-    fetchReviews();
-  }, [fetchReviews]);
+    dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
+    dispatch(fetchPendingReviews());
+  }, [dispatch, pagination.page]);
 
   // Open review modal
   const handleOpenReview = (booking) => {
@@ -88,20 +65,22 @@ const StudentReviews = () => {
     setReviewForm({ rating: 5, comment: "" });
   };
 
-  // Submit review
+  // Submit review using Redux thunk
   const handleSubmitReview = async () => {
     if (!selectedBooking) return;
 
     try {
       setSubmitting(true);
-      await studentApi.createReview({
-        booking_id: selectedBooking.booking_id,
-        rating: reviewForm.rating,
-        comment: reviewForm.comment,
-      });
-
+      await dispatch(
+        createReview({
+          booking_id: selectedBooking.booking_id,
+          rating: reviewForm.rating,
+          comment: reviewForm.comment,
+        }),
+      );
       // Refresh data
-      fetchReviews();
+      dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
+      dispatch(fetchPendingReviews());
       handleCloseModal();
       alert("Review submitted successfully!");
     } catch (err) {
@@ -112,15 +91,14 @@ const StudentReviews = () => {
     }
   };
 
-  // Delete review
+  // Delete review using Redux thunk
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm("Are you sure you want to delete this review?")) {
       return;
     }
 
     try {
-      await studentApi.deleteReview(reviewId);
-      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      await dispatch(deleteReview(reviewId));
       alert("Review deleted successfully.");
     } catch (err) {
       console.error("Error deleting review:", err);
@@ -151,7 +129,12 @@ const StudentReviews = () => {
       },
     };
 
-    const { icon: Icon, color, bgColor, text } = config[status] || config.pending;
+    const {
+      icon: Icon,
+      color,
+      bgColor,
+      text,
+    } = config[status] || config.pending;
 
     return (
       <span
@@ -189,10 +172,20 @@ const StudentReviews = () => {
     );
   };
 
-  if (loading && reviews.length === 0) {
+  // Retry fetch
+  const handleRetry = () => {
+    dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
+    dispatch(fetchPendingReviews());
+  };
+
+  if (loading && myReviews.length === 0) {
     return (
       <div style={styles.loadingContainer}>
-        <Loader2 size={40} color="#3b82f6" style={{ animation: "spin 1s linear infinite" }} />
+        <Loader2
+          size={40}
+          color="#3b82f6"
+          style={{ animation: "spin 1s linear infinite" }}
+        />
         <p>Loading reviews...</p>
       </div>
     );
@@ -205,7 +198,7 @@ const StudentReviews = () => {
         <div>
           <h1 style={styles.title}>My Reviews</h1>
           <p style={styles.subtitle}>
-            Reviews you've written for accommodations
+            Reviews you&apos;ve written for accommodations
           </p>
         </div>
       </div>
@@ -219,7 +212,7 @@ const StudentReviews = () => {
           }}
           onClick={() => setActiveTab("reviews")}
         >
-          My Reviews ({reviews.length})
+          My Reviews ({myReviews.length})
         </button>
         <button
           style={{
@@ -236,7 +229,7 @@ const StudentReviews = () => {
       {error && (
         <div style={styles.errorContainer}>
           <p>{error}</p>
-          <button style={styles.retryButton} onClick={fetchReviews}>
+          <button style={styles.retryButton} onClick={handleRetry}>
             Retry
           </button>
         </div>
@@ -245,9 +238,9 @@ const StudentReviews = () => {
       {/* Reviews Tab */}
       {activeTab === "reviews" && (
         <>
-          {reviews.length > 0 ? (
+          {myReviews.length > 0 ? (
             <div style={styles.reviewsList}>
-              {reviews.map((review) => (
+              {myReviews.map((review) => (
                 <div key={review.id} style={styles.reviewCard}>
                   <div style={styles.reviewHeader}>
                     <div style={styles.reviewHostel}>
@@ -281,7 +274,7 @@ const StudentReviews = () => {
                         {new Date(review.booking_check_in).toLocaleDateString()}
                         {review.booking_check_out &&
                           ` - ${new Date(
-                            review.booking_check_out
+                            review.booking_check_out,
                           ).toLocaleDateString()}`}
                       </span>
                     </div>
@@ -316,8 +309,8 @@ const StudentReviews = () => {
               <MessageSquare size={64} color="#d1d5db" />
               <h3 style={styles.emptyStateTitle}>No reviews yet</h3>
               <p style={styles.emptyStateText}>
-                After completing a booking, you can leave a review to help
-                other students
+                After completing a booking, you can leave a review to help other
+                students
               </p>
             </div>
           )}
@@ -328,9 +321,7 @@ const StudentReviews = () => {
               <button
                 style={{
                   ...styles.pageButton,
-                  ...(pagination.page === 1
-                    ? styles.pageButtonDisabled
-                    : {}),
+                  ...(pagination.page === 1 ? styles.pageButtonDisabled : {}),
                 }}
                 onClick={() =>
                   setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
@@ -405,7 +396,7 @@ const StudentReviews = () => {
               <CheckCircle size={64} color="#10b981" />
               <h3 style={styles.emptyStateTitle}>All caught up!</h3>
               <p style={styles.emptyStateText}>
-                You've reviewed all your completed bookings
+                You&apos;ve reviewed all your completed bookings
               </p>
             </div>
           )}
@@ -418,10 +409,7 @@ const StudentReviews = () => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>Write a Review</h2>
-              <button
-                style={styles.modalClose}
-                onClick={handleCloseModal}
-              >
+              <button style={styles.modalClose} onClick={handleCloseModal}>
                 ×
               </button>
             </div>
@@ -453,7 +441,9 @@ const StudentReviews = () => {
                     >
                       <Star
                         size={32}
-                        color={star <= reviewForm.rating ? "#f59e0b" : "#d1d5db"}
+                        color={
+                          star <= reviewForm.rating ? "#f59e0b" : "#d1d5db"
+                        }
                         fill={star <= reviewForm.rating ? "#f59e0b" : "none"}
                       />
                     </button>
@@ -463,12 +453,12 @@ const StudentReviews = () => {
                   {reviewForm.rating === 5
                     ? "Excellent"
                     : reviewForm.rating === 4
-                    ? "Very Good"
-                    : reviewForm.rating === 3
-                    ? "Average"
-                    : reviewForm.rating === 2
-                    ? "Poor"
-                    : "Terrible"}
+                      ? "Very Good"
+                      : reviewForm.rating === 3
+                        ? "Average"
+                        : reviewForm.rating === 2
+                          ? "Poor"
+                          : "Terrible"}
                 </span>
               </div>
 
@@ -491,10 +481,7 @@ const StudentReviews = () => {
 
               {/* Actions */}
               <div style={styles.modalActions}>
-                <button
-                  style={styles.cancelButton}
-                  onClick={handleCloseModal}
-                >
+                <button style={styles.cancelButton} onClick={handleCloseModal}>
                   Cancel
                 </button>
                 <button
@@ -512,45 +499,6 @@ const StudentReviews = () => {
     </div>
   );
 };
-
-// Mock data for demo
-const getMockReviews = () => [
-  {
-    id: 1,
-    hostel_id: 1,
-    hostel_name: "University View Hostel",
-    hostel_location: "123 College Ave, Nairobi",
-    rating: 5,
-    comment: "Great accommodation with excellent facilities. The staff was very helpful and the rooms were clean.",
-    status: "approved",
-    booking_check_in: "2024-01-15",
-    booking_check_out: "2024-02-15",
-    created_at: "2024-02-16T10:30:00Z",
-  },
-  {
-    id: 2,
-    hostel_id: 2,
-    hostel_name: "Central Student Living",
-    hostel_location: "456 Main Street, Nairobi",
-    rating: 4,
-    comment: "Good value for money. Location is convenient but could use more study spaces.",
-    status: "pending",
-    booking_check_in: "2024-02-01",
-    booking_check_out: "2024-02-28",
-    created_at: "2024-03-01T14:20:00Z",
-  },
-];
-
-const getMockPendingReviews = () => [
-  {
-    booking_id: 3,
-    hostel_id: 3,
-    hostel_name: "Green Valley Hostel",
-    hostel_location: "789 Park Road, Nairobi",
-    check_in: "2024-03-01",
-    check_out: "2024-03-15",
-  },
-];
 
 const styles = {
   container: {
@@ -925,4 +873,3 @@ const styles = {
 };
 
 export default StudentReviews;
-

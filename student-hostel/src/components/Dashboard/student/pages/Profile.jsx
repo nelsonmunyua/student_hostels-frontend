@@ -31,6 +31,20 @@ const StudentProfile = () => {
     }
   }, [user]);
 
+  // Update form data when user data changes
+  useEffect(() => {
+    if (user) {
+      const newData = {
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      };
+      setFormData(newData);
+      originalData.current = newData;
+    }
+  }, [user]);
+
   // Handle input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -105,7 +119,7 @@ const StudentProfile = () => {
         accept="image/*"
         style={{ display: "none" }}
       />
-      
+
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
         <p style={styles.subtitle}>

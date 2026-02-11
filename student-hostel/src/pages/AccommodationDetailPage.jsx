@@ -119,11 +119,21 @@ const AccommodationDetailPage = () => {
   const defaultImage = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800';
   const mainImage = accommodation.images?.[0] || accommodation.image || defaultImage;
 
-  const amenitiesList = accommodation.amenities || ['WiFi', 'Kitchen', 'Parking', 'Laundry', 'Security'];
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = DEFAULT_PLACEHOLDER;
+  };
+
+  const amenitiesList = accommodation.amenities || [
+    "WiFi",
+    "Kitchen",
+    "Parking",
+    "Laundry",
+    "Security",
+  ];
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <button style={styles.backButton} onClick={() => navigate(-1)}>
           <ChevronLeft size={20} />
@@ -141,17 +151,21 @@ const AccommodationDetailPage = () => {
         </div>
       </div>
 
-      {/* Image Gallery */}
       <div style={styles.gallery}>
-        <img src={mainImage} alt={accommodation.title || accommodation.name} style={styles.mainImage} />
+        <img
+          src={mainImage}
+          alt={accommodation.title || accommodation.name}
+          style={styles.mainImage}
+          onError={handleImageError}
+        />
       </div>
 
-      {/* Content */}
       <div style={styles.content}>
         <div style={styles.mainContent}>
-          {/* Title & Info */}
           <div style={styles.titleSection}>
-            <h1 style={styles.title}>{accommodation.title || accommodation.name}</h1>
+            <h1 style={styles.title}>
+              {accommodation.title || accommodation.name}
+            </h1>
             <div style={styles.meta}>
               <div style={styles.location}>
                 <MapPin size={18} color="#64748b" />
@@ -172,15 +186,15 @@ const AccommodationDetailPage = () => {
 
           <div style={styles.divider} />
 
-          {/* Description */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>About this place</h2>
-            <p style={styles.description}>{accommodation.description || 'No description available.'}</p>
+            <p style={styles.description}>
+              {accommodation.description || "No description available."}
+            </p>
           </div>
 
           <div style={styles.divider} />
 
-          {/* Amenities */}
           <div style={styles.section}>
             <h2 style={styles.sectionTitle}>Amenities</h2>
             <div style={styles.amenities}>
@@ -195,18 +209,48 @@ const AccommodationDetailPage = () => {
 
           <div style={styles.divider} />
 
-          {/* Reviews */}
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Reviews</h2>
-            <ReviewList reviews={reviews} averageRating={accommodation.rating || 0} totalReviews={reviews.length || 0} />
+            <div style={styles.reviewsHeader}>
+              <h2 style={styles.sectionTitle}>Reviews</h2>
+              {user && user.role === "student" && (
+                <button
+                  style={styles.writeReviewButton}
+                  onClick={() => setShowReviewForm(true)}
+                >
+                  Write a Review
+                </button>
+              )}
+            </div>
+
+            {showReviewForm && (
+              <div style={styles.reviewFormContainer}>
+                <ReviewForm
+                  accommodationId={parseInt(id)}
+                  onSuccess={() => {
+                    setShowReviewForm(false);
+                    dispatch(fetchReviewsByAccommodation(id));
+                  }}
+                  onCancel={() => setShowReviewForm(false)}
+                />
+              </div>
+            )}
+
+            <ReviewList
+              reviews={reviews}
+              averageRating={accommodation.rating || 0}
+              totalReviews={reviews.length || 0}
+            />
           </div>
         </div>
 
-        {/* Booking Sidebar */}
         <aside style={styles.sidebar}>
           <div style={styles.bookingCard}>
             <div style={styles.priceSection}>
-              <span style={styles.price}>KSh {accommodation.price_per_night?.toLocaleString() || accommodation.price?.toLocaleString()}</span>
+              <span style={styles.price}>
+                KSh{" "}
+                {accommodation.price_per_night?.toLocaleString() ||
+                  accommodation.price?.toLocaleString()}
+              </span>
               <span style={styles.priceLabel}>/night</span>
             </div>
             
@@ -236,186 +280,191 @@ const AccommodationDetailPage = () => {
 
 const styles = {
   container: {
-    minHeight: '100vh',
-    backgroundColor: '#f8fafc',
+    minHeight: "100vh",
+    backgroundColor: "#f8fafc",
   },
-  loadingContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    gap: '16px',
-  },
-  spinner: {
-    width: '40px',
-    height: '40px',
-    border: '3px solid #e2e8f0',
-    borderTopColor: '#0369a1',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
-  },
+  // Note: loadingContainer and spinner styles removed - content loads directly
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "20px",
+    backgroundColor: "#ffffff",
+    borderBottom: "1px solid #e5e7eb",
   },
   backButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
     fontWeight: 500,
   },
   headerActions: {
-    display: 'flex',
-    gap: '12px',
+    display: "flex",
+    gap: "12px",
   },
   iconButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
     fontWeight: 500,
   },
   gallery: {
-    width: '100%',
-    height: '500px',
-    overflow: 'hidden',
+    width: "100%",
+    height: "500px",
+    overflow: "hidden",
   },
   mainImage: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
   },
   content: {
-    maxWidth: '1400px',
-    margin: '0 auto',
-    padding: '40px 20px',
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
-    gap: '40px',
+    maxWidth: "1400px",
+    margin: "0 auto",
+    padding: "40px 20px",
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr",
+    gap: "40px",
   },
   mainContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '32px',
-    border: '1px solid #e5e7eb',
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "32px",
+    border: "1px solid #e5e7eb",
   },
   titleSection: {
-    marginBottom: '24px',
+    marginBottom: "24px",
   },
   title: {
-    fontSize: '32px',
+    fontSize: "32px",
     fontWeight: 700,
-    color: '#1e293b',
-    marginBottom: '16px',
+    color: "#1e293b",
+    marginBottom: "16px",
   },
   meta: {
-    display: 'flex',
-    gap: '24px',
-    flexWrap: 'wrap',
+    display: "flex",
+    gap: "24px",
+    flexWrap: "wrap",
   },
   location: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '16px',
-    color: '#64748b',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "16px",
+    color: "#64748b",
   },
   guests: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '16px',
-    color: '#64748b',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "16px",
+    color: "#64748b",
   },
   rating: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '16px',
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "16px",
     fontWeight: 600,
   },
   divider: {
-    height: '1px',
-    backgroundColor: '#e5e7eb',
-    margin: '24px 0',
+    height: "1px",
+    backgroundColor: "#e5e7eb",
+    margin: "24px 0",
   },
   section: {
-    marginBottom: '32px',
+    marginBottom: "32px",
+  },
+  reviewsHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
+  },
+  writeReviewButton: {
+    padding: "10px 20px",
+    backgroundColor: "#3b82f6",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  reviewFormContainer: {
+    marginBottom: "24px",
   },
   sectionTitle: {
-    fontSize: '20px',
+    fontSize: "20px",
     fontWeight: 600,
-    color: '#1e293b',
-    marginBottom: '16px',
+    color: "#1e293b",
+    marginBottom: "16px",
   },
   description: {
-    fontSize: '16px',
-    lineHeight: '1.6',
-    color: '#475569',
+    fontSize: "16px",
+    lineHeight: "1.6",
+    color: "#475569",
   },
   amenities: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '16px',
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "16px",
   },
   amenity: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    fontSize: '15px',
-    color: '#475569',
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontSize: "15px",
+    color: "#475569",
   },
   amenityIcon: {
-    width: '24px',
-    height: '24px',
-    borderRadius: '50%',
-    backgroundColor: '#ecfdf5',
-    color: '#059669',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '14px',
+    width: "24px",
+    height: "24px",
+    borderRadius: "50%",
+    backgroundColor: "#ecfdf5",
+    color: "#059669",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "14px",
   },
   sidebar: {
-    position: 'sticky',
-    top: '20px',
-    height: 'fit-content',
+    position: "sticky",
+    top: "20px",
+    height: "fit-content",
   },
   bookingCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "24px",
+    border: "1px solid #e5e7eb",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
   },
   priceSection: {
-    marginBottom: '24px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #e5e7eb',
+    marginBottom: "24px",
+    paddingBottom: "20px",
+    borderBottom: "1px solid #e5e7eb",
   },
   price: {
-    fontSize: '28px',
+    fontSize: "28px",
     fontWeight: 700,
-    color: '#1e293b',
+    color: "#1e293b",
   },
   priceLabel: {
-    fontSize: '16px',
-    color: '#64748b',
+    fontSize: "16px",
+    color: "#64748b",
   },
   bookingLoading: {
     display: 'flex',
@@ -432,4 +481,3 @@ const styles = {
 };
 
 export default AccommodationDetailPage;
-

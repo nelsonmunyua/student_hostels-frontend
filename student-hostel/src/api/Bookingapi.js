@@ -1,4 +1,4 @@
-import axios from './axios';
+import axios from "./axios";
 
 /**
  * Booking API Service
@@ -7,15 +7,22 @@ import axios from './axios';
 
 const bookingApi = {
   /**
-   * Get all bookings for current user
+   * Create a new booking
+   * @param {Object} bookingData - Booking details
+   * @returns {Promise} Response with created booking
+   */
+  create: async (bookingData) => {
+    const response = await axios.post("/bookings", bookingData);
+    return response.data;
+  },
+
+  /**
+   * Get all bookings (Admin) or user bookings
    * @param {Object} params - Query parameters
-   * @param {string} params.status - Filter by status (paid, pending, cancelled, completed)
-   * @param {number} params.page - Page number
-   * @param {number} params.limit - Items per page
    * @returns {Promise} Response with bookings list
    */
   getAll: async (params = {}) => {
-    const response = await axios.get('/bookings', { params });
+    const response = await axios.get("/bookings", { params });
     return response.data;
   },
 
@@ -30,75 +37,51 @@ const bookingApi = {
   },
 
   /**
-   * Create new booking
-   * @param {Object} bookingData - Booking data
-   * @param {number} bookingData.accommodation_id - Accommodation ID
-   * @param {Date} bookingData.check_in - Check-in date
-   * @param {Date} bookingData.check_out - Check-out date
-   * @param {number} bookingData.total_price - Total price
-   * @returns {Promise} Response with created booking
+   * Get student's bookings
+   * @param {Object} params - Query parameters (status, page, limit)
+   * @returns {Promise} Response with student bookings
    */
-  create: async (bookingData) => {
-    const response = await axios.post('/bookings', bookingData);
+  getStudentBookings: async (params = {}) => {
+    const response = await axios.get("/bookings/my-bookings", { params });
     return response.data;
   },
 
   /**
-   * Update booking
+   * Get host's bookings (for their properties)
+   * @param {Object} params - Query parameters (status, page, limit)
+   * @returns {Promise} Response with host bookings
+   */
+  getHostBookings: async (params = {}) => {
+    const response = await axios.get("/bookings/host-bookings", { params });
+    return response.data;
+  },
+
+  /**
+   * Update booking status
    * @param {number} id - Booking ID
-   * @param {Object} bookingData - Updated booking data
+   * @param {Object} data - Update data (status, notes)
    * @returns {Promise} Response with updated booking
    */
-  update: async (id, bookingData) => {
-    const response = await axios.put(`/bookings/${id}`, bookingData);
+  update: async (id, data) => {
+    const response = await axios.put(`/bookings/${id}`, data);
     return response.data;
   },
 
   /**
    * Cancel booking
    * @param {number} id - Booking ID
-   * @param {Object} data - Cancellation reason (optional)
-   * @returns {Promise} Response confirming cancellation
+   * @param {string} reason - Cancellation reason
+   * @returns {Promise} Response with cancelled booking
    */
-  cancel: async (id, data = {}) => {
-    const response = await axios.post(`/bookings/${id}/cancel`, data);
+  cancel: async (id, reason = "") => {
+    const response = await axios.post(`/bookings/${id}/cancel`, { reason });
     return response.data;
   },
 
   /**
-   * Complete booking (mark as completed)
+   * Accept booking (Host)
    * @param {number} id - Booking ID
-   * @returns {Promise} Response confirming completion
-   */
-  complete: async (id) => {
-    const response = await axios.post(`/bookings/${id}/complete`);
-    return response.data;
-  },
-
-  /**
-   * Get student bookings (Student dashboard)
-   * @param {Object} params - Query parameters
-   * @returns {Promise} Response with student's bookings
-   */
-  getStudentBookings: async (params = {}) => {
-    const response = await axios.get('/student/bookings', { params });
-    return response.data;
-  },
-
-  /**
-   * Get host bookings (Host dashboard)
-   * @param {Object} params - Query parameters
-   * @returns {Promise} Response with bookings for host's properties
-   */
-  getHostBookings: async (params = {}) => {
-    const response = await axios.get('/host/bookings', { params });
-    return response.data;
-  },
-
-  /**
-   * Accept booking (Host only)
-   * @param {number} id - Booking ID
-   * @returns {Promise} Response confirming acceptance
+   * @returns {Promise} Response with accepted booking
    */
   accept: async (id) => {
     const response = await axios.post(`/bookings/${id}/accept`);
@@ -106,91 +89,87 @@ const bookingApi = {
   },
 
   /**
-   * Reject booking (Host only)
+   * Reject booking (Host)
    * @param {number} id - Booking ID
-   * @param {Object} data - Rejection reason
-   * @returns {Promise} Response confirming rejection
+   * @param {string} reason - Rejection reason
+   * @returns {Promise} Response with rejected booking
    */
-  reject: async (id, data) => {
-    const response = await axios.post(`/bookings/${id}/reject`, data);
+  reject: async (id, reason = "") => {
+    const response = await axios.post(`/bookings/${id}/reject`, { reason });
     return response.data;
   },
 
   /**
-   * Check booking availability
-   * @param {Object} params - Availability parameters
-   * @param {number} params.accommodation_id - Accommodation ID
-   * @param {Date} params.check_in - Check-in date
-   * @param {Date} params.check_out - Check-out date
-   * @returns {Promise} Response with availability status
+   * Check accommodation availability
+   * @param {number} accommodationId - Accommodation ID
+   * @param {Object} params - Date range parameters
+   * @returns {Promise} Response with availability data
    */
-  checkAvailability: async (params) => {
-    const response = await axios.post('/bookings/check-availability', params);
+  checkAvailability: async (accommodationId, params) => {
+    const response = await axios.get(
+      `/accommodations/${accommodationId}/availability`,
+      { params },
+    );
     return response.data;
   },
 
   /**
    * Calculate booking price
-   * @param {Object} params - Price calculation parameters
-   * @param {number} params.accommodation_id - Accommodation ID
-   * @param {Date} params.check_in - Check-in date
-   * @param {Date} params.check_out - Check-out date
-   * @returns {Promise} Response with price breakdown
+   * @param {Object} params - Booking parameters
+   * @returns {Promise} Response with price calculation
    */
   calculatePrice: async (params) => {
-    const response = await axios.post('/bookings/calculate-price', params);
+    const response = await axios.post("/bookings/calculate-price", params);
     return response.data;
   },
 
   /**
-   * Get booking statistics (Dashboard)
-   * @returns {Promise} Response with booking statistics
+   * Get booking calendar (for host availability management)
+   * @param {number} accommodationId - Accommodation ID
+   * @param {string} month - Month in YYYY-MM format
+   * @returns {Promise} Response with booking calendar
    */
-  getStats: async () => {
-    const response = await axios.get('/bookings/stats');
+  getBookingCalendar: async (accommodationId, month) => {
+    const response = await axios.get(
+      `/accommodations/${accommodationId}/bookings`,
+      {
+        params: { month },
+      },
+    );
     return response.data;
   },
 
   /**
    * Download booking receipt
    * @param {number} id - Booking ID
-   * @returns {Promise} Response with receipt data/URL
+   * @returns {Promise} Blob response with PDF
    */
   downloadReceipt: async (id) => {
     const response = await axios.get(`/bookings/${id}/receipt`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return response.data;
   },
 
   /**
-   * Get upcoming bookings
-   * @param {number} limit - Number of upcoming bookings
-   * @returns {Promise} Response with upcoming bookings
+   * Request booking modification
+   * @param {number} id - Booking ID
+   * @param {Object} modifications - Requested changes
+   * @returns {Promise} Response with modification request
    */
-  getUpcoming: async (limit = 5) => {
-    const response = await axios.get('/bookings/upcoming', {
-      params: { limit },
-    });
+  requestModification: async (id, modifications) => {
+    const response = await axios.post(`/bookings/${id}/modify`, modifications);
     return response.data;
   },
 
   /**
-   * Get past bookings
-   * @param {Object} params - Query parameters
-   * @returns {Promise} Response with past bookings
+   * Report booking issue
+   * @param {number} id - Booking ID
+   * @param {Object} issueData - Issue details
+   * @returns {Promise} Response with created issue
    */
-  getPast: async (params = {}) => {
-    const response = await axios.get('/bookings/past', { params });
-    return response.data;
-  },
-
-  /**
-   * Get active bookings
-   * @returns {Promise} Response with active bookings
-   */
-  getActive: async () => {
-    const response = await axios.get('/bookings/active');
+  reportIssue: async (id, issueData) => {
+    const response = await axios.post(`/bookings/${id}/issue`, issueData);
     return response.data;
   },
 
