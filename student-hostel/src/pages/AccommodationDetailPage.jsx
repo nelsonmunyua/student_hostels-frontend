@@ -36,7 +36,8 @@ const AccommodationDetailPage = () => {
   }
 
   const accommodation = currentAccommodation;
-  const defaultImage = 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800';
+  // Use Unsplash images for better quality
+  const defaultImage = 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
   const mainImage = accommodation.images?.[0] || accommodation.image || defaultImage;
 
   const amenitiesList = accommodation.amenities || ['WiFi', 'Kitchen', 'Parking', 'Laundry', 'Security'];

@@ -36,7 +36,7 @@ axiosInstance.interceptors.request.use(
 
 /**
  * Response interceptor
- * Handles errors gracefully
+ * Handles errors gracefully, including 401 token expiration
  */
 axiosInstance.interceptors.response.use(
   (response) => {
@@ -45,7 +45,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If server responded with an error, handle it
+    // If server responded with an error
     if (error.response) {
       const { status, data } = error.response;
 
@@ -63,21 +63,42 @@ axiosInstance.interceptors.response.use(
               { headers: { Authorization: `Bearer ${refreshToken}` } }
             );
 
-            const { access_token } = response.data;
+            const { token: access_token } = response.data;
 
-            localStorage.setItem("token", access_token);
-            originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-            return axiosInstance(originalRequest);
+            // Store new access token
+            if (access_token) {
+              localStorage.setItem("token", access_token);
+              originalRequest.headers.Authorization = `Bearer ${access_token}`;
+              return axiosInstance(originalRequest);
+            }
           }
         } catch (refreshError) {
-          // Refresh failed, logout user
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
+          console.error("Token refresh failed:", refreshError);
+          // Refresh failed, logout user and redirect to login
+        }
 
-          if (window.location.pathname !== "/login") {
-            window.location.href = "/login";
-          }
+        // Either no refresh token or refresh failed
+        console.log("Token refresh failed or no refresh token, logging out user");
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+
+        // Only redirect if not already on login page
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login?session_expired=true";
+        }
+
+        return Promise.reject(error);
+      }
+
+      // For other 401 errors (no token, invalid token), redirect to login
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login?session_expired=true";
         }
       }
 

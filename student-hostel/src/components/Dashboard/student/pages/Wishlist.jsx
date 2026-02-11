@@ -134,7 +134,7 @@ const StudentWishlist = () => {
                   <img
                     src={
                       item.images?.[0] ||
-                      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400"
+                      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"
                     }
                     alt={item.name}
                     style={styles.cardImageImg}
@@ -267,7 +267,7 @@ const StudentWishlist = () => {
   );
 };
 
-// Mock data for demo
+// Mock data for demo - using Unsplash images
 const getMockWishlist = () => [
   {
     id: 1,
@@ -278,7 +278,7 @@ const getMockWishlist = () => [
     room_type: "single",
     rating: 4.5,
     images: [
-      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400",
+      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
     ],
     added_at: new Date().toISOString(),
   },
@@ -291,7 +291,7 @@ const getMockWishlist = () => [
     room_type: "bed_sitter",
     rating: 4.2,
     images: [
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
     ],
     added_at: new Date(Date.now() - 86400000).toISOString(),
   },

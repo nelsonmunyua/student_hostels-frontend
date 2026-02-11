@@ -132,9 +132,9 @@ const authApi = {
   refreshToken: async () => {
     const refreshToken = localStorage.getItem("refreshToken");
     const response = await axios.post(
-      `${API_BASE_URL}/auth/refresh-token`,
+      `${API_BASE_URL}/auth/refresh`,
       {},
-      { headers: refreshToken ? { Authorization: `Bearer ${refreshToken}` } : {} }
+      { headers: { Authorization: `Bearer ${refreshToken}` } }
     );
     return response.data;
   },

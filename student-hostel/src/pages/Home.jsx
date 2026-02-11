@@ -226,7 +226,7 @@ const Home = () => {
   );
 };
 
-// Mock data for demo
+// Mock data for demo - using Unsplash images
 const getMockAccommodations = () => [
   {
     id: 1,

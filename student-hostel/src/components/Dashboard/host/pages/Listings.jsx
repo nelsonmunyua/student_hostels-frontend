@@ -1,6 +1,8 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, X } from "lucide-react";
+import hostApi from "../../../../api/hostApi";
 
 const HostListings = () => {
   const navigate = useNavigate();
@@ -8,39 +10,99 @@ const HostListings = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState(null);
-  
-  const [listings] = useState([
-    {
-      id: 1,
-      name: "University View Hostel",
-      location: "123 College Ave",
-      status: "active",
-      price: 450,
-      bookings: 12,
-      rating: 4.8,
-      image: "/api/placeholder/100/100",
-    },
-    {
-      id: 2,
-      name: "Central Student Living",
-      location: "456 Main St",
-      status: "active",
-      price: 380,
-      bookings: 8,
-      rating: 4.5,
-      image: "/api/placeholder/100/100",
-    },
-    {
-      id: 3,
-      name: "Campus Edge Apartments",
-      location: "789 Campus Rd",
-      status: "pending",
-      price: 520,
-      bookings: 0,
-      rating: 0,
-      image: "/api/placeholder/100/100",
-    },
-  ]);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    description: '',
+    price: '',
+    room_type: 'single',
+    capacity: 1,
+    available_units: 1
+  });
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    location: '',
+    description: '',
+    price: '',
+    room_type: 'single',
+    capacity: 1,
+    available_units: 1
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
+
+  // Helper function to safely capitalize status
+  const capitalizeStatus = (status) => {
+    if (!status) return 'Unknown';
+    // Handle boolean is_active from backend
+    if (typeof status === 'boolean') {
+      return status ? 'Active' : 'Inactive';
+    }
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  // Helper function to check if status is active
+  const isStatusActive = (status) => {
+    // Handle boolean is_active from backend
+    if (typeof status === 'boolean') {
+      return status;
+    }
+    return status === 'active';
+  };
+
+  // Helper function to get price with fallback
+  const getPrice = (listing) => {
+    return listing.price || listing.total_rooms * 100 || 0;
+  };
+
+  // Helper function to get bookings count with fallback
+  const getBookings = (listing) => {
+    return listing.bookings || listing.total_reviews || 0;
+  };
+
+  // Helper function to get rating with fallback
+  const getRating = (listing) => {
+    return listing.rating !== undefined ? listing.rating : (listing.avg_rating || 0);
+  };
+
+  // Fetch listings from API
+  useEffect(() => {
+    const fetchListings = async () => {
+      try {
+        setLoading(true);
+        const data = await hostApi.getListings();
+        setListings(data.hostels || []);
+      } catch (error) {
+        console.error("Failed to fetch listings:", error);
+        
+        // Check for authentication errors
+        const errorMessage = error.response?.data?.message || error.message || "";
+        const isAuthError = 
+          error.response?.status === 401 || 
+          errorMessage.toLowerCase().includes("unauthorized") ||
+          errorMessage.toLowerCase().includes("authentication") ||
+          errorMessage.toLowerCase().includes("jwt") ||
+          errorMessage.toLowerCase().includes("token");
+        
+        if (isAuthError) {
+          // Clear auth data and redirect to login
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+          localStorage.removeItem("user");
+          window.location.href = "/login?session_expired=true";
+          return;
+        }
+        
+        // Keep empty array on other errors
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchListings();
+  }, []);
 
   // Modal handlers
   const handleAddNew = () => {
@@ -49,6 +111,16 @@ const HostListings = () => {
 
   const handleEdit = (listing) => {
     setSelectedListing(listing);
+    // Pre-populate edit form with listing data
+    setEditFormData({
+      name: listing.name || '',
+      location: listing.location || '',
+      description: listing.description || '',
+      price: listing.price ? listing.price.toString() : '',
+      room_type: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].room_type : 'single',
+      capacity: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].capacity : 1,
+      available_units: listing.rooms && listing.rooms.length > 0 ? listing.rooms[0].available_units : 1
+    });
     setShowEditModal(true);
   };
 
@@ -67,6 +139,117 @@ const HostListings = () => {
       setShowDeleteModal(false);
       setSelectedListing(null);
     }
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const listingData = {
+        name: formData.name,
+        location: formData.location,
+        description: formData.description,
+        latitude: 0, // Default values
+        longitude: 0,
+        amenities: [],
+        rules: '',
+        images: [],
+        is_verified: false,
+        is_active: true
+      };
+
+      const roomData = {
+        room_type: formData.room_type,
+        price: parseFloat(formData.price),
+        capacity: parseInt(formData.capacity),
+        available_units: parseInt(formData.available_units),
+        is_available: true
+      };
+
+      // Create listing
+      const listingResponse = await hostApi.createListing(listingData);
+      const listingId = listingResponse.hostel.id;
+
+      // Add room to listing
+      await hostApi.addRoom(listingId, roomData);
+
+      // Refresh listings
+      const data = await hostApi.getListings();
+      setListings(data.hostels || []);
+
+      // Reset form and close modal
+      resetAddForm();
+      setShowAddModal(false);
+      alert('Listing created successfully!');
+    } catch (error) {
+      console.error('Failed to create listing:', error);
+      alert('Failed to create listing. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle edit form input changes
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditingSubmitting(true);
+
+    try {
+      const listingData = {
+        name: editFormData.name,
+        location: editFormData.location,
+        description: editFormData.description
+      };
+
+      // Update listing
+      await hostApi.updateListing(selectedListing.id, listingData);
+
+      // Refresh listings
+      const data = await hostApi.getListings();
+      setListings(data.hostels || []);
+
+      setShowEditModal(false);
+      setSelectedListing(null);
+      alert('Listing updated successfully!');
+    } catch (error) {
+      console.error('Failed to update listing:', error);
+      alert('Failed to update listing. Please try again.');
+    } finally {
+      setEditingSubmitting(false);
+    }
+  };
+
+  // Reset add form
+  const resetAddForm = () => {
+    setFormData({
+      name: '',
+      location: '',
+      description: '',
+      price: '',
+      room_type: 'single',
+      capacity: 1,
+      available_units: 1
+    });
   };
 
   return (
@@ -95,24 +278,24 @@ const HostListings = () => {
                 <span
                   style={{
                     ...styles.statusBadge,
-                    ...(listing.status === "active"
+                    ...(isStatusActive(listing.is_active)
                       ? styles.statusActive
                       : styles.statusPending),
                   }}
                 >
-                  {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                  {capitalizeStatus(listing.is_active)}
                 </span>
               </div>
               <p style={styles.listingLocation}>📍 {listing.location}</p>
               <div style={styles.listingStats}>
-                <span style={styles.listingPrice}>${listing.price}/mo</span>
+                <span style={styles.listingPrice}>KES {getPrice(listing)}/mo</span>
                 <span style={styles.listingBookings}>
-                  📅 {listing.bookings} bookings
+                  📅 {getBookings(listing)} bookings
                 </span>
               </div>
-              {listing.rating > 0 && (
+              {getRating(listing) > 0 && (
                 <div style={styles.listingRating}>
-                  ⭐ {listing.rating.toFixed(1)} rating
+                  ⭐ {getRating(listing).toFixed(1)} rating
                 </div>
               )}
               <div style={styles.listingActions}>
@@ -150,22 +333,22 @@ const HostListings = () => {
                     </div>
                   </td>
                   <td style={styles.td}>{listing.location}</td>
-                  <td style={styles.td}>${listing.price}/mo</td>
+                  <td style={styles.td}>KES {getPrice(listing)}/mo</td>
                   <td style={styles.td}>
                     <span
                       style={{
                         ...styles.tableBadge,
-                        ...(listing.status === "active"
+                        ...(isStatusActive(listing.is_active)
                           ? styles.badgeActive
                           : styles.badgePending),
                       }}
                     >
-                      {listing.status}
+                      {capitalizeStatus(listing.is_active)}
                     </span>
                   </td>
-                  <td style={styles.td}>{listing.bookings}</td>
+                  <td style={styles.td}>{getBookings(listing)}</td>
                   <td style={styles.td}>
-                    {listing.rating > 0 ? `⭐ ${listing.rating.toFixed(1)}` : "-"}
+                    {getRating(listing) > 0 ? `⭐ ${getRating(listing).toFixed(1)}` : "-"}
                   </td>
                   <td style={styles.td}>
                     <div style={styles.tableActions}>
@@ -197,47 +380,119 @@ const HostListings = () => {
                 <X size={20} />
               </button>
             </div>
-            <div style={styles.modalContent}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Property Name</label>
-                <input type="text" style={styles.input} placeholder="Enter property name" />
-              </div>
-              <div style={styles.formRow}>
+            <form onSubmit={handleSubmit}>
+              <div style={styles.modalContent}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Type</label>
-                  <select style={styles.select}>
-                    <option>Hostel</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
-                  </select>
+                  <label style={styles.label}>Property Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    style={styles.input}
+                    placeholder="Enter property name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
-                  <input type="number" style={styles.input} placeholder="Enter price" />
+                  <label style={styles.label}>Description</label>
+                  <textarea
+                    name="description"
+                    style={styles.textarea}
+                    placeholder="Enter property description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
                 </div>
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input type="text" style={styles.input} placeholder="Enter address" />
-              </div>
-              <div style={styles.formRow}>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Room Type</label>
+                    <select
+                      name="room_type"
+                      style={styles.select}
+                      value={formData.room_type}
+                      onChange={handleInputChange}
+                    >
+                      <option value="single">Single</option>
+                      <option value="double">Double</option>
+                      <option value="bed_sitter">Bed Sitter</option>
+                      <option value="studio">Studio</option>
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Price (KES/month)</label>
+                    <input
+                      type="number"
+                      name="price"
+                      style={styles.input}
+                      placeholder="Enter price"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Rooms</label>
-                  <input type="number" style={styles.input} placeholder="Number of rooms" />
+                  <label style={styles.label}>Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    style={styles.input}
+                    placeholder="Enter address"
+                    value={formData.location}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Capacity</label>
-                  <input type="number" style={styles.input} placeholder="Total capacity" />
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Capacity</label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      style={styles.input}
+                      placeholder="Room capacity"
+                      value={formData.capacity}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Available Units</label>
+                    <input
+                      type="number"
+                      name="available_units"
+                      style={styles.input}
+                      placeholder="Available units"
+                      value={formData.available_units}
+                      onChange={handleInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button style={styles.submitBtn} onClick={() => {
-                alert("New listing would be created and list refreshed");
-                setShowAddModal(false);
-              }}>Add Listing</button>
-            </div>
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  style={styles.cancelBtn}
+                  onClick={() => setShowAddModal(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={styles.submitBtn}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Creating...' : 'Add Listing'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -252,37 +507,119 @@ const HostListings = () => {
                 <X size={20} />
               </button>
             </div>
-            <div style={styles.modalContent}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Property Name</label>
-                <input type="text" style={styles.input} defaultValue={selectedListing.name} />
-              </div>
-              <div style={styles.formRow}>
+            <form onSubmit={handleEditSubmit}>
+              <div style={styles.modalContent}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Type</label>
-                  <select style={styles.select} defaultValue={selectedListing.type || "Hostel"}>
-                    <option>Hostel</option>
-                    <option>Apartment</option>
-                    <option>Studio</option>
-                  </select>
+                  <label style={styles.label}>Property Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    style={styles.input}
+                    placeholder="Enter property name"
+                    value={editFormData.name}
+                    onChange={handleEditInputChange}
+                    required
+                  />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
-                  <input type="number" style={styles.input} defaultValue={selectedListing.price} />
+                  <label style={styles.label}>Description</label>
+                  <textarea
+                    name="description"
+                    style={styles.textarea}
+                    placeholder="Enter property description"
+                    value={editFormData.description}
+                    onChange={handleEditInputChange}
+                    rows={3}
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Room Type</label>
+                    <select
+                      name="room_type"
+                      style={styles.select}
+                      value={editFormData.room_type}
+                      onChange={handleEditInputChange}
+                    >
+                      <option value="single">Single</option>
+                      <option value="double">Double</option>
+                      <option value="bed_sitter">Bed Sitter</option>
+                      <option value="studio">Studio</option>
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Price (KES/month)</label>
+                    <input
+                      type="number"
+                      name="price"
+                      style={styles.input}
+                      placeholder="Enter price"
+                      value={editFormData.price}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    style={styles.input}
+                    placeholder="Enter address"
+                    value={editFormData.location}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+                <div style={styles.formRow}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Capacity</label>
+                    <input
+                      type="number"
+                      name="capacity"
+                      style={styles.input}
+                      placeholder="Room capacity"
+                      value={editFormData.capacity}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Available Units</label>
+                    <input
+                      type="number"
+                      name="available_units"
+                      style={styles.input}
+                      placeholder="Available units"
+                      value={editFormData.available_units}
+                      onChange={handleEditInputChange}
+                      required
+                      min="1"
+                    />
+                  </div>
                 </div>
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Location</label>
-                <input type="text" style={styles.input} defaultValue={selectedListing.location} />
+              <div style={styles.modalFooter}>
+                <button
+                  type="button"
+                  style={styles.cancelBtn}
+                  onClick={() => setShowEditModal(false)}
+                  disabled={editingSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={styles.submitBtn}
+                  disabled={editingSubmitting}
+                >
+                  {editingSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
-            </div>
-            <div style={styles.modalFooter}>
-              <button style={styles.cancelBtn} onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button style={styles.submitBtn} onClick={() => {
-                alert(`Listing "${selectedListing.name}" would be updated`);
-                setShowEditModal(false);
-              }}>Save Changes</button>
-            </div>
+            </form>
           </div>
         </div>
       )}
@@ -318,7 +655,9 @@ const HostListings = () => {
 
 const styles = {
   container: {
-    animation: "fadeIn 0.4s ease-out",
+    padding: "24px",
+    backgroundColor: "#f8fafc",
+    minHeight: "100%",
   },
   header: {
     display: "flex",
@@ -610,6 +949,18 @@ const styles = {
     outline: "none",
     backgroundColor: "#ffffff",
     cursor: "pointer",
+  },
+  textarea: {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    fontSize: "14px",
+    color: "#334155",
+    outline: "none",
+    boxSizing: "border-box",
+    resize: "vertical",
+    fontFamily: "inherit",
   },
   modalFooter: {
     display: "flex",

@@ -4,6 +4,7 @@ import { Heart, MapPin, Star, Wifi, Car, Coffee, BookOpen, Shield } from 'lucide
 const AccommodationCard = ({ accommodation, layout = 'grid' }) => {
   const navigate = useNavigate();
   
+  // Use Unsplash images for better quality
   const defaultImage = 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
   const image = accommodation.images?.[0] || accommodation.image || defaultImage;
 

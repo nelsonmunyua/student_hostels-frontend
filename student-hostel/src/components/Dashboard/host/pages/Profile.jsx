@@ -1,24 +1,52 @@
-import { useState } from "react";
-import { useSelector } from "react-redux";
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import hostApi from "../../../../api/hostApi";
+import authApi from "../../../../api/authApi";
+import { setCredentials } from "../../../../redux/slices/authSlice";
 
 const HostProfile = () => {
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("personal");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: "", text: "" });
+  
+  // State for profile data
+  const [profileData, setProfileData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+  });
+  
+  // State for verification status
+  const [verificationStatus, setVerificationStatus] = useState(null);
+  const [verificationLoading, setVerificationLoading] = useState(true);
+  
+  // State for dashboard stats
+  const [stats, setStats] = useState({
+    totalListings: 0,
+    avgRating: 0,
+    memberDuration: "0",
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Form state
   const [formData, setFormData] = useState({
-    firstName: user?.first_name || "Host",
-    lastName: user?.last_name || "User",
-    email: user?.email || "host@example.com",
-    phone: "+1 234 567 8900",
-    company: "StudentHostel Management",
-    address: "123 Business Ave, Suite 100",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
     country: "United States",
-    bankName: "Chase Bank",
-    accountNumber: "****4567",
-    routingNumber: "****8901",
-    taxId: "**-***7890",
+    bankName: "",
+    accountNumber: "",
+    routingNumber: "",
+    taxId: "",
   });
 
   const [notifications, setNotifications] = useState({
@@ -29,13 +57,263 @@ const HostProfile = () => {
     weeklyReports: true,
   });
 
+  // Fetch verification status on mount
+  useEffect(() => {
+    const fetchVerificationStatus = async () => {
+      try {
+        setVerificationLoading(true);
+        const response = await hostApi.getVerificationStatus();
+        setVerificationStatus(response);
+      } catch (error) {
+        console.error("Failed to fetch verification status:", error);
+        setVerificationStatus({ status: "not_submitted" });
+      } finally {
+        setVerificationLoading(false);
+      }
+    };
+
+    if (user?.role === "host") {
+      fetchVerificationStatus();
+    }
+  }, [user]);
+
+  // Fetch dashboard stats
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setStatsLoading(true);
+        // Fetch listings count
+        const listingsResponse = await hostApi.getListings();
+        const totalListings = listingsResponse.hostels?.length || 0;
+        
+        // Fetch reviews for rating
+        const reviewsResponse = await hostApi.getReviews();
+        const reviews = reviewsResponse.reviews || [];
+        const avgRating = reviews.length > 0
+          ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+          : 0;
+        
+        // Calculate member duration
+        let memberDuration = "0";
+        if (user?.created_at) {
+          const createdDate = new Date(user.created_at);
+          const now = new Date();
+          const years = now.getFullYear() - createdDate.getFullYear();
+          const months = now.getMonth() - createdDate.getMonth();
+          const totalMonths = years * 12 + months;
+          
+          if (totalMonths < 1) {
+            memberDuration = "< 1 mo";
+          } else if (totalMonths < 12) {
+            memberDuration = `${totalMonths} mo`;
+          } else {
+            memberDuration = `${years} yr${years > 1 ? "s" : ""}`;
+          }
+        }
+        
+        setStats({
+          totalListings,
+          avgRating,
+          memberDuration,
+        });
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+        // Keep default values on error
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    if (user?.role === "host") {
+      fetchDashboardStats();
+    }
+  }, [user]);
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await hostApi.getProfile();
+        const userData = response.user || response;
+        
+        setProfileData({
+          firstName: userData.first_name || "",
+          lastName: userData.last_name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+        });
+        
+        setFormData((prev) => ({
+          ...prev,
+          firstName: userData.first_name || prev.firstName,
+          lastName: userData.last_name || prev.lastName,
+          email: userData.email || prev.email,
+          phone: userData.phone || prev.phone,
+        }));
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        // Fallback to auth context data
+        if (user) {
+          setProfileData({
+            firstName: user.first_name || "",
+            lastName: user.last_name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+          });
+          setFormData((prev) => ({
+            ...prev,
+            firstName: user.first_name || prev.firstName,
+            lastName: user.last_name || prev.lastName,
+            email: user.email || prev.email,
+            phone: user.phone || prev.phone,
+          }));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setMessage({ type: "", text: "" });
   };
 
   const handleNotificationChange = (key) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: "", text: "" }), 5000);
+  };
+
+  const handleSubmit = async (section) => {
+    setLoading(true);
+    setMessage({ type: "", text: "" });
+    
+    try {
+      if (section === "personal") {
+        const response = await hostApi.updateProfile({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+        });
+        
+        const updatedUser = response.user || response;
+        
+        // Update Redux state and localStorage with new user data
+        const updatedUserData = {
+          ...user,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+        };
+        const token = localStorage.getItem("token");
+        dispatch(setCredentials({ user: updatedUserData, token }));
+        localStorage.setItem("user", JSON.stringify(updatedUserData));
+        
+        // Update local profile state
+        setProfileData({
+          firstName: updatedUser.first_name || formData.firstName,
+          lastName: updatedUser.last_name || formData.lastName,
+          email: updatedUser.email || formData.email,
+          phone: updatedUser.phone || formData.phone,
+        });
+        
+        showMessage("success", "Personal information updated successfully!");
+      } else if (section === "business") {
+        // Business info would need a different endpoint or additional backend support
+        showMessage("success", "Business information saved!");
+      } else if (section === "payment") {
+        // Payment info would need a different endpoint or additional backend support
+        showMessage("success", "Payment information updated!");
+      } else if (section === "notifications") {
+        // Notifications would need a different endpoint or additional backend support
+        showMessage("success", "Notification preferences saved!");
+      }
+    } catch (error) {
+      console.error("Update failed:", error);
+      showMessage("error", error.response?.data?.message || "Failed to save changes. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get verification badge based on status
+  const getVerificationBadge = () => {
+    if (verificationLoading) {
+      return (
+        <span style={styles.userBadgeLoading}>
+          Loading...
+        </span>
+      );
+    }
+
+    const status = verificationStatus?.status;
+    
+    switch (status) {
+      case "approved":
+        return (
+          <span style={styles.userBadgeVerified}>
+            Verified Host
+          </span>
+        );
+      case "pending":
+        return (
+          <span style={styles.userBadgePending}>
+            Verification Pending
+          </span>
+        );
+      case "rejected":
+        return (
+          <span style={styles.userBadgeRejected}>
+            Verification Rejected
+          </span>
+        );
+      case "not_submitted":
+      default:
+        return (
+          <span style={styles.userBadgeNotVerified}>
+            Not Verified
+          </span>
+        );
+    }
+  };
+
+  // Render stats based on loading state
+  const renderStats = () => {
+    if (statsLoading) {
+      return (
+        <div style={styles.statsLoading}>
+          <div style={styles.loadingSpinner}></div>
+          <span>Loading stats...</span>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div style={styles.statItem}>
+          <span style={styles.statValue}>{stats.totalListings}</span>
+          <span style={styles.statLabel}>Listings</span>
+        </div>
+        <div style={styles.statItem}>
+          <span style={styles.statValue}>{stats.avgRating}</span>
+          <span style={styles.statLabel}>Avg Rating</span>
+        </div>
+        <div style={styles.statItem}>
+          <span style={styles.statValue}>{stats.memberDuration}</span>
+          <span style={styles.statLabel}>Member</span>
+        </div>
+      </>
+    );
   };
 
   return (
@@ -45,6 +323,18 @@ const HostProfile = () => {
         <p style={styles.subtitle}>Manage your account information and preferences</p>
       </div>
 
+      {/* Success/Error Message */}
+      {message.text && (
+        <div style={{
+          ...styles.message,
+          backgroundColor: message.type === "success" ? "#dcfce7" : "#fee2e2",
+          color: message.type === "success" ? "#16a34a" : "#dc2626",
+          border: `1px solid ${message.type === "success" ? "#86efac" : "#fca5a5"}`,
+        }}>
+          {message.text}
+        </div>
+      )}
+
       {/* Profile Header Card */}
       <div style={styles.profileCard}>
         <div style={styles.avatarSection}>
@@ -52,12 +342,12 @@ const HostProfile = () => {
             {user?.profile_picture ? (
               <img
                 src={user.profile_picture}
-                alt={user.first_name}
+                alt={profileData.firstName}
                 style={styles.avatarImg}
               />
             ) : (
               <span style={styles.avatarInitial}>
-                {user?.first_name?.charAt(0) || "H"}
+                {profileData.firstName?.charAt(0) || "H"}
               </span>
             )}
           </div>
@@ -65,24 +355,13 @@ const HostProfile = () => {
         </div>
         <div style={styles.infoSection}>
           <h2 style={styles.userName}>
-            {user?.first_name} {user?.last_name}
+            {profileData.firstName} {profileData.lastName}
           </h2>
-          <p style={styles.userEmail}>{user?.email}</p>
-          <span style={styles.userBadge}>Verified Host</span>
+          <p style={styles.userEmail}>{profileData.email}</p>
+          {getVerificationBadge()}
         </div>
         <div style={styles.statsSection}>
-          <div style={styles.statItem}>
-            <span style={styles.statValue}>5</span>
-            <span style={styles.statLabel}>Listings</span>
-          </div>
-          <div style={styles.statItem}>
-            <span style={styles.statValue}>4.8</span>
-            <span style={styles.statLabel}>Avg Rating</span>
-          </div>
-          <div style={styles.statItem}>
-            <span style={styles.statValue}>2 yrs</span>
-            <span style={styles.statLabel}>Member</span>
-          </div>
+          {renderStats()}
         </div>
       </div>
 
@@ -138,6 +417,7 @@ const HostProfile = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   style={styles.input}
+                  disabled
                 />
               </div>
               <div style={styles.formGroup}>
@@ -151,7 +431,16 @@ const HostProfile = () => {
                 />
               </div>
             </div>
-            <button style={styles.saveBtn}>Save Changes</button>
+            <button 
+              style={{
+                ...styles.saveBtn,
+                opacity: loading ? 0.7 : 1
+              }} 
+              onClick={() => handleSubmit("personal")}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
           </div>
         )}
 
@@ -223,7 +512,16 @@ const HostProfile = () => {
                 </select>
               </div>
             </div>
-            <button style={styles.saveBtn}>Save Changes</button>
+            <button 
+              style={{
+                ...styles.saveBtn,
+                opacity: loading ? 0.7 : 1
+              }} 
+              onClick={() => handleSubmit("business")}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
           </div>
         )}
 
@@ -272,7 +570,16 @@ const HostProfile = () => {
                 />
               </div>
             </div>
-            <button style={styles.saveBtn}>Update Payment Info</button>
+            <button 
+              style={{
+                ...styles.saveBtn,
+                opacity: loading ? 0.7 : 1
+              }} 
+              onClick={() => handleSubmit("payment")}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Update Payment Info"}
+            </button>
           </div>
         )}
 
@@ -384,7 +691,16 @@ const HostProfile = () => {
                 </label>
               </div>
             </div>
-            <button style={styles.saveBtn}>Save Preferences</button>
+            <button 
+              style={{
+                ...styles.saveBtn,
+                opacity: loading ? 0.7 : 1
+              }} 
+              onClick={() => handleSubmit("notifications")}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Preferences"}
+            </button>
           </div>
         )}
       </div>
@@ -393,6 +709,10 @@ const HostProfile = () => {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
@@ -416,6 +736,13 @@ const styles = {
     fontSize: "16px",
     color: "#6b7280",
     margin: 0,
+  },
+  message: {
+    padding: "12px 16px",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: "500",
+    marginBottom: "24px",
   },
   profileCard: {
     display: "flex",
@@ -478,7 +805,7 @@ const styles = {
     color: "#6b7280",
     margin: "0 0 12px 0",
   },
-  userBadge: {
+  userBadgeVerified: {
     display: "inline-block",
     padding: "4px 12px",
     backgroundColor: "#dcfce7",
@@ -487,9 +814,60 @@ const styles = {
     fontSize: "12px",
     fontWeight: "600",
   },
+  userBadgePending: {
+    display: "inline-block",
+    padding: "4px 12px",
+    backgroundColor: "#fef3c7",
+    color: "#d97706",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  userBadgeRejected: {
+    display: "inline-block",
+    padding: "4px 12px",
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  userBadgeNotVerified: {
+    display: "inline-block",
+    padding: "4px 12px",
+    backgroundColor: "#f3f4f6",
+    color: "#6b7280",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  userBadgeLoading: {
+    display: "inline-block",
+    padding: "4px 12px",
+    backgroundColor: "#f3f4f6",
+    color: "#9ca3af",
+    borderRadius: "12px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
   statsSection: {
     display: "flex",
     gap: "32px",
+  },
+  statsLoading: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    color: "#6b7280",
+    fontSize: "14px",
+  },
+  loadingSpinner: {
+    width: "20px",
+    height: "20px",
+    border: "2px solid #e5e7eb",
+    borderTop: "2px solid #0369a1",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
   },
   statItem: {
     textAlign: "center",

@@ -81,7 +81,7 @@ const Accommodations = () => {
     fetchAccommodations();
   }, []);
 
-  // Mock data for fallback
+  // Mock data for fallback - using Unsplash images
   const mockAccommodations = [
     {
       id: 1,
@@ -93,7 +93,7 @@ const Accommodations = () => {
       price: 450,
       rating: 4.8,
       status: "active",
-      image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400",
+      image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
       host: "John Smith",
     },
     {
@@ -107,7 +107,7 @@ const Accommodations = () => {
       rating: 4.6,
       status: "active",
       image:
-        "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400",
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
       host: "Sarah Johnson",
     },
     {
@@ -120,7 +120,7 @@ const Accommodations = () => {
       price: 380,
       rating: 4.5,
       status: "active",
-      image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400",
+      image: "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800",
       host: "Mike Brown",
     },
     {
@@ -134,7 +134,7 @@ const Accommodations = () => {
       rating: 4.7,
       status: "pending",
       image:
-        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400",
+        "https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=800",
       host: "Emily Davis",
     },
     {
@@ -148,7 +148,7 @@ const Accommodations = () => {
       rating: 4.9,
       status: "active",
       image:
-        "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400",
+        "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
       host: "David Wilson",
     },
     {
@@ -162,7 +162,7 @@ const Accommodations = () => {
       rating: 4.3,
       status: "inactive",
       image:
-        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400",
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
       host: "Lisa Anderson",
     },
   ];
@@ -170,7 +170,7 @@ const Accommodations = () => {
   // Use mock data if API data is empty or on error
   const displayAccommodations = accommodations.length > 0 ? accommodations : mockAccommodations;
 
-  // Helper to get image URL from accommodation
+  // Helper to get image URL from accommodation - using Unsplash images
   const getImageUrl = (acc) => {
     // If API data with images array
     if (acc.images && Array.isArray(acc.images) && acc.images.length > 0) {
@@ -180,9 +180,16 @@ const Accommodations = () => {
     if (acc.image) {
       return acc.image;
     }
-    // Fallback to mock image based on ID
-    const mockIndex = (acc.id - 1) % mockAccommodations.length;
-    return mockAccommodations[mockIndex].image;
+    // Fallback to Unsplash images based on ID
+    const imageMap = {
+      1: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800',
+      2: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+      3: 'https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800',
+      4: 'https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=800',
+      5: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800',
+      6: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+    };
+    return imageMap[acc.id] || 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
   };
 
   const getStatusBadge = (status) => {
