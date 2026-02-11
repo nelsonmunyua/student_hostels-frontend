@@ -32,6 +32,11 @@ import Reviews from "./components/Dashboard/admin/pages/Reviews";
 import Settings from "./components/Dashboard/admin/pages/Settings";
 import AdminPayments from "./components/Dashboard/admin/pages/Payments";
 
+// Admin Analytics page import
+import AdminAnalytics from "./components/Dashboard/admin/pages/Analytics";
+
+// will do
+
 // Host page imports
 import HostOverview from "./components/Dashboard/host/pages/Overview";
 import HostListings from "./components/Dashboard/host/pages/Listings";
@@ -155,6 +160,8 @@ function App() {
         <Route path="bookings" element={<Bookings />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="analytics" element={<HostAnalytics />} />
         <Route path="settings" element={<Settings />} />
       </Route>

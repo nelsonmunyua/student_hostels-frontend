@@ -14,6 +14,7 @@ import {
   Star,
   X,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
 
 const Accommodations = () => {
@@ -182,7 +183,55 @@ const Accommodations = () => {
     }
     // Fallback to mock image based on ID
     const mockIndex = (acc.id - 1) % mockAccommodations.length;
-    return mockAccommodations[mockIndex].image;
+    return mockAccommodations[mockIndex]?.image;
+  };
+
+  // Helper to get price - handle both API and mock data formats
+  const getPrice = (acc) => {
+    if (acc.price) return acc.price;
+    if (acc.amenities?.price) return acc.amenities.price;
+    return 0;
+  };
+
+  // Helper to get rooms - handle both API and mock data formats
+  const getRooms = (acc) => {
+    if (acc.rooms) return acc.rooms;
+    if (acc.amenities?.rooms) return acc.amenities.rooms;
+    return 0;
+  };
+
+  // Helper to get capacity - handle both API and mock data formats
+  const getCapacity = (acc) => {
+    if (acc.capacity) return acc.capacity;
+    if (acc.amenities?.capacity) return acc.amenities.capacity;
+    return 0;
+  };
+
+  // Helper to get type - handle both API and mock data formats
+  const getType = (acc) => {
+    if (acc.type) return acc.type;
+    if (acc.amenities?.type) return acc.amenities.type;
+    return "Hostel";
+  };
+
+  // Helper to get status - handle both API and mock data formats
+  const getStatus = (acc) => {
+    if (acc.status) return acc.status;
+    if (acc.is_active !== undefined) return acc.is_active ? "active" : "inactive";
+    return "active";
+  };
+
+  // Helper to get host name - API returns host_id, need to handle it
+  const getHostName = (acc) => {
+    if (acc.host) return acc.host;
+    return acc.host_id ? `Host #${acc.host_id}` : "Unknown";
+  };
+
+  // Mock rating for API data (since backend doesn't have rating field)
+  const getRating = (acc) => {
+    if (acc.rating) return acc.rating;
+    // Generate a random rating for API data based on id for consistency
+    return (4 + (acc.id % 10) * 0.1).toFixed(1);
   };
 
   const getStatusBadge = (status) => {
@@ -222,7 +271,7 @@ const Accommodations = () => {
     const matchesSearch =
       acc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acc.location?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || acc.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || getStatus(acc) === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -230,6 +279,13 @@ const Accommodations = () => {
   const handleAddAccommodation = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    // Validate required fields
+    if (!newAccommodation.name || !newAccommodation.location) {
+      toast.error("Please fill in all required fields");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const hostelData = {
@@ -245,8 +301,8 @@ const Accommodations = () => {
         host_id: parseInt(newAccommodation.host_id) || 1
       };
 
-      const response = await adminApi.createHostel(hostelData);
-      alert("Accommodation added successfully!");
+      await adminApi.createHostel(hostelData);
+      toast.success("Accommodation added successfully!");
       
       // Refresh list
       const data = await adminApi.getHostels();
@@ -265,7 +321,7 @@ const Accommodations = () => {
       });
     } catch (error) {
       console.error("Failed to add accommodation:", error);
-      alert("Failed to add accommodation. Please try again.");
+      toast.error(error.response?.data?.message || "Failed to add accommodation. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -278,7 +334,7 @@ const Accommodations = () => {
 
     try {
       await adminApi.toggleHostelStatus(editingId);
-      alert("Accommodation updated successfully!");
+      toast.success("Accommodation updated successfully!");
       
       // Refresh list
       const data = await adminApi.getHostels();
@@ -289,7 +345,7 @@ const Accommodations = () => {
       setEditingId(null);
     } catch (error) {
       console.error("Failed to update accommodation:", error);
-      alert("Failed to update accommodation. Please try again.");
+      toast.error("Failed to update accommodation. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -297,17 +353,19 @@ const Accommodations = () => {
 
   // Handle delete accommodation
   const handleDeleteAccommodation = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+    if (
+      window.confirm(`Are you sure you want to delete "${name}"?`)
+    ) {
       try {
         await adminApi.deleteHostel(id);
-        alert("Accommodation deleted successfully!");
+        toast.success("Accommodation deleted successfully!");
         
         // Refresh list
         const data = await adminApi.getHostels();
         setAccommodations(data);
       } catch (error) {
         console.error("Failed to delete accommodation:", error);
-        alert("Failed to delete accommodation. Please try again.");
+        toast.error("Failed to delete accommodation. Please try again.");
       }
     }
   };
@@ -408,9 +466,9 @@ const Accommodations = () => {
         {filteredAccommodations.map((acc) => (
           <div key={acc.id} style={styles.card}>
             <div style={styles.cardImage}>
-              <img src={getImageUrl(acc)} alt={acc.name} style={styles.cardImg} />
-              <span style={styles.typeBadge}>{acc.type}</span>
-              {getStatusBadge(acc.status)}
+              <img src={getImageUrl(acc)} alt={acc.name} style={styles.cardImg} onError={(e) => { e.target.src = mockAccommodations[0]?.image; }} />
+              <span style={styles.typeBadge}>{getType(acc)}</span>
+              {getStatusBadge(getStatus(acc))}
             </div>
             <div style={styles.cardContent}>
               <h3 style={styles.cardTitle}>{acc.name}</h3>
@@ -421,20 +479,20 @@ const Accommodations = () => {
               <div style={styles.cardStats}>
                 <div style={styles.cardStat}>
                   <Users size={16} color="#64748b" />
-                  <span>{acc.capacity} students</span>
+                  <span>{getCapacity(acc)} students</span>
                 </div>
                 <div style={styles.cardStat}>
                   <Star size={16} color="#f59e0b" />
-                  <span>{acc.rating}</span>
+                  <span>{getRating(acc)}</span>
                 </div>
                 <div style={styles.cardStat}>
                   <DollarSign size={16} color="#059669" />
-                  <span>${acc.price}/mo</span>
+                  <span>Ksh{getPrice(acc)}/mo</span>
                 </div>
               </div>
               <div style={styles.cardHost}>
                 <span style={styles.hostLabel}>Host:</span>
-                <span style={styles.hostName}>{acc.host}</span>
+                <span style={styles.hostName}>{getHostName(acc)}</span>
               </div>
               <div style={styles.cardActions}>
                 <button
@@ -499,7 +557,7 @@ const Accommodations = () => {
                   </select>
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
+                  <label style={styles.label}>Price (Ksh/month)</label>
                   <input
                     type="number"
                     style={styles.input}
@@ -550,6 +608,16 @@ const Accommodations = () => {
                   onChange={(e) => setNewAccommodation({ ...newAccommodation, description: e.target.value })}
                 />
               </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Host ID</label>
+                <input
+                  type="number"
+                  style={styles.input}
+                  placeholder="Enter host user ID"
+                  value={newAccommodation.host_id}
+                  onChange={(e) => setNewAccommodation({ ...newAccommodation, host_id: e.target.value })}
+                />
+              </div>
             </div>
             <div style={styles.modalFooter}>
               <button
@@ -588,49 +656,50 @@ const Accommodations = () => {
                 src={getImageUrl(selectedAccommodation)}
                 alt={selectedAccommodation.name}
                 style={styles.detailImage}
+                onError={(e) => { e.target.src = mockAccommodations[0]?.image; }}
               />
               <h3 style={styles.detailTitle}>{selectedAccommodation.name}</h3>
               <div style={styles.detailLocation}>
                 <MapPin size={16} color="#94a3b8" />
                 <span>{selectedAccommodation.location}</span>
               </div>
-              {getStatusBadge(selectedAccommodation.status)}
+              {getStatusBadge(getStatus(selectedAccommodation))}
               <div style={styles.detailStats}>
                 <div style={styles.detailStat}>
                   <span style={styles.detailStatLabel}>Type</span>
                   <span style={styles.detailStatValue}>
-                    {selectedAccommodation.type}
+                    {getType(selectedAccommodation)}
                   </span>
                 </div>
                 <div style={styles.detailStat}>
                   <span style={styles.detailStatLabel}>Rooms</span>
                   <span style={styles.detailStatValue}>
-                    {selectedAccommodation.rooms}
+                    {getRooms(selectedAccommodation)}
                   </span>
                 </div>
                 <div style={styles.detailStat}>
                   <span style={styles.detailStatLabel}>Capacity</span>
                   <span style={styles.detailStatValue}>
-                    {selectedAccommodation.capacity}
+                    {getCapacity(selectedAccommodation)}
                   </span>
                 </div>
                 <div style={styles.detailStat}>
                   <span style={styles.detailStatLabel}>Price</span>
                   <span style={styles.detailStatValue}>
-                    ${selectedAccommodation.price}/mo
+                    Ksh{getPrice(selectedAccommodation)}/mo
                   </span>
                 </div>
                 <div style={styles.detailStat}>
                   <span style={styles.detailStatLabel}>Rating</span>
                   <span style={styles.detailStatValue}>
-                    ⭐ {selectedAccommodation.rating}
+                    ⭐ {getRating(selectedAccommodation)}
                   </span>
                 </div>
               </div>
               <div style={styles.detailHost}>
                 <span style={styles.hostLabel}>Hosted by:</span>
                 <span style={styles.hostName}>
-                  {selectedAccommodation.host}
+                  {getHostName(selectedAccommodation)}
                 </span>
               </div>
             </div>
@@ -680,6 +749,7 @@ const Accommodations = () => {
                   <label style={styles.label}>Type</label>
                   <select
                     style={styles.select}
+                    defaultValue={getType(selectedAccommodation)}
                     value={editForm.type}
                     onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
                   >
@@ -689,10 +759,11 @@ const Accommodations = () => {
                   </select>
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Price ($/month)</label>
+                  <label style={styles.label}>Price (Ksh/month)</label>
                   <input
                     type="number"
                     style={styles.input}
+                    defaultValue={getPrice(selectedAccommodation)}
                     value={editForm.price}
                     onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
                   />
@@ -713,6 +784,7 @@ const Accommodations = () => {
                   <input
                     type="number"
                     style={styles.input}
+                    defaultValue={getRooms(selectedAccommodation)}
                     value={editForm.rooms}
                     onChange={(e) => setEditForm({ ...editForm, rooms: e.target.value })}
                   />
@@ -722,6 +794,7 @@ const Accommodations = () => {
                   <input
                     type="number"
                     style={styles.input}
+                    defaultValue={getCapacity(selectedAccommodation)}
                     value={editForm.capacity}
                     onChange={(e) => setEditForm({ ...editForm, capacity: e.target.value })}
                   />
@@ -731,6 +804,7 @@ const Accommodations = () => {
                 <label style={styles.label}>Status</label>
                 <select
                   style={styles.select}
+                  defaultValue={getStatus(selectedAccommodation)}
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                 >

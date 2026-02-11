@@ -14,15 +14,15 @@ import App from "./App.jsx";
 // Export toast for use in components
 export { toast };
 
-// Error Boundary Component
+// ---------------- Error Boundary ----------------
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+  static getDerivedStateFromError() {
+    return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
@@ -45,12 +45,8 @@ class ErrorBoundary extends Component {
             textAlign: "center",
           }}
         >
-          <h1 style={{ fontSize: "2rem", marginBottom: "1rem" }}>
-            Oops! Something went wrong
-          </h1>
-          <p style={{ marginBottom: "1.5rem", opacity: 0.9 }}>
-            Please refresh the page.
-          </p>
+          <h1>Oops! Something went wrong</h1>
+          <p>Please refresh the page.</p>
           <button
             onClick={() => window.location.reload()}
             style={{
@@ -73,7 +69,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-// Auth initialization component
+// ---------------- Auth Initializer ----------------
 const AuthInitializer = ({ children }) => {
   const initialized = useRef(false);
 
@@ -101,13 +97,24 @@ const AuthInitializer = ({ children }) => {
   return children;
 };
 
+// ---------------- Render App ----------------
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
       <Provider store={store}>
         <BrowserRouter>
           <AuthInitializer>
-            <ToastContainer position="top-right" autoClose={3000} />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
             <App />
           </AuthInitializer>
         </BrowserRouter>
@@ -115,3 +122,4 @@ createRoot(document.getElementById("root")).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+

@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
 
 const AdminPayments = () => {
@@ -30,7 +31,28 @@ const AdminPayments = () => {
       try {
         setLoading(true);
         const data = await adminApi.getPayments();
-        setPayments(data);
+        
+        // Transform API data to match frontend structure
+        const transformedPayments = Array.isArray(data) ? data.map((payment) => ({
+          id: payment.id,
+          reference: payment.reference || `PAY-${payment.id}`,
+          guest: {
+            name: `User #${payment.booking_id || payment.student_id || payment.id}`,
+            email: "user@example.com",
+          },
+          accommodation: {
+            name: "Hostel Booking",
+            roomType: "Standard Room",
+          },
+          amount: payment.amount || 0,
+          method: payment.method || "unknown",
+          status: payment.status || "pending",
+          date: payment.created_at || payment.paid_at || new Date().toISOString(),
+          booking_id: payment.booking_id,
+          paid_at: payment.paid_at,
+        })) : [];
+        
+        setPayments(transformedPayments);
       } catch (error) {
         console.error("Failed to fetch payments:", error);
         // Keep mock data on error
@@ -197,14 +219,14 @@ const AdminPayments = () => {
     if (window.confirm(`Are you sure you want to refund payment ${payment.reference}?`)) {
       try {
         await adminApi.updatePaymentStatus(payment.id, "refunded");
-        alert("Payment refunded successfully!");
+        toast.success("Payment refunded successfully!");
         
         // Refresh list
         const data = await adminApi.getPayments();
         setPayments(data);
       } catch (error) {
         console.error("Failed to refund payment:", error);
-        alert("Failed to refund payment. Please try again.");
+        toast.error("Failed to refund payment. Please try again.");
       }
     }
   };
@@ -217,7 +239,7 @@ const AdminPayments = () => {
 
   // Handle download receipt
   const handleDownloadReceipt = async (payment) => {
-    alert(`Downloading receipt for ${payment.reference} (Demo)`);
+    toast.info(`Downloading receipt for ${payment.reference} (Demo)`);
   };
 
   return (
@@ -239,7 +261,7 @@ const AdminPayments = () => {
             <DollarSign size={24} color="#059669" />
           </div>
           <div>
-            <p style={styles.statValue}>${totalRevenue.toLocaleString()}</p>
+            <p style={styles.statValue}>Ksh{totalRevenue.toLocaleString()}</p>
             <p style={styles.statLabel}>Total Revenue</p>
           </div>
         </div>
@@ -269,7 +291,7 @@ const AdminPayments = () => {
             <RefreshCw size={24} color="#7c3aed" />
           </div>
           <div>
-            <p style={styles.statValue}>${refundedAmount.toLocaleString()}</p>
+            <p style={styles.statValue}>Ksh{refundedAmount.toLocaleString()}</p>
             <p style={styles.statLabel}>Refunded Amount</p>
           </div>
         </div>
@@ -345,7 +367,7 @@ const AdminPayments = () => {
                 </td>
                 <td style={styles.tableCell}>
                   <span style={styles.amountText}>
-                    ${payment.amount?.toLocaleString()}
+                    Ksh{payment.amount?.toLocaleString()}
                   </span>
                 </td>
                 <td style={styles.tableCell}>
@@ -392,12 +414,12 @@ const AdminPayments = () => {
                             adminApi
                               .updatePaymentStatus(payment.id, "paid")
                               .then(() => {
-                                alert("Payment marked as paid!");
+                                toast.success("Payment marked as paid!");
                                 fetchPayments();
                               })
                               .catch((err) => {
                                 console.error(err);
-                                alert("Failed to update payment");
+                                toast.error("Failed to update payment");
                               });
                           }
                         }}
