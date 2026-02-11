@@ -1,7 +1,24 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+/**
+ * Helper function to redirect to signup page
+ */
+const redirectToSignup = () => {
+  // Only redirect if not already on signup or auth pages
+  const currentPath = window.location.pathname;
+  const authPages = [
+    "/login",
+    "/signup",
+    "/forgot-password",
+    "/reset-password",
+  ];
+
+  if (!authPages.includes(currentPath)) {
+    window.location.href = "/signup";
+  }
+};
 
 /**
  * Create axios instance with base configuration
@@ -31,7 +48,7 @@ axiosInstance.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -53,15 +70,22 @@ axiosInstance.interceptors.response.use(
       if (status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
 
-        try {
-          const refreshToken = localStorage.getItem("refreshToken");
+        const refreshToken = localStorage.getItem("refreshToken");
 
-          if (refreshToken) {
-            const response = await axios.post(
-              `${API_BASE_URL}/auth/refresh`,
-              {},
-              { headers: { Authorization: `Bearer ${refreshToken}` } }
-            );
+        // If no refresh token, redirect to signup immediately
+        if (!refreshToken) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          redirectToSignup();
+          return Promise.reject(error);
+        }
+
+        try {
+          const response = await axios.post(
+            `${API_BASE_URL}/auth/refresh`,
+            {},
+            { headers: { Authorization: `Bearer ${refreshToken}` } },
+          );
 
             const { token: access_token } = response.data;
 
@@ -109,16 +133,20 @@ axiosInstance.interceptors.response.use(
     // If no response (network error, server down, etc.)
     if (!error.response) {
       // Create a network error with proper structure
-      const networkError = new Error("Network error: Unable to connect to server");
+      const networkError = new Error(
+        "Network error: Unable to connect to server",
+      );
       networkError.response = {
-        data: { message: "Unable to connect to server. Please check your connection." },
+        data: {
+          message: "Unable to connect to server. Please check your connection.",
+        },
         status: 0,
       };
       return Promise.reject(networkError);
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 /**
@@ -130,4 +158,3 @@ export const isMockMode = () => {
 };
 
 export default axiosInstance;
-

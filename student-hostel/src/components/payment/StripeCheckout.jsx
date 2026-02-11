@@ -1,26 +1,23 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CreditCard, Lock, AlertCircle } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import paymentApi from '../../api/Paymentapi';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { CreditCard, Lock, AlertCircle } from "lucide-react";
+import paymentApi from "../../api/Paymentapi";
 
 const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  
-  const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState(null);
   const [cardDetails, setCardDetails] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
+    cardNumber: "",
+    cardName: "",
+    expiryDate: "",
+    cvv: "",
   });
 
   const formatCardNumber = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
     const matches = v.match(/\d{4,16}/g);
-    const match = (matches && matches[0]) || '';
+    const match = (matches && matches[0]) || "";
     const parts = [];
 
     for (let i = 0, len = match.length; i < len; i += 4) {
@@ -28,16 +25,16 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
     }
 
     if (parts.length) {
-      return parts.join(' ');
+      return parts.join(" ");
     } else {
       return value;
     }
   };
 
   const formatExpiryDate = (value) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "");
     if (v.length >= 2) {
-      return v.slice(0, 2) + '/' + v.slice(2, 4);
+      return v.slice(0, 2) + "/" + v.slice(2, 4);
     }
     return v;
   };
@@ -53,22 +50,22 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
   };
 
   const handleCvvChange = (e) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    const value = e.target.value.replace(/\D/g, "").slice(0, 4);
     setCardDetails({ ...cardDetails, cvv: value });
   };
 
   const validateCard = () => {
-    if (cardDetails.cardNumber.replace(/\s/g, '').length < 13) {
-      return 'Invalid card number';
+    if (cardDetails.cardNumber.replace(/\s/g, "").length < 13) {
+      return "Invalid card number";
     }
     if (!cardDetails.cardName.trim()) {
-      return 'Cardholder name is required';
+      return "Cardholder name is required";
     }
     if (cardDetails.expiryDate.length !== 5) {
-      return 'Invalid expiry date';
+      return "Invalid expiry date";
     }
     if (cardDetails.cvv.length < 3) {
-      return 'Invalid CVV';
+      return "Invalid CVV";
     }
     return null;
   };
@@ -83,187 +80,183 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
       return;
     }
 
-    setLoading(true);
-
     try {
-      // Get Stripe client secret
       const { client_secret } = await paymentApi.getStripeClientSecret({
         booking_id: bookingData.booking_id || bookingData.id,
         amount: bookingData.total_price || bookingData.amount,
       });
 
-      // Process Stripe payment
       const paymentResult = await paymentApi.processStripePayment({
         booking_id: bookingData.booking_id || bookingData.id,
         payment_intent_id: client_secret,
       });
 
-      // Confirm payment
       await paymentApi.confirmStripePayment({
         payment_intent_id: client_secret,
         booking_id: bookingData.booking_id || bookingData.id,
       });
 
-      setLoading(false);
-      
       if (onSuccess) {
         onSuccess(paymentResult);
       } else {
-        navigate('/student/payment/success', { 
-          state: { 
+        navigate("/student/payment/success", {
+          state: {
             booking: bookingData,
-            payment: paymentResult 
-          } 
+            payment: paymentResult,
+          },
         });
       }
     } catch (err) {
-      setLoading(false);
-      setError(err.response?.data?.message || err.message || 'Payment failed. Please try again.');
-      console.error('Payment error:', err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Payment failed. Please try again.",
+      );
+      console.error("Payment error:", err);
     }
   };
 
   const containerStyle = {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '24px',
-    border: '1px solid #e5e7eb',
-    maxWidth: '500px',
-    margin: '0 auto',
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "24px",
+    border: "1px solid #e5e7eb",
+    maxWidth: "500px",
+    margin: "0 auto",
   };
 
   const headerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    marginBottom: '24px',
-    paddingBottom: '20px',
-    borderBottom: '1px solid #f1f5f9',
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    marginBottom: "24px",
+    paddingBottom: "20px",
+    borderBottom: "1px solid #f1f5f9",
   };
 
   const headerIconStyle = {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
-    backgroundColor: '#eff6ff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "48px",
+    height: "48px",
+    borderRadius: "12px",
+    backgroundColor: "#eff6ff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   const titleStyle = {
-    fontSize: '20px',
+    fontSize: "20px",
     fontWeight: 700,
-    color: '#1e293b',
+    color: "#1e293b",
     margin: 0,
   };
 
   const subtitleStyle = {
-    fontSize: '14px',
-    color: '#64748b',
-    margin: '4px 0 0 0',
+    fontSize: "14px",
+    color: "#64748b",
+    margin: "4px 0 0 0",
   };
 
   const errorBannerStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
-    backgroundColor: '#fef2f2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
-    color: '#dc2626',
-    fontSize: '14px',
-    marginBottom: '20px',
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 16px",
+    backgroundColor: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
+    color: "#dc2626",
+    fontSize: "14px",
+    marginBottom: "20px",
   };
 
   const formStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
   };
 
   const formGroupStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
   };
 
   const formRowStyle = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '16px',
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
   };
 
   const labelStyle = {
-    fontSize: '14px',
+    fontSize: "14px",
     fontWeight: 600,
-    color: '#374151',
+    color: "#374151",
   };
 
   const inputWrapperStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '12px 16px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    backgroundColor: '#ffffff',
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "12px 16px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
   };
 
   const inputStyle = {
     flex: 1,
-    padding: '12px 16px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: 'monospace',
-    outline: 'none',
-    transition: 'border-color 0.2s',
+    padding: "12px 16px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontFamily: "monospace",
+    outline: "none",
+    transition: "border-color 0.2s",
   };
 
   const securityNoteStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px 16px',
-    backgroundColor: '#f0fdf4',
-    border: '1px solid #bbf7d0',
-    borderRadius: '8px',
-    fontSize: '13px',
-    color: '#059669',
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 16px",
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    borderRadius: "8px",
+    fontSize: "13px",
+    color: "#059669",
   };
 
   const actionsStyle = {
-    display: 'flex',
-    gap: '12px',
-    marginTop: '8px',
+    display: "flex",
+    gap: "12px",
+    marginTop: "8px",
   };
 
   const cancelButtonStyle = {
     flex: 1,
-    padding: '14px',
-    backgroundColor: '#f8fafc',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    fontSize: '14px',
+    padding: "14px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    borderRadius: "8px",
+    fontSize: "14px",
     fontWeight: 600,
-    color: '#64748b',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    color: "#64748b",
+    cursor: "pointer",
+    transition: "all 0.2s",
   };
 
   const submitButtonStyle = {
     flex: 2,
-    padding: '14px',
-    backgroundColor: '#3b82f6',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
+    padding: "14px",
+    backgroundColor: "#3b82f6",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
     fontWeight: 600,
-    color: '#ffffff',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
+    color: "#ffffff",
+    cursor: "pointer",
+    transition: "all 0.2s",
   };
 
   const amount = bookingData.total_price || bookingData.amount || 0;
@@ -310,7 +303,12 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
             type="text"
             placeholder="JOHN DOE"
             value={cardDetails.cardName}
-            onChange={(e) => setCardDetails({ ...cardDetails, cardName: e.target.value.toUpperCase() })}
+            onChange={(e) =>
+              setCardDetails({
+                ...cardDetails,
+                cardName: e.target.value.toUpperCase(),
+              })
+            }
             style={inputStyle}
             required
           />
@@ -350,20 +348,11 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
         </div>
 
         <div style={actionsStyle}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={cancelButtonStyle}
-            disabled={loading}
-          >
+          <button type="button" onClick={onCancel} style={cancelButtonStyle}>
             Cancel
           </button>
-          <button
-            type="submit"
-            style={submitButtonStyle}
-            disabled={loading}
-          >
-            {loading ? 'Processing...' : `Pay KSh ${amount.toLocaleString()}`}
+          <button type="submit" style={submitButtonStyle}>
+            Pay KSh {amount.toLocaleString()}
           </button>
         </div>
       </form>
@@ -372,4 +361,3 @@ const StripeCheckout = ({ bookingData, onSuccess, onCancel }) => {
 };
 
 export default StripeCheckout;
-

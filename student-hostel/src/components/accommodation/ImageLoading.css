@@ -1,0 +1,215 @@
+/* Image Loading & Error States */
+
+/* Image loading skeleton */
+.image-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Image container with aspect ratio */
+.image-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.image-container.img-loading::after {
+  content: "";
+  display: block;
+  padding-bottom: calc(100% * (3 / 4));
+}
+
+/* Fade in animation for loaded images */
+.image-fade-in {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.image-fade-in.loaded {
+  opacity: 1;
+}
+
+/* Placeholder image styles */
+.image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.image-placeholder svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+/* Card image container */
+.accommodation-card .card-image {
+  position: relative;
+  background-color: #f1f5f9;
+  overflow: hidden;
+}
+
+.accommodation-card .card-image::before {
+  content: "";
+  display: block;
+  padding-bottom: 60%;
+}
+
+.accommodation-card .card-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Result card image */
+.result-card .result-image {
+  position: relative;
+  background-color: #f1f5f9;
+  overflow: hidden;
+}
+
+.result-card .result-image::before {
+  content: "";
+  display: block;
+  padding-bottom: 70%;
+}
+
+.result-card .result-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Detail page main image */
+.gallery {
+  position: relative;
+  background-color: #f1f5f9;
+  overflow: hidden;
+}
+
+.gallery::before {
+  content: "";
+  display: block;
+  padding-bottom: 50%;
+}
+
+.gallery img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Destination card image */
+.destination-card {
+  position: relative;
+  background-color: #f1f5f9;
+  overflow: hidden;
+}
+
+.destination-card::before {
+  content: "";
+  display: block;
+  padding-bottom: 75%;
+}
+
+.destination-card img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.destination-card:hover img {
+  transform: scale(1.05);
+}
+
+/* Modal image */
+.modal-image {
+  position: relative;
+  background-color: #f1f5f9;
+  overflow: hidden;
+  border-radius: 12px 0 0 12px;
+}
+
+.modal-image::before {
+  content: "";
+  display: block;
+  padding-bottom: 100%;
+}
+
+.modal-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .accommodation-card.grid .card-image::before {
+    padding-bottom: 55%;
+  }
+
+  .modal-image {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .modal-image::before {
+    padding-bottom: 60%;
+  }
+}
+
+/* Image error state */
+img.image-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+}
+
+img.image-error::before {
+  content: "🖼️";
+  display: block;
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+

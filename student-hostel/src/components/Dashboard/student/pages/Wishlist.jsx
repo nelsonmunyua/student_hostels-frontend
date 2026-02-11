@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -6,20 +6,25 @@ import {
   Trash2,
   Star,
   Loader2,
-  Home,
   ExternalLink,
 } from "lucide-react";
-import { useSelector } from "react-redux";
-import studentApi from "../../../../api/studentApi";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  fetchWishlist,
+  removeFromWishlist,
+} from "../../../../redux/slices/Thunks/wishlistThunks";
 
 const StudentWishlist = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const {
+    items: wishlist,
+    loading,
+    error,
+  } = useSelector((state) => state.wishlist);
 
   // State
-  const [wishlist, setWishlist] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -27,44 +32,16 @@ const StudentWishlist = () => {
   });
   const [removingId, setRemovingId] = useState(null);
 
-  // Fetch wishlist
-  const fetchWishlist = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await studentApi.getWishlist({
-        page: pagination.page,
-        limit: 12,
-      });
-
-      setWishlist(response.wishlist || []);
-      setPagination((prev) => ({
-        ...prev,
-        total: response.total,
-        pages: response.pages,
-      }));
-    } catch (err) {
-      console.error("Error fetching wishlist:", err);
-      setError("Failed to load wishlist. Please try again.");
-      // Mock data for demo
-      setWishlist(getMockWishlist());
-      setPagination({ page: 1, pages: 1, total: 2 });
-    } finally {
-      setLoading(false);
-    }
-  }, [pagination.page]);
-
+  // Fetch wishlist on mount
   useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+    dispatch(fetchWishlist({ page: pagination.page, limit: 12 }));
+  }, [dispatch, pagination.page]);
 
-  // Remove from wishlist
+  // Remove from wishlist using Redux thunk
   const handleRemove = async (hostelId) => {
     try {
       setRemovingId(hostelId);
-      await studentApi.removeFromWishlist(hostelId);
-      setWishlist((prev) => prev.filter((item) => item.hostel_id !== hostelId));
+      await dispatch(removeFromWishlist(hostelId));
       setPagination((prev) => ({
         ...prev,
         total: prev.total - 1,
@@ -95,7 +72,11 @@ const StudentWishlist = () => {
   if (loading && wishlist.length === 0) {
     return (
       <div style={styles.loadingContainer}>
-        <Loader2 size={40} color="#3b82f6" style={{ animation: "spin 1s linear infinite" }} />
+        <Loader2
+          size={40}
+          color="#3b82f6"
+          style={{ animation: "spin 1s linear infinite" }}
+        />
         <p>Loading wishlist...</p>
       </div>
     );
@@ -117,7 +98,12 @@ const StudentWishlist = () => {
       {error && (
         <div style={styles.errorContainer}>
           <p>{error}</p>
-          <button style={styles.retryButton} onClick={fetchWishlist}>
+          <button
+            style={styles.retryButton}
+            onClick={() =>
+              dispatch(fetchWishlist({ page: pagination.page, limit: 12 }))
+            }
+          >
             Retry
           </button>
         </div>
@@ -128,7 +114,7 @@ const StudentWishlist = () => {
         <>
           <div style={styles.wishlistGrid}>
             {wishlist.map((item) => (
-              <div key={item.id} style={styles.card}>
+              <div key={item.id || item.hostel_id} style={styles.card}>
                 {/* Image */}
                 <div style={styles.cardImage}>
                   <img
@@ -152,7 +138,11 @@ const StudentWishlist = () => {
                     title="Remove from wishlist"
                   >
                     {removingId === item.hostel_id ? (
-                      <Loader2 size={18} color="#fff" style={{ animation: "spin 1s linear infinite" }} />
+                      <Loader2
+                        size={18}
+                        color="#fff"
+                        style={{ animation: "spin 1s linear infinite" }}
+                      />
                     ) : (
                       <Trash2 size={18} color="#fff" />
                     )}
@@ -220,9 +210,7 @@ const StudentWishlist = () => {
               <button
                 style={{
                   ...styles.pageButton,
-                  ...(pagination.page === 1
-                    ? styles.pageButtonDisabled
-                    : {}),
+                  ...(pagination.page === 1 ? styles.pageButtonDisabled : {}),
                 }}
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
@@ -524,4 +512,3 @@ const styles = {
 };
 
 export default StudentWishlist;
-

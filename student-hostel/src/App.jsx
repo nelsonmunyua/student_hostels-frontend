@@ -16,6 +16,12 @@ import AccommodationDetailPage from "./pages/AccommodationDetailPage";
 import SearchPage from "./pages/SearchPage";
 import BookingPage from "./pages/BookingPage";
 import NotFound from "./pages/NotFound";
+import CreateListingForm from "./components/accommodation/CreateListingForm";
+
+// Payment components
+import PaymentSuccess from "./components/payment/PaymentSuccess";
+import StripeCheckout from "./components/payment/StripeCheckout";
+import MpesaPayment from "./components/payment/MpesaPayment";
 
 // Admin page imports
 import Overview from "./components/Dashboard/admin/pages/Overview";
@@ -25,6 +31,11 @@ import Bookings from "./components/Dashboard/admin/pages/Bookings";
 import Reviews from "./components/Dashboard/admin/pages/Reviews";
 import Settings from "./components/Dashboard/admin/pages/Settings";
 import AdminPayments from "./components/Dashboard/admin/pages/Payments";
+
+// Admin Analytics page import
+import AdminAnalytics from "./components/Dashboard/admin/pages/Analytics";
+
+// will do
 
 // Host page imports
 import HostOverview from "./components/Dashboard/host/pages/Overview";
@@ -50,7 +61,6 @@ import StudentPayments from "./components/Dashboard/student/pages/Payments";
 import StudentNotifications from "./components/Dashboard/student/pages/Notifications";
 import StudentSupport from "./components/Dashboard/student/pages/Support";
 import PaymentCheckout from "./components/Dashboard/student/pages/PaymentCheckout";
-import PaymentSuccess from "./components/payment/PaymentSuccess";
 import AccommodationReviews from "./components/Dashboard/student/pages/AccommodationReviews";
 
 import "./App.css";
@@ -60,7 +70,7 @@ function App() {
     <Routes>
       {/* Public routes - accessible without authentication */}
       <Route path="/" element={<Home />} />
-      
+
       {/* Public accommodation routes */}
       <Route path="/accommodations" element={<AccommodationListPage />} />
       <Route path="/accommodations/:id" element={<AccommodationDetailPage />} />
@@ -97,7 +107,10 @@ function App() {
         <Route path="notifications" element={<StudentNotifications />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="support" element={<StudentSupport />} />
-        <Route path="payment/checkout/:bookingId" element={<PaymentCheckout />} />
+        <Route
+          path="payment/checkout/:bookingId"
+          element={<PaymentCheckout />}
+        />
         <Route path="payment/success" element={<PaymentSuccess />} />
         <Route path="reviews/:hostelId" element={<AccommodationReviews />} />
       </Route>
@@ -117,6 +130,7 @@ function App() {
         {/* Nested host routes */}
         <Route path="dashboard" element={<HostOverview />} />
         <Route path="my-listings" element={<HostListings />} />
+        <Route path="create-listing" element={<CreateListingForm />} />
         <Route path="availability" element={<Availability />} />
         <Route path="bookings" element={<HostBookings />} />
         <Route path="earnings" element={<Earnings />} />
@@ -146,12 +160,17 @@ function App() {
         <Route path="bookings" element={<Bookings />} />
         <Route path="payments" element={<AdminPayments />} />
         <Route path="reviews" element={<Reviews />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="settings" element={<Settings />} />
         <Route path="analytics" element={<HostAnalytics />} />
-<Route path="settings" element={<Settings />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* Redirect legacy /dashboard route to /student/dashboard */}
-      <Route path="/dashboard" element={<Navigate to="/student/dashboard" replace />} />
+      <Route
+        path="/dashboard"
+        element={<Navigate to="/student/dashboard" replace />}
+      />
 
       {/* 404 Not Found */}
       <Route path="*" element={<NotFound />} />
@@ -160,4 +179,3 @@ function App() {
 }
 
 export default App;
-

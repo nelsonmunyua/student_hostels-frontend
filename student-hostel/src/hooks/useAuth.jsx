@@ -10,11 +10,10 @@ import {
 const useAuth = () => {
   const dispatch = useDispatch();
 
-  // Get auth state from Redux
-  const { user, isAuthenticated, loading, error, successMessage, token } =
-    useSelector((state) => state.auth);
+  const { user, isAuthenticated, error, successMessage, token } = useSelector(
+    (state) => state.auth,
+  );
 
-  // Login function - uses Redux thunk
   const login = useCallback(
     async ({ email, password }) => {
       try {
@@ -27,7 +26,6 @@ const useAuth = () => {
     [dispatch],
   );
 
-  // Signup function - uses Redux thunk
   const signup = useCallback(
     async (userData) => {
       try {
@@ -40,12 +38,10 @@ const useAuth = () => {
     [dispatch],
   );
 
-  // Logout function
   const logout = useCallback(() => {
     dispatch(logoutUser());
   }, [dispatch]);
 
-  // Request password reset - uses Redux thunk
   const requestPasswordReset = useCallback(
     async (email) => {
       try {
@@ -59,14 +55,11 @@ const useAuth = () => {
   );
 
   return {
-    // State from Redux (primary)
     user,
     token,
     isAuthenticated,
-    loading,
     error,
     successMessage,
-    // Functions
     login,
     signup,
     logout,

@@ -1,11 +1,11 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import accommodationApi from '../../../api/Accomodationapi';
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import accommodationApi from "../../../api/Accomodationapi";
 
 /**
  * Fetch all accommodations with filters
  */
 export const fetchAccommodations = createAsyncThunk(
-  'accommodation/fetchAll',
+  "accommodation/fetchAll",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getAll(params);
@@ -15,17 +15,17 @@ export const fetchAccommodations = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch accommodations';
+        "Failed to fetch accommodations";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Fetch single accommodation by ID
  */
 export const fetchAccommodationById = createAsyncThunk(
-  'accommodation/fetchById',
+  "accommodation/fetchById",
   async (id, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getById(id);
@@ -35,37 +35,99 @@ export const fetchAccommodationById = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch accommodation details';
+        "Failed to fetch accommodation details";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
- * Search accommodations
+ * Search accommodations with full filter support
+ * Supports:
+ * - Basic: query, location
+ * - Dates: check_in, check_out
+ * - Guests: guests
+ * - Property: property_type
+ * - Price: min_price, max_price
+ * - Amenities: amenities (comma-separated)
+ * - Rating: min_rating
+ * - Distance: max_distance, university
+ * - Sorting: sort_by, sort_order
+ * - Pagination: page, limit
  */
 export const searchAccommodations = createAsyncThunk(
-  'accommodation/search',
-  async (searchParams, { rejectWithValue }) => {
+  "accommodation/search",
+  async (searchParams = {}, { rejectWithValue }) => {
     try {
-      const response = await accommodationApi.search(searchParams);
+      // Transform params to ensure compatibility
+      const params = {
+        // Basic search
+        query: searchParams.query || searchParams.q || "",
+        location: searchParams.location || "",
+
+        // Dates and guests
+        check_in: searchParams.check_in || searchParams.checkIn || "",
+        check_out: searchParams.check_out || searchParams.checkOut || "",
+        guests: searchParams.guests || searchParams.max_guests || 1,
+
+        // Property type
+        property_type:
+          searchParams.property_type || searchParams.propertyType || "",
+        propertyType: searchParams.propertyType || "",
+
+        // Price range
+        min_price: searchParams.min_price || searchParams.minPrice || 0,
+        max_price: searchParams.max_price || searchParams.maxPrice || 100000,
+
+        // Amenities
+        amenities: searchParams.amenities || "",
+
+        // Rating
+        min_rating: searchParams.min_rating || searchParams.minRating || 0,
+
+        // Distance/university
+        max_distance:
+          searchParams.max_distance || searchParams.maxDistance || 0,
+        university: searchParams.university || "",
+
+        // Sorting
+        sort_by: searchParams.sort_by || searchParams.sortBy || "relevance",
+        sort_order: searchParams.sort_order || searchParams.sortOrder || "desc",
+
+        // Pagination
+        page: searchParams.page || 1,
+        limit: searchParams.limit || 12,
+      };
+
+      // Remove empty values
+      Object.keys(params).forEach((key) => {
+        if (
+          params[key] === "" ||
+          params[key] === null ||
+          params[key] === undefined
+        ) {
+          delete params[key];
+        }
+      });
+
+      const response = await accommodationApi.search(params);
       return response;
     } catch (error) {
       const message =
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Search failed';
+        "Search failed";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Create new accommodation (Host only)
  */
 export const createAccommodation = createAsyncThunk(
-  'accommodation/create',
+  "accommodation/create",
   async (accommodationData, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.create(accommodationData);
@@ -75,17 +137,17 @@ export const createAccommodation = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to create accommodation';
+        "Failed to create accommodation";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Update accommodation (Host only)
  */
 export const updateAccommodation = createAsyncThunk(
-  'accommodation/update',
+  "accommodation/update",
   async ({ id, data }, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.update(id, data);
@@ -95,17 +157,17 @@ export const updateAccommodation = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to update accommodation';
+        "Failed to update accommodation";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Delete accommodation (Host only)
  */
 export const deleteAccommodation = createAsyncThunk(
-  'accommodation/delete',
+  "accommodation/delete",
   async (id, { rejectWithValue }) => {
     try {
       await accommodationApi.delete(id);
@@ -115,17 +177,17 @@ export const deleteAccommodation = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to delete accommodation';
+        "Failed to delete accommodation";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Upload accommodation images
  */
 export const uploadAccommodationImages = createAsyncThunk(
-  'accommodation/uploadImages',
+  "accommodation/uploadImages",
   async ({ id, formData }, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.uploadImages(id, formData);
@@ -135,17 +197,17 @@ export const uploadAccommodationImages = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to upload images';
+        "Failed to upload images";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Get host's accommodations (Host only)
  */
 export const fetchMyListings = createAsyncThunk(
-  'accommodation/fetchMyListings',
+  "accommodation/fetchMyListings",
   async (params = {}, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getMyListings(params);
@@ -155,17 +217,17 @@ export const fetchMyListings = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch listings';
+        "Failed to fetch listings";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Get featured accommodations
  */
 export const fetchFeaturedAccommodations = createAsyncThunk(
-  'accommodation/fetchFeatured',
+  "accommodation/fetchFeatured",
   async (limit = 6, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getFeatured(limit);
@@ -175,17 +237,17 @@ export const fetchFeaturedAccommodations = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch featured accommodations';
+        "Failed to fetch featured accommodations";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Get accommodation availability
  */
 export const fetchAccommodationAvailability = createAsyncThunk(
-  'accommodation/fetchAvailability',
+  "accommodation/fetchAvailability",
   async ({ id, params }, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getAvailability(id, params);
@@ -195,17 +257,17 @@ export const fetchAccommodationAvailability = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch availability';
+        "Failed to fetch availability";
       return rejectWithValue(message);
     }
-  }
+  },
 );
 
 /**
  * Get nearby accommodations
  */
 export const fetchNearbyAccommodations = createAsyncThunk(
-  'accommodation/fetchNearby',
+  "accommodation/fetchNearby",
   async ({ id, limit = 4 }, { rejectWithValue }) => {
     try {
       const response = await accommodationApi.getNearby(id, limit);
@@ -215,8 +277,28 @@ export const fetchNearbyAccommodations = createAsyncThunk(
         error.response?.data?.message ||
         error.response?.data?.error ||
         error.message ||
-        'Failed to fetch nearby accommodations';
+        "Failed to fetch nearby accommodations";
       return rejectWithValue(message);
     }
-  }
+  },
+);
+
+/**
+ * Quick search for autocomplete suggestions
+ */
+export const quickSearch = createAsyncThunk(
+  "accommodation/quickSearch",
+  async ({ query, limit = 5 }, { rejectWithValue }) => {
+    try {
+      const response = await accommodationApi.quickSearch(query, limit);
+      return response;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Quick search failed";
+      return rejectWithValue(message);
+    }
+  },
 );

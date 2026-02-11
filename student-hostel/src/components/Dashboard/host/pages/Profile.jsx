@@ -320,7 +320,9 @@ const HostProfile = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>Profile Settings</h1>
-        <p style={styles.subtitle}>Manage your account information and preferences</p>
+        <p style={styles.subtitle}>
+          Manage your account information and preferences
+        </p>
       </div>
 
       {/* Success/Error Message */}
@@ -379,7 +381,7 @@ const HostProfile = () => {
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)} Info
             </button>
-          )
+          ),
         )}
       </div>
 
@@ -597,7 +599,9 @@ const HostProfile = () => {
             </div>
             <div style={styles.securityItem}>
               <div style={styles.securityInfo}>
-                <span style={styles.securityTitle}>Two-Factor Authentication</span>
+                <span style={styles.securityTitle}>
+                  Two-Factor Authentication
+                </span>
                 <span style={styles.securityDesc}>
                   Add an extra layer of security
                 </span>
@@ -641,7 +645,9 @@ const HostProfile = () => {
               </div>
               <div style={styles.notificationItem}>
                 <div style={styles.notificationInfo}>
-                  <span style={styles.notificationTitle}>Review Notifications</span>
+                  <span style={styles.notificationTitle}>
+                    Review Notifications
+                  </span>
                   <span style={styles.notificationDesc}>
                     Get notified when guests leave reviews
                   </span>
@@ -1059,4 +1065,3 @@ const styles = {
 };
 
 export default HostProfile;
-

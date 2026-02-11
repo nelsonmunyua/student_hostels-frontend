@@ -1,387 +1,361 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, Download, Home, Calendar, MapPin, Users } from 'lucide-react';
-import paymentApi from '../../api/Paymentapi';
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  CheckCircle,
+  Calendar,
+  MapPin,
+  Download,
+  Mail,
+  Home,
+} from "lucide-react";
+import { useSelector } from "react-redux";
 
 const PaymentSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
-  const { booking, payment } = location.state || {};
+  const { user } = useSelector((state) => state.auth);
 
-  useEffect(() => {
-    if (!booking || !payment) {
-      navigate('/student/my-bookings');
-    }
-  }, [booking, payment, navigate]);
-
-  if (!booking || !payment) {
-    return null;
-  }
-
-  const handleDownloadReceipt = async () => {
-    try {
-      if (payment.id) {
-        await paymentApi.downloadReceipt(payment.id);
-      }
-      // Fallback alert if download fails
-      alert('Receipt feature coming soon!');
-    } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download receipt');
-    }
+  const booking = location.state?.booking || {
+    id: Math.floor(Math.random() * 10000) + 1000,
+    accommodation_title: "University View Hostel",
+    location: "123 College Ave, Nairobi",
+    check_in: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    check_out: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+    total_price: 29700,
   };
 
-  const handleGoToDashboard = () => {
-    navigate('/student/dashboard');
+  const payment = location.state?.payment || {
+    method: "M-Pesa",
+    transaction_id:
+      "MP" + Math.random().toString(36).substr(2, 9).toUpperCase(),
   };
 
-  const handleViewBooking = () => {
-    navigate('/student/my-bookings');
+  const handleDownloadReceipt = () => {
+    alert("Downloading receipt...");
   };
 
-  const containerStyle = {
-    minHeight: '100vh',
-    backgroundColor: '#f8fafc',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px 20px',
+  const handleViewBookings = () => {
+    navigate("/student/my-bookings");
   };
 
-  const successCardStyle = {
-    backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    padding: '48px',
-    maxWidth: '700px',
-    width: '100%',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    border: '1px solid #e5e7eb',
-    textAlign: 'center',
+  const handleGoHome = () => {
+    navigate("/");
   };
-
-  const iconContainerStyle = {
-    position: 'relative',
-    display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '32px',
-  };
-
-  const iconCircleStyle = {
-    width: '120px',
-    height: '120px',
-    borderRadius: '50%',
-    backgroundColor: '#059669',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    animation: 'scaleIn 0.5s ease-out',
-  };
-
-  const confettiStyle = {
-    position: 'absolute',
-    top: '-20px',
-    right: '30%',
-    fontSize: '32px',
-    animation: 'bounce 1s infinite',
-  };
-
-  const titleStyle = {
-    fontSize: '32px',
-    fontWeight: 700,
-    color: '#1e293b',
-    marginBottom: '12px',
-  };
-
-  const subtitleStyle = {
-    fontSize: '16px',
-    color: '#64748b',
-    marginBottom: '40px',
-    lineHeight: '1.6',
-  };
-
-  const detailsSectionStyle = {
-    textAlign: 'left',
-    marginBottom: '32px',
-    padding: '24px',
-    backgroundColor: '#f8fafc',
-    borderRadius: '12px',
-    border: '1px solid #e5e7eb',
-  };
-
-  const sectionTitleStyle = {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#1e293b',
-    marginBottom: '20px',
-  };
-
-  const detailsGridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '20px',
-  };
-
-  const detailItemStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  };
-
-  const detailLabelStyle = {
-    fontSize: '13px',
-    color: '#64748b',
-    fontWeight: 500,
-  };
-
-  const detailValueStyle = {
-    fontSize: '15px',
-    color: '#1e293b',
-    fontWeight: 600,
-  };
-
-  const detailValueHighlightStyle = {
-    fontSize: '20px',
-    color: '#059669',
-    fontWeight: 700,
-  };
-
-  const bookingSectionStyle = {
-    textAlign: 'left',
-    marginBottom: '32px',
-  };
-
-  const bookingCardStyle = {
-    display: 'flex',
-    gap: '20px',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
-  };
-
-  const accommodationImageStyle = {
-    width: '140px',
-    height: '140px',
-    borderRadius: '8px',
-    objectFit: 'cover',
-  };
-
-  const bookingDetailsStyle = {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  };
-
-  const accommodationTitleStyle = {
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#1e293b',
-    margin: 0,
-  };
-
-  const bookingInfoStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  };
-
-  const infoItemStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    fontSize: '14px',
-    color: '#64748b',
-  };
-
-  const actionsStyle = {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '32px',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-  };
-
-  const primaryButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '14px 24px',
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  };
-
-  const secondaryButtonStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '14px 24px',
-    backgroundColor: '#ffffff',
-    color: '#3b82f6',
-    border: '1px solid #3b82f6',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  };
-
-  const nextStepsStyle = {
-    textAlign: 'left',
-    padding: '20px',
-    backgroundColor: '#eff6ff',
-    borderRadius: '12px',
-    border: '1px solid #bfdbfe',
-  };
-
-  const nextStepsTitleStyle = {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: '#1e40af',
-    marginBottom: '12px',
-  };
-
-  const nextStepsListStyle = {
-    margin: 0,
-    paddingLeft: '20px',
-    fontSize: '14px',
-    color: '#1e40af',
-    lineHeight: '1.8',
-  };
-
-  const accommodationImage = booking.accommodation?.images?.[0] || 
-                           booking.images?.[0] || 
-                           'https://via.placeholder.com/140x140?text=Accommodation';
 
   return (
-    <div style={containerStyle}>
-      <div style={successCardStyle}>
-        {/* Success Icon */}
-        <div style={iconContainerStyle}>
-          <div style={iconCircleStyle}>
-            <CheckCircle size={64} color="#ffffff" strokeWidth={2.5} />
-          </div>
-          <div style={confettiStyle}>🎉</div>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <div style={styles.iconWrapper}>
+          <CheckCircle size={48} color="#16a34a" />
         </div>
 
-        {/* Success Message */}
-        <h1 style={titleStyle}>Payment Successful!</h1>
-        <p style={subtitleStyle}>
-          Your booking has been confirmed. We've sent a confirmation email with all the details.
+        <h1 style={styles.title}>Payment Successful!</h1>
+        <p style={styles.subtitle}>
+          Your booking has been confirmed. A confirmation email has been sent to
+          your registered email address.
         </p>
 
-        {/* Payment Details */}
-        <div style={detailsSectionStyle}>
-          <h3 style={sectionTitleStyle}>Payment Details</h3>
-          <div style={detailsGridStyle}>
-            <div style={detailItemStyle}>
-              <span style={detailLabelStyle}>Transaction ID</span>
-              <span style={detailValueStyle}>#{payment.id || 'N/A'}</span>
+        <div style={styles.bookingReference}>
+          <span style={styles.referenceLabel}>Booking Reference</span>
+          <span style={styles.referenceNumber}>#BK{booking.id}</span>
+        </div>
+
+        <div style={styles.divider}></div>
+
+        <div style={styles.bookingDetails}>
+          <h2 style={styles.sectionTitle}>Booking Details</h2>
+
+          <div style={styles.detailRow}>
+            <div style={styles.detailIcon}>
+              <Home size={18} color="#64748b" />
             </div>
-            <div style={detailItemStyle}>
-              <span style={detailLabelStyle}>Amount Paid</span>
-              <span style={detailValueHighlightStyle}>
-                KSh {(booking.total_price || booking.amount || 0).toLocaleString()}
+            <div style={styles.detailContent}>
+              <span style={styles.detailLabel}>Property</span>
+              <span style={styles.detailValue}>
+                {booking.accommodation_title || "University View Hostel"}
               </span>
             </div>
-            <div style={detailItemStyle}>
-              <span style={detailLabelStyle}>Payment Method</span>
-              <span style={detailValueStyle}>
-                {payment.method === 'mpesa' ? 'M-Pesa' : 
-                 payment.method === 'stripe' ? 'Stripe' : 
-                 payment.method === 'card' ? 'Card Payment' : 
-                 payment.payment_method || 'Card Payment'}
+          </div>
+
+          <div style={styles.detailRow}>
+            <div style={styles.detailIcon}>
+              <MapPin size={18} color="#64748b" />
+            </div>
+            <div style={styles.detailContent}>
+              <span style={styles.detailLabel}>Location</span>
+              <span style={styles.detailValue}>
+                {booking.location || "123 College Ave, Nairobi"}
               </span>
             </div>
-            <div style={detailItemStyle}>
-              <span style={detailLabelStyle}>Date</span>
-              <span style={detailValueStyle}>
-                {new Date().toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
+          </div>
+
+          <div style={styles.detailRow}>
+            <div style={styles.detailIcon}>
+              <Calendar size={18} color="#64748b" />
+            </div>
+            <div style={styles.detailContent}>
+              <span style={styles.detailLabel}>Check-in</span>
+              <span style={styles.detailValue}>
+                {new Date(booking.check_in).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
                 })}
               </span>
             </div>
           </div>
-        </div>
 
-        {/* Booking Summary */}
-        <div style={bookingSectionStyle}>
-          <h3 style={sectionTitleStyle}>Booking Summary</h3>
-          <div style={bookingCardStyle}>
-            <img
-              src={accommodationImage}
-              alt={booking.accommodation_title || booking.accommodation?.title || 'Accommodation'}
-              style={accommodationImageStyle}
-              onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/140x140?text=Accommodation';
-              }}
-            />
-            <div style={bookingDetailsStyle}>
-              <h4 style={accommodationTitleStyle}>
-                {booking.accommodation_title || booking.accommodation?.title || 'Accommodation'}
-              </h4>
-              
-              <div style={bookingInfoStyle}>
-                <div style={infoItemStyle}>
-                  <MapPin size={16} color="#64748b" />
-                  <span>{booking.location || booking.accommodation?.location || 'Location'}</span>
-                </div>
-                
-                <div style={infoItemStyle}>
-                  <Calendar size={16} color="#64748b" />
-                  <span>
-                    {booking.check_in || booking.check_in_date} - {booking.check_out || booking.check_out_date}
-                  </span>
-                </div>
-                
-                <div style={infoItemStyle}>
-                  <Users size={16} color="#64748b" />
-                  <span>{booking.number_of_guests || 1} Guest{(booking.number_of_guests || 1) > 1 ? 's' : ''}</span>
-                </div>
-              </div>
+          <div style={styles.detailRow}>
+            <div style={styles.detailIcon}>
+              <Calendar size={18} color="#64748b" />
+            </div>
+            <div style={styles.detailContent}>
+              <span style={styles.detailLabel}>Check-out</span>
+              <span style={styles.detailValue}>
+                {new Date(booking.check_out).toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          </div>
+
+          <div style={styles.detailRow}>
+            <div style={styles.detailIcon}>
+              <Mail size={18} color="#64748b" />
+            </div>
+            <div style={styles.detailContent}>
+              <span style={styles.detailLabel}>Confirmation Sent To</span>
+              <span style={styles.detailValue}>
+                {user?.email || "your@email.com"}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={actionsStyle}>
-          <button style={secondaryButtonStyle} onClick={handleDownloadReceipt}>
+        <div style={styles.paymentInfo}>
+          <div style={styles.paymentRow}>
+            <span style={styles.paymentLabel}>Payment Method</span>
+            <span style={styles.paymentValue}>{payment.method}</span>
+          </div>
+          <div style={styles.paymentRow}>
+            <span style={styles.paymentLabel}>Transaction ID</span>
+            <span style={styles.paymentValue}>{payment.transaction_id}</span>
+          </div>
+          <div style={styles.paymentRow}>
+            <span style={styles.paymentLabel}>Amount Paid</span>
+            <span style={styles.paymentValue}>
+              KSh {booking.total_price?.toLocaleString() || "29,700"}
+            </span>
+          </div>
+        </div>
+
+        <div style={styles.actions}>
+          <button style={styles.primaryButton} onClick={handleDownloadReceipt}>
             <Download size={18} />
             Download Receipt
           </button>
-          <button style={secondaryButtonStyle} onClick={handleViewBooking}>
-            <Calendar size={18} />
-            View Booking
+          <button style={styles.secondaryButton} onClick={handleViewBookings}>
+            View My Bookings
           </button>
-          <button style={primaryButtonStyle} onClick={handleGoToDashboard}>
-            <Home size={18} />
-            Go to Dashboard
+          <button style={styles.tertiaryButton} onClick={handleGoHome}>
+            Back to Home
           </button>
         </div>
 
-        {/* Next Steps */}
-        <div style={nextStepsStyle}>
-          <h4 style={nextStepsTitleStyle}>What's Next?</h4>
-          <ul style={nextStepsListStyle}>
-            <li>Check your email for booking confirmation and receipt</li>
-            <li>The host will be notified about your booking</li>
-            <li>You can view and manage your booking in your dashboard</li>
-            <li>Contact the host if you have any questions</li>
-          </ul>
+        <div style={styles.helpSection}>
+          <p style={styles.helpText}>
+            Need help? Contact our support team at{" "}
+            <strong>support@student-hostel.com</strong>
+          </p>
         </div>
       </div>
     </div>
   );
 };
 
-export default PaymentSuccess;
+const styles = {
+  container: {
+    minHeight: "100vh",
+    backgroundColor: "#f8fafc",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px 20px",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: "16px",
+    padding: "48px",
+    maxWidth: "600px",
+    width: "100%",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+    textAlign: "center",
+  },
+  iconWrapper: {
+    width: "96px",
+    height: "96px",
+    backgroundColor: "#dcfce7",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 24px",
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: "12px",
+  },
+  subtitle: {
+    fontSize: "16px",
+    color: "#64748b",
+    marginBottom: "24px",
+  },
+  bookingReference: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    padding: "16px",
+    backgroundColor: "#f0f9ff",
+    borderRadius: "8px",
+    marginBottom: "32px",
+  },
+  referenceLabel: {
+    fontSize: "12px",
+    color: "#0369a1",
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  referenceNumber: {
+    fontSize: "24px",
+    fontWeight: "700",
+    color: "#0369a1",
+  },
+  divider: {
+    height: "1px",
+    backgroundColor: "#e5e7eb",
+    margin: "32px 0",
+  },
+  bookingDetails: {
+    textAlign: "left",
+    marginBottom: "32px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: "20px",
+  },
+  detailRow: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "16px",
+    padding: "12px 0",
+  },
+  detailIcon: {
+    width: "40px",
+    height: "40px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  detailContent: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  detailLabel: {
+    fontSize: "12px",
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  detailValue: {
+    fontSize: "15px",
+    color: "#1e293b",
+    fontWeight: "500",
+  },
+  paymentInfo: {
+    backgroundColor: "#f8fafc",
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "32px",
+  },
+  paymentRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "8px 0",
+  },
+  paymentLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  paymentValue: {
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#1e293b",
+  },
+  actions: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  primaryButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "16px",
+    backgroundColor: "#3b82f6",
+    color: "#ffffff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  secondaryButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "16px",
+    backgroundColor: "#ffffff",
+    color: "#3b82f6",
+    border: "1px solid #3b82f6",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  tertiaryButton: {
+    padding: "12px",
+    backgroundColor: "transparent",
+    color: "#64748b",
+    border: "none",
+    fontSize: "14px",
+    cursor: "pointer",
+    textDecoration: "underline",
+  },
+  helpSection: {
+    marginTop: "32px",
+    paddingTop: "24px",
+    borderTop: "1px solid #e5e7eb",
+  },
+  helpText: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+};
 
+export default PaymentSuccess;

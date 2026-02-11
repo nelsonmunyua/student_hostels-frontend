@@ -536,3 +536,4 @@ const styles = {
 
 export default HostEarnings;
 
+export default HostEarnings;

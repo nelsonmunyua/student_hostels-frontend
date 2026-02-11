@@ -595,3 +595,4 @@ const styles = {
 
 export default HostAvailability;
 
+export default HostAvailability;

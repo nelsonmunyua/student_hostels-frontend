@@ -17,6 +17,7 @@ import {
   Download,
   Plus,
 } from "lucide-react";
+import { toast } from "../../../../main";
 import adminApi from "../../../../api/adminApi";
 
 const Bookings = () => {
@@ -278,7 +279,7 @@ const Bookings = () => {
     setIsSubmitting(true);
     // In real app, this would call the API
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    alert("Booking added successfully! (Demo)");
+    toast.success("Booking added successfully! (Demo)");
     setShowAddModal(false);
     setIsSubmitting(false);
   };
@@ -293,14 +294,14 @@ const Bookings = () => {
   const handleEditBooking = async (booking, newStatus) => {
     try {
       await adminApi.updateBookingStatus(booking.id, newStatus);
-      alert(`Booking #${booking.id} status updated to ${newStatus}!`);
+      toast.success(`Booking #${booking.id} status updated to ${newStatus}!`);
       
       // Refresh list
       const data = await adminApi.getBookings();
       setBookings(data);
     } catch (error) {
       console.error("Failed to update booking status:", error);
-      alert("Failed to update booking status. Please try again.");
+      toast.error("Failed to update booking status. Please try again.");
     }
   };
 
@@ -311,14 +312,14 @@ const Bookings = () => {
     ) {
       try {
         await adminApi.updateBookingStatus(booking.id, "cancelled");
-        alert("Booking cancelled successfully!");
+        toast.success("Booking cancelled successfully!");
         
         // Refresh list
         const data = await adminApi.getBookings();
         setBookings(data);
       } catch (error) {
         console.error("Failed to cancel booking:", error);
-        alert("Failed to cancel booking. Please try again.");
+        toast.error("Failed to cancel booking. Please try again.");
       }
     }
   };
@@ -326,7 +327,7 @@ const Bookings = () => {
   // Handle download receipt
   const handleDownloadReceipt = async (booking) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    alert(`Downloading receipt for booking #${booking.id} (Demo)`);
+    toast.info(`Downloading receipt for booking #${booking.id} (Demo)`);
   };
 
   return (
@@ -362,7 +363,7 @@ const Bookings = () => {
             <DollarSign size={24} color="#059669" />
           </div>
           <div>
-            <p style={styles.statValue}>${totalRevenue.toLocaleString()}</p>
+            <p style={styles.statValue}>Ksh{totalRevenue.toLocaleString()}</p>
             <p style={styles.statLabel}>Total Revenue</p>
           </div>
         </div>
@@ -474,7 +475,7 @@ const Bookings = () => {
                   <span style={styles.nightsBadge}>{booking.nights || "-"}</span>
                 </td>
                 <td style={styles.tableCell}>
-                  <span style={styles.amountText}>${booking.total_amount || booking.totalAmount || 0}</span>
+                  <span style={styles.amountText}>Ksh{booking.total_amount || booking.totalAmount || 0}</span>
                 </td>
                 <td style={styles.tableCell}>
                   <span

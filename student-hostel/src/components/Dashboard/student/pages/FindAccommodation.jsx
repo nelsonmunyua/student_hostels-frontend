@@ -8,7 +8,6 @@ import {
   Filter,
   Grid,
   List,
-  Loader2,
   Wifi,
   Car,
   Coffee,
@@ -24,8 +23,6 @@ const FindAccommodation = () => {
 
   // State
   const [accommodations, setAccommodations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -54,21 +51,20 @@ const FindAccommodation = () => {
 
   const fetchAccommodations = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const params = {
         page: pagination.page,
         limit: 12,
       };
-      
+
       // Only add optional params if they have values
       if (filters.location) params.location = filters.location;
-      if (filters.min_price) params.min_price = parseInt(filters.min_price) || 0;
-      if (filters.max_price) params.max_price = parseInt(filters.max_price) || 0;
+      if (filters.min_price)
+        params.min_price = parseInt(filters.min_price) || 0;
+      if (filters.max_price)
+        params.max_price = parseInt(filters.max_price) || 0;
       if (filters.room_type) params.room_type = filters.room_type;
       if (filters.amenities && filters.amenities.length > 0) {
-        params.amenities = filters.amenities.join(',');
+        params.amenities = filters.amenities.join(",");
       }
 
       const response = await studentApi.getAccommodations(params);
@@ -80,10 +76,8 @@ const FindAccommodation = () => {
       }));
     } catch (err) {
       console.error("Error fetching accommodations:", err);
-      // Don't show error, just set mock data for demo
+      // Use mock data on error
       setAccommodations(getMockAccommodations());
-    } finally {
-      setLoading(false);
     }
   }, [pagination.page, filters]);
 
@@ -120,8 +114,8 @@ const FindAccommodation = () => {
         prev.map((acc) =>
           acc.id === hostelId
             ? { ...acc, is_in_wishlist: response.in_wishlist }
-            : acc
-        )
+            : acc,
+        ),
       );
     } catch (err) {
       console.error("Error toggling wishlist:", err);
@@ -245,7 +239,9 @@ const FindAccommodation = () => {
               <label style={styles.filterLabel}>Room Type</label>
               <select
                 value={filters.room_type}
-                onChange={(e) => handleFilterChange("room_type", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("room_type", e.target.value)
+                }
                 style={styles.filterSelect}
               >
                 <option value="">All Types</option>
@@ -262,7 +258,9 @@ const FindAccommodation = () => {
                 type="number"
                 placeholder="0"
                 value={filters.min_price}
-                onChange={(e) => handleFilterChange("min_price", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("min_price", e.target.value)
+                }
                 style={styles.filterInput}
               />
             </div>
@@ -273,7 +271,9 @@ const FindAccommodation = () => {
                 type="number"
                 placeholder="No limit"
                 value={filters.max_price}
-                onChange={(e) => handleFilterChange("max_price", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("max_price", e.target.value)
+                }
                 style={styles.filterInput}
               />
             </div>
@@ -300,7 +300,7 @@ const FindAccommodation = () => {
                         {amenity}
                       </span>
                     </button>
-                  )
+                  ),
                 )}
               </div>
             </div>
@@ -308,7 +308,7 @@ const FindAccommodation = () => {
             <button
               style={{
                 ...styles.clearFiltersButton,
-                ...(!hasActiveFilters ? styles.clearFiltersButtonDisabled : {})
+                ...(!hasActiveFilters ? styles.clearFiltersButtonDisabled : {}),
               }}
               onClick={clearFilters}
               disabled={!hasActiveFilters}
@@ -326,26 +326,8 @@ const FindAccommodation = () => {
         </p>
       </div>
 
-      {/* Loading State */}
-      {loading && (
-        <div style={styles.loadingContainer}>
-          <Loader2 size={40} color="#3b82f6" style={{ animation: "spin 1s linear infinite" }} />
-          <p>Loading accommodations...</p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div style={styles.errorContainer}>
-          <p>{error}</p>
-          <button style={styles.retryButton} onClick={fetchAccommodations}>
-            Retry
-          </button>
-        </div>
-      )}
-
       {/* Results Grid */}
-      {!loading && !error && accommodations.length > 0 && (
+      {accommodations.length > 0 ? (
         <div
           style={
             viewMode === "grid"
@@ -356,13 +338,15 @@ const FindAccommodation = () => {
           {accommodations.map((accommodation) => (
             <div
               key={accommodation.id}
-              style={
-                viewMode === "grid" ? styles.cardGrid : styles.cardList
-              }
+              style={viewMode === "grid" ? styles.cardGrid : styles.cardList}
               onClick={() => handleViewDetails(accommodation.id)}
             >
               {/* Image */}
-              <div style={viewMode === "grid" ? styles.cardImage : styles.cardImageList}>
+              <div
+                style={
+                  viewMode === "grid" ? styles.cardImage : styles.cardImageList
+                }
+              >
                 <img
                   src={
                     accommodation.images?.[0] ||
@@ -378,9 +362,7 @@ const FindAccommodation = () => {
                       ? styles.wishlistButtonActive
                       : {}),
                   }}
-                  onClick={(e) =>
-                    handleWishlistToggle(accommodation.id, e)
-                  }
+                  onClick={(e) => handleWishlistToggle(accommodation.id, e)}
                 >
                   <Heart
                     size={20}
@@ -441,10 +423,8 @@ const FindAccommodation = () => {
             </div>
           ))}
         </div>
-      )}
-
-      {/* Empty State */}
-      {!loading && !error && accommodations.length === 0 && (
+      ) : (
+        /* Empty State */
         <div style={styles.emptyState}>
           <Home size={64} color="#d1d5db" />
           <h3 style={styles.emptyStateTitle}>No accommodations found</h3>
@@ -465,9 +445,7 @@ const FindAccommodation = () => {
           <button
             style={{
               ...styles.pageButton,
-              ...(pagination.page === 1
-                ? styles.pageButtonDisabled
-                : {}),
+              ...(pagination.page === 1 ? styles.pageButtonDisabled : {}),
             }}
             onClick={() =>
               setPagination((prev) => ({ ...prev, page: prev.page - 1 }))
@@ -735,31 +713,6 @@ const styles = {
     fontSize: "14px",
     color: "#6b7280",
   },
-  loadingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "400px",
-    gap: "16px",
-  },
-  errorContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "400px",
-    gap: "16px",
-    color: "#ef4444",
-  },
-  retryButton: {
-    padding: "10px 20px",
-    backgroundColor: "#3b82f6",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-  },
   accommodationsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
@@ -969,4 +922,3 @@ const styles = {
 };
 
 export default FindAccommodation;
-
