@@ -475,7 +475,7 @@ const SearchPage = () => {
   );
 };
 
-// Mock data for demo
+// Mock data for demo - using Unsplash images
 const getMockAccommodations = () => [
   {
     id: 1,
@@ -541,10 +541,8 @@ const getMockAccommodations = () => [
     price: 7000,
     rating: 4.3,
     review_count: 20,
-    amenities: ["wifi", "security", "parking"],
-    images: [
-      "https://images.unsplash.com/photo-1590508794514-f2a3c8b8edd4?w=800&q=80",
-    ],
+    amenities: ['wifi', 'security', 'parking'],
+    images: ['https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800'],
     is_verified: true,
   },
   {
@@ -555,10 +553,8 @@ const getMockAccommodations = () => [
     price: 6000,
     rating: 4.1,
     review_count: 18,
-    amenities: ["wifi", "breakfast", "security"],
-    images: [
-      "https://images.unsplash.com/photo-1630699144867-37acec97df5a?w=800&q=80",
-    ],
+    amenities: ['wifi', 'breakfast', 'security'],
+    images: ['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800'],
     is_verified: true,
   },
   {

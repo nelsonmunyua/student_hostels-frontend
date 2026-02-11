@@ -350,7 +350,7 @@ const FindAccommodation = () => {
                 <img
                   src={
                     accommodation.images?.[0] ||
-                    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400"
+                    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"
                   }
                   alt={accommodation.name}
                   style={styles.cardImageImg}
@@ -477,7 +477,7 @@ const FindAccommodation = () => {
   );
 };
 
-// Mock data for demo
+// Mock data for demo - using Unsplash images
 const getMockAccommodations = () => [
   {
     id: 1,
@@ -488,7 +488,9 @@ const getMockAccommodations = () => [
     rating: 4.5,
     review_count: 28,
     amenities: ["wifi", "security", "study", "parking"],
-    images: ["https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400"],
+    images: [
+      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
+    ],
     is_verified: true,
     is_in_wishlist: false,
   },
@@ -501,7 +503,9 @@ const getMockAccommodations = () => [
     rating: 4.2,
     review_count: 15,
     amenities: ["wifi", "breakfast", "security"],
-    images: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400"],
+    images: [
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+    ],
     is_verified: true,
     is_in_wishlist: true,
   },
@@ -515,7 +519,7 @@ const getMockAccommodations = () => [
     review_count: 42,
     amenities: ["wifi", "parking", "security"],
     images: [
-      "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=400",
+      "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800",
     ],
     is_verified: false,
     is_in_wishlist: false,

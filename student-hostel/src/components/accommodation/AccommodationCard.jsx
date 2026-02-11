@@ -74,41 +74,10 @@ const getAllImages = (accommodation) => {
 const AccommodationCard = ({ accommodation, layout = "grid" }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items: wishlistItems } = useSelector((state) => state.wishlist);
-  const { user } = useSelector((state) => state.auth);
-
-  const [imageIndex, setImageIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-
-  const isInWishlist = wishlistItems.some(
-    (item) => item.accommodation_id === accommodation.id,
-  );
-
-  const handleWishlistClick = (e) => {
-    e.stopPropagation();
-    if (!user) {
-      navigate("/signup");
-      return;
-    }
-    dispatch(toggleWishlist(accommodation.id));
-  };
-
-  const handleCardClick = () => {
-    navigate(`/accommodations/${accommodation.id}`);
-  };
-
-  const formatPropertyType = (type) => {
-    const types = {
-      hostel: "Hostel",
-      bedsitter: "Bedsitter",
-      apartment: "Apartment",
-      single: "Single Room",
-      studio: "Studio",
-      shared: "Shared Room",
-    };
-    return types[type] || type;
-  };
+  
+  // Use Unsplash images for better quality
+  const defaultImage = 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
+  const image = accommodation.images?.[0] || accommodation.image || defaultImage;
 
   const getAmenityIcon = (amenity) => {
     const icons = {

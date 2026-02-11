@@ -1,30 +1,59 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { User, Mail, Phone, Camera } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
-import { updateProfile } from "../../../../redux/slices/Thunks/authThunks";
+import useAuth from "../../../../hooks/useAuth.jsx";
+import authApi from "../../../../api/authApi.js";
 
 const StudentProfile = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { user, loading } = useSelector((state) => state.auth);
-  const fileInputRef = useRef(null);
-
+  const { user, setUser } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    first_name: user?.first_name || "",
-    last_name: user?.last_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone: "",
   });
 
-  // Store original values for reset
-  const originalData = useRef({
-    first_name: user?.first_name || "",
-    last_name: user?.last_name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-  });
+  // Fetch user data on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await authApi.getCurrentUser();
+        const userData = response.user || response;
+        
+        setFormData({
+          first_name: userData.first_name || "",
+          last_name: userData.last_name || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+        });
+        
+        // Also update the auth context if needed
+        if (setUser && userData) {
+          setUser(userData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user data:", err);
+        setError("Failed to load profile data");
+        // Fallback to auth context data
+        if (user) {
+          setFormData({
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user, setUser]);
 
   // Update form data when user data changes
   useEffect(() => {
@@ -47,27 +76,75 @@ const StudentProfile = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear messages when user starts typing
+    setError("");
+    setSuccess("");
   };
 
-  // Handle save changes
+  // Handle save changes - real API call
   const handleSaveChanges = async () => {
     try {
       setIsSaving(true);
-      await dispatch(updateProfile(formData));
-      // Update original data after successful save
-      originalData.current = { ...formData };
-      alert("Profile updated successfully!");
-    } catch (error) {
-      console.error("Failed to save profile:", error);
-      alert("Failed to save profile");
+      setError("");
+      setSuccess("");
+
+      // Make actual API call to update profile
+      const response = await authApi.updateProfile({
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+      });
+
+      // Update local state with response
+      const updatedUser = response.user || response;
+      
+      setFormData({
+        first_name: updatedUser.first_name || "",
+        last_name: updatedUser.last_name || "",
+        email: updatedUser.email || "",
+        phone: updatedUser.phone || "",
+      });
+
+      // Update auth context
+      if (setUser && updatedUser) {
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+
+      setSuccess("Profile updated successfully!");
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error || 
+                          "Failed to save profile. Please try again.";
+      setError(errorMessage);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Handle cancel - reset to original values
-  const handleCancel = () => {
-    setFormData({ ...originalData.current });
+  // Handle cancel - reset to original values from API
+  const handleCancel = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+      setSuccess("");
+      
+      const response = await authApi.getCurrentUser();
+      const userData = response.user || response;
+      
+      setFormData({
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        email: userData.email || "",
+        phone: userData.phone || "",
+      });
+    } catch (err) {
+      console.error("Failed to reset profile:", err);
+      setError("Failed to reset profile data");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle upload photo
@@ -79,11 +156,32 @@ const StudentProfile = () => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      alert(
-        `Photo "${file.name}" selected. This would be uploaded to the server.`,
-      );
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setError("Please select a valid image file");
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size should be less than 5MB");
+        return;
+      }
+      
+      alert(`Photo "${file.name}" selected. Upload functionality coming soon!`);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner}></div>
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -102,6 +200,18 @@ const StudentProfile = () => {
           Manage your personal information and preferences
         </p>
       </div>
+
+      {/* Error/Success Messages */}
+      {error && (
+        <div style={styles.errorMessage}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={styles.successMessage}>
+          {success}
+        </div>
+      )}
 
       <div style={styles.card}>
         <div style={styles.avatarSection}>
@@ -132,6 +242,7 @@ const StudentProfile = () => {
                 value={formData.first_name}
                 onChange={handleInputChange}
                 style={styles.input}
+                placeholder="Enter your first name"
               />
             </div>
             <div style={styles.inputGroup}>
@@ -142,6 +253,7 @@ const StudentProfile = () => {
                 value={formData.last_name}
                 onChange={handleInputChange}
                 style={styles.input}
+                placeholder="Enter your last name"
               />
             </div>
           </div>
@@ -154,7 +266,10 @@ const StudentProfile = () => {
               value={formData.email}
               onChange={handleInputChange}
               style={styles.input}
+              placeholder="Enter your email"
+              disabled
             />
+            <span style={styles.hint}>Email cannot be changed</span>
           </div>
 
           <div style={styles.inputGroup}>
@@ -165,18 +280,26 @@ const StudentProfile = () => {
               value={formData.phone}
               onChange={handleInputChange}
               style={styles.input}
+              placeholder="Enter your phone number"
             />
           </div>
 
           <div style={styles.actions}>
             <button
-              style={styles.saveButton}
+              style={{
+                ...styles.saveButton,
+                opacity: isSaving ? 0.7 : 1
+              }}
               onClick={handleSaveChanges}
               disabled={isSaving}
             >
               {isSaving ? "Saving..." : "Save Changes"}
             </button>
-            <button style={styles.cancelButton} onClick={handleCancel}>
+            <button 
+              style={styles.cancelButton} 
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
               Cancel
             </button>
           </div>
@@ -188,6 +311,22 @@ const StudentProfile = () => {
 
 const styles = {
   container: { maxWidth: "800px" },
+  loadingContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 0",
+  },
+  spinner: {
+    width: "40px",
+    height: "40px",
+    border: "3px solid #e5e7eb",
+    borderTop: "3px solid #3b82f6",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+    marginBottom: "16px",
+  },
   header: { marginBottom: "32px" },
   title: {
     fontSize: "28px",
@@ -196,6 +335,24 @@ const styles = {
     marginBottom: "8px",
   },
   subtitle: { fontSize: "16px", color: "#6b7280" },
+  errorMessage: {
+    padding: "12px 16px",
+    backgroundColor: "#fee2e2",
+    color: "#dc2626",
+    borderRadius: "8px",
+    fontSize: "14px",
+    marginBottom: "24px",
+    border: "1px solid #fecaca",
+  },
+  successMessage: {
+    padding: "12px 16px",
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+    borderRadius: "8px",
+    fontSize: "14px",
+    marginBottom: "24px",
+    border: "1px solid #86efac",
+  },
   card: {
     backgroundColor: "#fff",
     borderRadius: "12px",
@@ -264,6 +421,13 @@ const styles = {
     borderRadius: "8px",
     fontSize: "14px",
     color: "#1a1a1a",
+    outline: "none",
+    transition: "border-color 0.2s",
+  },
+  hint: {
+    fontSize: "12px",
+    color: "#9ca3af",
+    fontStyle: "italic",
   },
   actions: {
     display: "flex",
@@ -293,3 +457,4 @@ const styles = {
 };
 
 export default StudentProfile;
+
