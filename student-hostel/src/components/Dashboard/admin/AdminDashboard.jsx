@@ -68,6 +68,12 @@ const AdminDashboard = () => {
       path: "/admin/settings",
       icon: "Settings",
     },
+    {
+      id: "support",
+      label: "Support Tickets",
+      path: "/admin/support",
+      icon: "MessageSquare",
+    },
   ];
 
   return (
@@ -105,6 +111,7 @@ const styles = {
     left: 0,
     width: "280px",
     height: "calc(100vh - 72px)",
+    zIndex: 900,
   },
   mainContent: {
     flex: 1,
@@ -112,7 +119,34 @@ const styles = {
     marginTop: "72px",
     minHeight: "calc(100vh - 72px)",
     backgroundColor: "#f8fafc",
+    padding: "24px",
   },
 };
+
+// CSS for responsive design
+const cssStyles = `
+  @media (max-width: 1024px) {
+    .sidebarWrapper {
+      width: 240px !important;
+    }
+    .mainContent {
+      margin-left: 240px !important;
+    }
+  }
+  @media (max-width: 768px) {
+    .sidebarWrapper {
+      display: none !important;
+    }
+    .mainContent {
+      margin-left: 0 !important;
+      padding: 16px !important;
+    }
+  }
+`;
+
+// Inject CSS styles
+const styleSheet = document.createElement("style");
+styleSheet.innerText = cssStyles;
+document.head.appendChild(styleSheet);
 
 export default AdminDashboard;

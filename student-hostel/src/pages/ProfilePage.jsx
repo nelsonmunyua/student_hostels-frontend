@@ -49,7 +49,15 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await dispatch(updateProfile(formData));
+    
+    // Only send fields supported by backend
+    const profileData = {
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      phone: formData.phone,
+    };
+    
+    await dispatch(updateProfile(profileData));
     setIsEditing(false);
   };
 

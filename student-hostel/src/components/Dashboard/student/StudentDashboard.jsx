@@ -120,26 +120,33 @@ const styles = {
     minHeight: "calc(100vh - 72px)",
     backgroundColor: "#f8fafc",
     padding: "24px",
-    overflowY: "auto",
-  },
-  // Responsive design for mobile/tablet
-  "@media (max-width: 1024px)": {
-    sidebarWrapper: {
-      width: "240px",
-    },
-    mainContent: {
-      marginLeft: "240px",
-    },
-  },
-  "@media (max-width: 768px)": {
-    sidebarWrapper: {
-      display: "none", // Hide sidebar on mobile, could be toggled later
-    },
-    mainContent: {
-      marginLeft: "0",
-      padding: "16px",
-    },
   },
 };
+
+// CSS for responsive design
+const cssStyles = `
+  @media (max-width: 1024px) {
+    .sidebarWrapper {
+      width: 240px !important;
+    }
+    .mainContent {
+      margin-left: 240px !important;
+    }
+  }
+  @media (max-width: 768px) {
+    .sidebarWrapper {
+      display: none !important;
+    }
+    .mainContent {
+      margin-left: 0 !important;
+      padding: 16px !important;
+    }
+  }
+`;
+
+// Inject CSS styles
+const styleSheet = document.createElement("style");
+styleSheet.innerText = cssStyles;
+document.head.appendChild(styleSheet);
 
 export default StudentDashboard;

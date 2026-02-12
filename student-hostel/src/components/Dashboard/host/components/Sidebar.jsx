@@ -1,6 +1,39 @@
 import { NavLink } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const HostSidebar = ({ menuItems = [], userType = "host" }) => {
+  const { user } = useSelector((state) => state.auth);
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name.charAt(0)}${user.last_name.charAt(0)}`.toUpperCase();
+    }
+    if (user?.first_name) {
+      return user.first_name.substring(0, 2).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    // Fallback to role-based initials
+    return userType === "host" ? "HO" : "AD";
+  };
+
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user?.first_name) {
+      return user.first_name;
+    }
+    if (user?.email) {
+      return user.email.split("@")[0];
+    }
+    // Fallback to role-based name
+    return userType === "host" ? "Host User" : "Admin User";
+  };
+
   const getIcon = (iconName) => {
     const icons = {
       LayoutDashboard: "📊",
@@ -51,9 +84,11 @@ const HostSidebar = ({ menuItems = [], userType = "host" }) => {
 
       <div style={styles.footer}>
         <div style={styles.userInfo}>
-          <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>HO</div>
+          <div style={{ ...styles.userAvatar, backgroundColor: roleColor }}>
+            {getUserInitials()}
+          </div>
           <div style={styles.userText}>
-            <span style={styles.userName}>Host User</span>
+            <span style={styles.userName}>{getUserDisplayName()}</span>
             <span style={styles.userRole}>Property Host</span>
           </div>
         </div>

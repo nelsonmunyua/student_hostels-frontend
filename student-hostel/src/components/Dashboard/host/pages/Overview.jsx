@@ -13,6 +13,38 @@ import {
 } from "lucide-react";
 import hostApi from "../../../../api/hostApi";
 
+// Helper function to format time ago
+const formatTimeAgo = (dateString) => {
+  if (!dateString) return "Recently";
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return "Just now";
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  return date.toLocaleDateString();
+};
+
+// Helper function to calculate occupancy percentage
+const calculateOccupancy = (hostel) => {
+  if (!hostel) return 0;
+  
+  const totalRooms = hostel.total_rooms || hostel.rooms?.length || 0;
+  if (totalRooms === 0) return 0;
+  
+  // If API provides occupancy directly, use it
+  if (hostel.occupancy_rate !== undefined) {
+    return Math.round(hostel.occupancy_rate * 100);
+  }
+  
+  // Calculate from bookings
+  const occupiedRooms = hostel.occupied_rooms || hostel.bookings?.length || 0;
+  return Math.round((occupiedRooms / totalRooms) * 100);
+};
+
 const HostOverview = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
@@ -30,16 +62,22 @@ const HostOverview = () => {
   });
   const [recentBookings, setRecentBookings] = useState([]);
   const [recentReviews, setRecentReviews] = useState([]);
+  const [listings, setListings] = useState([]);
 
   // Fetch dashboard data from API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const data = await hostApi.getDashboard();
-        setStats(data.stats);
-        setRecentBookings(data.recent_bookings || []);
-        setRecentReviews(data.recent_reviews || []);
+        const [dashboardData, listingsData] = await Promise.all([
+          hostApi.getDashboard(),
+          hostApi.getListings()
+        ]);
+        
+        setStats(dashboardData.stats || {});
+        setRecentBookings(dashboardData.recent_bookings || []);
+        setRecentReviews(dashboardData.recent_reviews || []);
+        setListings(listingsData || []);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         // Keep default values on error
@@ -71,7 +109,7 @@ const HostOverview = () => {
     },
     {
       label: "Active Bookings",
-      value: loading ? "..." : ((stats.active_hostels || 0) > 0 ? (stats.total_rooms || 0) : "0").toString(),
+      value: loading ? "..." : (stats.active_bookings || 0).toString(),
       change: "+23%",
       icon: Users,
       color: "#7c3aed",
@@ -87,35 +125,27 @@ const HostOverview = () => {
     },
   ];
 
-  // Mock data for recent activity (in real app, fetch from API)
-  const recentActivity = [
-    {
-      id: 1,
-      user: "John Doe",
-      action: "Booked a room",
-      hostel: "University View Hostel",
-      time: "2 hours ago",
-      type: "booking",
-    },
-    {
-      id: 2,
-      user: "Jane Smith",
-      action: "Left a review",
-      hostel: "Central Student Living",
-      time: "5 hours ago",
-      type: "review",
-    },
-    {
-      id: 3,
-      user: "Mike Johnson",
-      action: "Sent message",
-      hostel: "-",
-      time: "1 day ago",
-      type: "message",
-    },
-  ];
+  // Transform recentBookings to activity format for display
+  const recentActivity = recentBookings.map((booking) => ({
+    id: booking.id || Math.random(),
+    user: booking.student_name || booking.user_name || "Student",
+    action: booking.status === "confirmed" ? "Booked a room" : 
+            booking.status === "pending" ? "Requested booking" :
+            booking.status === "completed" ? "Completed stay" :
+            booking.status === "cancelled" ? "Cancelled booking" : "Made a booking",
+    hostel: booking.accommodation_title || booking.hostel_name || "-",
+    time: formatTimeAgo(booking.created_at || booking.date),
+    type: "booking",
+  }));
 
-  // Mock data for quick actions
+  // Get popular hostels from listings with occupancy calculation
+  const popularHostels = listings.slice(0, 4).map((hostel) => ({
+    name: hostel.name || hostel.title,
+    rooms: hostel.total_rooms || hostel.rooms?.length || 0,
+    occupancy: calculateOccupancy(hostel),
+  }));
+
+  // Quick actions - static UI actions
   const quickActions = [
     {
       label: "Add New Listing",
@@ -240,47 +270,57 @@ const HostOverview = () => {
             </button>
           </div>
           <div style={styles.activityList}>
-            {recentActivity.map((activity) => (
-              <div key={activity.id} style={styles.activityItem}>
-                <div style={styles.activityIconWrapper}>
-                  <div
-                    style={{
-                      ...styles.activityIcon,
-                      backgroundColor:
-                        activity.type === "booking"
-                          ? "#f0f9ff"
-                          : activity.type === "review"
-                            ? "#f5f3ff"
-                            : activity.type === "registration"
-                              ? "#ecfdf5"
-                              : "#fef3c7",
-                    }}
-                  >
-                    <Activity
-                      size={16}
-                      color={
-                        activity.type === "booking"
-                          ? "#0369a1"
-                          : activity.type === "review"
-                            ? "#7c3aed"
-                            : activity.type === "registration"
-                              ? "#059669"
-                              : "#d97706"
-                      }
-                    />
+            {recentActivity.length > 0 ? (
+              recentActivity.map((activity) => (
+                <div key={activity.id} style={styles.activityItem}>
+                  <div style={styles.activityIconWrapper}>
+                    <div
+                      style={{
+                        ...styles.activityIcon,
+                        backgroundColor:
+                          activity.type === "booking"
+                            ? "#f0f9ff"
+                            : activity.type === "review"
+                              ? "#f5f3ff"
+                              : activity.type === "registration"
+                                ? "#ecfdf5"
+                                : "#fef3c7",
+                      }}
+                    >
+                      <Activity
+                        size={16}
+                        color={
+                          activity.type === "booking"
+                            ? "#0369a1"
+                            : activity.type === "review"
+                              ? "#7c3aed"
+                              : activity.type === "registration"
+                                ? "#059669"
+                                : "#d97706"
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div style={styles.activityContent}>
+                    <p style={styles.activityText}>
+                      <strong>{activity.user}</strong> {activity.action}
+                    </p>
+                    {activity.hostel !== "-" && (
+                      <span style={styles.activityHostel}>{activity.hostel}</span>
+                    )}
+                    <span style={styles.activityTime}>{activity.time}</span>
                   </div>
                 </div>
-                <div style={styles.activityContent}>
-                  <p style={styles.activityText}>
-                    <strong>{activity.user}</strong> {activity.action}
-                  </p>
-                  {activity.hostel !== "-" && (
-                    <span style={styles.activityHostel}>{activity.hostel}</span>
-                  )}
-                  <span style={styles.activityTime}>{activity.time}</span>
-                </div>
+              ))
+            ) : (
+              <div style={styles.emptyState}>
+                <Activity size={48} color="#d1d5db" />
+                <p style={styles.emptyStateText}>No recent activity</p>
+                <p style={styles.emptyStateSubtext}>
+                  New bookings and reviews will appear here
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -321,36 +361,41 @@ const HostOverview = () => {
             <h2 style={styles.cardTitle}>Popular Hostels</h2>
           </div>
           <div style={styles.hostelList}>
-            {[
-              { name: "University View", rooms: 45, occupancy: 92 },
-              { name: "Central Student Living", rooms: 38, occupancy: 87 },
-              { name: "Campus Edge", rooms: 52, occupancy: 78 },
-              { name: "Student Haven", rooms: 30, occupancy: 95 },
-            ].map((hostel, index) => (
-              <div key={index} style={styles.hostelItem}>
-                <div>
-                  <div style={styles.hostelName}>{hostel.name}</div>
-                  <div style={styles.hostelRooms}>{hostel.rooms} rooms</div>
-                </div>
-                <div style={styles.occupancyWrapper}>
-                  <div style={styles.occupancyBar}>
-                    <div
-                      style={{
-                        ...styles.occupancyFill,
-                        width: `${hostel.occupancy}%`,
-                        backgroundColor:
-                          hostel.occupancy > 90
-                            ? "#059669"
-                            : hostel.occupancy > 80
-                              ? "#0369a1"
-                              : "#d97706",
-                      }}
-                    />
+            {popularHostels.length > 0 ? (
+              popularHostels.map((hostel, index) => (
+                <div key={index} style={styles.hostelItem}>
+                  <div>
+                    <div style={styles.hostelName}>{hostel.name}</div>
+                    <div style={styles.hostelRooms}>{hostel.rooms} rooms</div>
                   </div>
-                  <span style={styles.occupancyText}>{hostel.occupancy}%</span>
+                  <div style={styles.occupancyWrapper}>
+                    <div style={styles.occupancyBar}>
+                      <div
+                        style={{
+                          ...styles.occupancyFill,
+                          width: `${hostel.occupancy}%`,
+                          backgroundColor:
+                            hostel.occupancy > 90
+                              ? "#059669"
+                              : hostel.occupancy > 80
+                                ? "#0369a1"
+                                : "#d97706",
+                        }}
+                      />
+                    </div>
+                    <span style={styles.occupancyText}>{hostel.occupancy}%</span>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div style={styles.emptyState}>
+                <Home size={48} color="#d1d5db" />
+                <p style={styles.emptyStateText}>No hostels yet</p>
+                <p style={styles.emptyStateSubtext}>
+                  Add your first listing to get started
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -430,21 +475,26 @@ const styles = {
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
     border: "1px solid #e5e7eb",
   },
-  statIconWrapper: {
+  statHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  statIcon: {
     width: "48px",
     height: "48px",
     borderRadius: "12px",
-    backgroundColor: "#f0f9ff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   },
-  statIcon: {
-    fontSize: "24px",
-  },
-  statInfo: {
-    display: "flex",
-    flexDirection: "column",
+  statChange: {
+    fontSize: "12px",
+    fontWeight: 600,
+    color: "#059669",
+    backgroundColor: "#ecfdf5",
+    padding: "2px 8px",
+    borderRadius: "12px",
   },
   statValue: {
     fontSize: "28px",
@@ -645,6 +695,24 @@ const styles = {
     color: "#059669",
     fontWeight: 600,
     fontSize: "14px",
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "32px 16px",
+    textAlign: "center",
+  },
+  emptyStateText: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#64748b",
+    marginTop: "12px",
+  },
+  emptyStateSubtext: {
+    fontSize: "12px",
+    color: "#9ca3af",
+    marginTop: "4px",
   },
 };
 
