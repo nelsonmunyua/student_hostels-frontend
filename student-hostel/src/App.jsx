@@ -29,6 +29,7 @@ import Accommodations from "./components/Dashboard/admin/pages/Accommodations";
 import Bookings from "./components/Dashboard/admin/pages/Bookings";
 import Reviews from "./components/Dashboard/admin/pages/Reviews";
 import Settings from "./components/Dashboard/admin/pages/Settings";
+import AdminSupport from "./components/Dashboard/admin/pages/Support";
 import AdminPayments from "./components/Dashboard/admin/pages/Payments";
 
 // Admin Analytics page import
@@ -171,8 +172,7 @@ function App() {
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="analytics" element={<HostAnalytics />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="support" element={<AdminSupport />} />
       </Route>
 
       {/* Redirect legacy /dashboard route to /student/dashboard */}

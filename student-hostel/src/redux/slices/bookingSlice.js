@@ -12,6 +12,20 @@ import {
   rejectBooking,
 } from './Thunks/bookingThunks';
 
+// Re-export thunk actions for convenience
+export {
+  fetchBookings,
+  fetchBookingById,
+  createBooking,
+  cancelBooking,
+  checkAvailability,
+  calculateBookingPrice,
+  fetchStudentBookings,
+  fetchHostBookings,
+  acceptBooking,
+  rejectBooking,
+};
+
 const initialState = {
   bookings: [],
   currentBooking: null,

@@ -14,6 +14,7 @@ const AdminSidebar = ({ menuItems = [], userType = "admin" }) => {
       Users: "👥",
       BarChart3: "📈",
       Settings: "⚙️",
+      MessageSquare: "💬",
     };
     return icons[iconName] || "📄";
   };
