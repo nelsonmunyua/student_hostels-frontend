@@ -77,7 +77,7 @@ const HostOverview = () => {
         setStats(dashboardData.stats || {});
         setRecentBookings(dashboardData.recent_bookings || []);
         setRecentReviews(dashboardData.recent_reviews || []);
-        setListings(listingsData || []);
+        setListings(listingsData.hostels || []);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         // Keep default values on error
