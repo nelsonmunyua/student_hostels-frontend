@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+  import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 /**
  * Login user thunk - Uses real backend API
@@ -235,7 +235,7 @@ export const refreshToken = createAsyncThunk(
     try {
       const refreshToken = localStorage.getItem("refreshToken");
       const response = await axios.post(
-        `${API_BASE_URL}/auth/refresh-token`,
+        `${API_BASE_URL}/auth/refresh`,
         {},
         { headers: refreshToken ? { Authorization: `Bearer ${refreshToken}` } : {} }
       );

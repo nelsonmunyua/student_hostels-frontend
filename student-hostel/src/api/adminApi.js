@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+  import.meta.env.VITE_API_URL || "http://localhost:5001";
 
 const adminApi = {
   /**
@@ -325,6 +325,72 @@ const adminApi = {
     const response = await axios.post(
       `${API_BASE_URL}/admin/settings`,
       settings,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    return response.data;
+  },
+
+  // ==================== SUPPORT TICKET MANAGEMENT ====================
+
+  /**
+   * Get all support tickets
+   * @param {Object} params - Query parameters
+   * @param {string} params.status - Filter by status (open, in_progress, resolved, closed)
+   * @param {number} params.page - Page number
+   * @param {number} params.limit - Items per page
+   * @returns {Promise} Response with tickets list
+   */
+  getSupportTickets: async (params = {}) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `${API_BASE_URL}/admin/support/tickets`,
+      { 
+        params,
+        headers: token ? { Authorization: `Bearer ${token}` } : {} 
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get single support ticket details
+   * @param {number} ticketId - Ticket ID
+   * @returns {Promise} Response with ticket details
+   */
+  getSupportTicketDetail: async (ticketId) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(
+      `${API_BASE_URL}/admin/support/tickets/${ticketId}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    return response.data;
+  },
+
+  /**
+   * Update support ticket status
+   * @param {number} ticketId - Ticket ID
+   * @param {string} status - New status (open, in_progress, resolved, closed)
+   * @returns {Promise} Response with updated ticket
+   */
+  updateSupportTicketStatus: async (ticketId, status) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.patch(
+      `${API_BASE_URL}/admin/support/tickets/${ticketId}`,
+      { status },
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete a support ticket
+   * @param {number} ticketId - Ticket ID
+   * @returns {Promise} Response confirming deletion
+   */
+  deleteSupportTicket: async (ticketId) => {
+    const token = localStorage.getItem("token");
+    const response = await axios.delete(
+      `${API_BASE_URL}/admin/support/tickets/${ticketId}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     );
     return response.data;

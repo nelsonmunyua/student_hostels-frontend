@@ -1,21 +1,27 @@
 import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { X, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react";
+import { X, AlertCircle, CheckCircle, Clock, XCircle, Check, MessageSquare } from "lucide-react";
 import hostApi from "../../../../api/hostApi";
+import { acceptBooking, rejectBooking } from "../../../../redux/slices/bookingSlice";
 
 const HostBookings = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  
+  // Redux state
   const { hostBookings, loading, error, successMessage } = useSelector(
     (state) => state.booking,
   );
 
+  // Local state
   const [filter, setFilter] = useState("all");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  //const [bookings, setBookings] = useState([]);
- // const [loading, setLoading] = useState(true);
- // const [error, setError] = useState(null);
+  const [localBookings, setLocalBookings] = useState([]);
+  const [localLoading, setLocalLoading] = useState(true);
+  const [localError, setLocalError] = useState(null);
+  const [localSuccess, setLocalSuccess] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -28,13 +34,13 @@ const HostBookings = () => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        setLocalLoading(true);
+        setLocalError(null);
         const data = await hostApi.getBookings();
         
         // Handle the new response format from backend
         const bookingsData = data.bookings || [];
-        setBookings(bookingsData);
+        setLocalBookings(bookingsData);
         
         // Update stats from response or calculate from bookings
         if (data.total_count !== undefined) {
@@ -57,16 +63,16 @@ const HostBookings = () => {
         }
       } catch (error) {
         console.error("Failed to fetch bookings:", error);
-        setError(error.response?.data?.message || error.message || "Failed to load bookings");
+        const errorMsg = error.response?.data?.message || error.message || "Failed to load bookings";
+        setLocalError(errorMsg);
         
         // Check for authentication errors
-        const errorMessage = error.response?.data?.message || error.message || "";
         const isAuthError = 
           error.response?.status === 401 || 
-          errorMessage.toLowerCase().includes("unauthorized") ||
-          errorMessage.toLowerCase().includes("authentication") ||
-          errorMessage.toLowerCase().includes("jwt") ||
-          errorMessage.toLowerCase().includes("token");
+          errorMsg.toLowerCase().includes("unauthorized") ||
+          errorMsg.toLowerCase().includes("authentication") ||
+          errorMsg.toLowerCase().includes("jwt") ||
+          errorMsg.toLowerCase().includes("token");
         
         if (isAuthError) {
           // Clear auth data and redirect to login
@@ -78,9 +84,9 @@ const HostBookings = () => {
         }
         
         // Set empty bookings on error
-        setBookings([]);
+        setLocalBookings([]);
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     };
 
@@ -99,12 +105,13 @@ const HostBookings = () => {
     }
   }, [error, successMessage]);
 
-  // Use Redux data only - no mock fallback
-  const bookings = hostBookings || [];
+  // Use local state data - prioritize API data over Redux
+  const bookings = localBookings.length > 0 ? localBookings : (hostBookings || []);
   const filteredBookings =
     filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
 
   const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -123,22 +130,29 @@ const HostBookings = () => {
     return colors[status] || colors.pending;
   };
 
-  const handleConfirm = async (id) => {
+  const handleViewDetails = (booking) => {
+    setSelectedBooking(booking);
+    setShowDetailsModal(true);
+  };
+
+  const handleAccept = async (booking) => {
     try {
-      await dispatch(acceptBooking(id));
-      setLocalSuccess(`Booking #${id} confirmed successfully!`);
+      await dispatch(acceptBooking(booking.id));
+      setLocalSuccess(`Booking #${booking.id} confirmed successfully!`);
       setSelectedBooking(null);
+      setShowDetailsModal(false);
     } catch (err) {
       setLocalError("Failed to confirm booking");
     }
   };
 
-  const handleReject = async (id) => {
+  const handleReject = async (booking) => {
     if (window.confirm("Are you sure you want to reject this booking?")) {
       try {
-        await dispatch(rejectBooking({ id, reason: "Rejected by host" }));
-        setLocalSuccess(`Booking #${id} rejected`);
+        await dispatch(rejectBooking({ id: booking.id, reason: "Rejected by host" }));
+        setLocalSuccess(`Booking #${booking.id} rejected`);
         setSelectedBooking(null);
+        setShowDetailsModal(false);
       } catch (err) {
         setLocalError("Failed to reject booking");
       }
@@ -150,6 +164,9 @@ const HostBookings = () => {
     .filter(b => b.status === 'confirmed' || b.status === 'completed')
     .reduce((sum, b) => sum + (b.amount || b.total_amount || 0), 0);
 
+  // Show loading state
+  const isLoading = localLoading || loading;
+
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -160,10 +177,10 @@ const HostBookings = () => {
       </div>
 
       {/* Error State */}
-      {error && (
+      {(localError || error) && (
         <div style={styles.errorState}>
           <AlertCircle size={24} style={{ color: '#dc2626' }} />
-          <span>{error}</span>
+          <span>{localError || error}</span>
           <button 
             style={styles.retryButton}
             onClick={() => window.location.reload()}
@@ -173,8 +190,16 @@ const HostBookings = () => {
         </div>
       )}
 
+      {/* Success Message */}
+      {localSuccess && (
+        <div style={styles.successState}>
+          <CheckCircle size={24} style={{ color: '#16a34a' }} />
+          <span>{localSuccess}</span>
+        </div>
+      )}
+
       {/* Loading State */}
-      {loading && (
+      {isLoading && (
         <div style={styles.loadingState}>
           <div style={styles.spinner}></div>
           <p>Loading your bookings...</p>
@@ -182,10 +207,10 @@ const HostBookings = () => {
       )}
 
       {/* Stats Cards */}
-      {!loading && !error && (
+      {!isLoading && !localError && (
         <div style={styles.statsRow}>
           <div style={styles.statCard}>
-            <div style={styles.statIcon}>
+            <div style={{ ...styles.statIcon, backgroundColor: "#f0f9ff" }}>
               <Clock size={20} style={{ color: '#0369a1' }} />
             </div>
             <div>
@@ -194,7 +219,7 @@ const HostBookings = () => {
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statIcon}>
+            <div style={{ ...styles.statIcon, backgroundColor: "#fef9c3" }}>
               <Clock size={20} style={{ color: '#d97706' }} />
             </div>
             <div>
@@ -203,7 +228,7 @@ const HostBookings = () => {
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statIcon}>
+            <div style={{ ...styles.statIcon, backgroundColor: "#dcfce7" }}>
               <CheckCircle size={20} style={{ color: '#16a34a' }} />
             </div>
             <div>
@@ -212,8 +237,8 @@ const HostBookings = () => {
             </div>
           </div>
           <div style={styles.statCard}>
-            <div style={styles.statIcon}>
-              <XCircle size={20} style={{ color: '#16a34a' }} />
+            <div style={{ ...styles.statIcon, backgroundColor: "#ecfdf5" }}>
+              <XCircle size={20} style={{ color: '#059669' }} />
             </div>
             <div>
               <span style={styles.statValue}>KES {totalRevenue.toLocaleString()}</span>
@@ -224,17 +249,17 @@ const HostBookings = () => {
       )}
 
       {/* Empty State */}
-      {!loading && !error && bookings.length === 0 && (
+      {!isLoading && !localError && bookings.length === 0 && (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>📋</div>
           <h3 style={styles.emptyTitle}>No Bookings Found</h3>
           <p style={styles.emptyText}>
-            You don&apos;t have any bookings yet. When students book your properties, 
+            You don't have any bookings yet. When students book your properties, 
             they will appear here.
           </p>
           <button 
             style={styles.emptyButton}
-            onClick={() => navigate('/host/listings')}
+            onClick={() => navigate('/host/my-listings')}
           >
             View My Listings
           </button>
@@ -242,56 +267,58 @@ const HostBookings = () => {
       )}
 
       {/* Filter Tabs */}
-      <div style={styles.filterTabs}>
-        <button
-          style={{
-            ...styles.filterTab,
-            ...(filter === "all" && styles.filterTabActive),
-          }}
-          onClick={() => setFilter("all")}
-        >
-          All ({bookings.length})
-        </button>
-        <button
-          style={{
-            ...styles.filterTab,
-            ...(filter === "pending" && styles.filterTabActive),
-          }}
-          onClick={() => setFilter("pending")}
-        >
-          Pending ({bookings.filter((b) => b.status === "pending").length})
-        </button>
-        <button
-          style={{
-            ...styles.filterTab,
-            ...(filter === "confirmed" && styles.filterTabActive),
-          }}
-          onClick={() => setFilter("confirmed")}
-        >
-          Confirmed ({bookings.filter((b) => b.status === "confirmed").length})
-        </button>
-        <button
-          style={{
-            ...styles.filterTab,
-            ...(filter === "completed" && styles.filterTabActive),
-          }}
-          onClick={() => setFilter("completed")}
-        >
-          Completed ({bookings.filter((b) => b.status === "completed").length})
-        </button>
-        <button
-          style={{
-            ...styles.filterTab,
-            ...(filter === "cancelled" && styles.filterTabActive),
-          }}
-          onClick={() => setFilter("cancelled")}
-        >
-          Cancelled ({bookings.filter((b) => b.status === "cancelled").length})
-        </button>
-      </div>
+      {!isLoading && !localError && bookings.length > 0 && (
+        <div style={styles.filterTabs}>
+          <button
+            style={{
+              ...styles.filterTab,
+              ...(filter === "all" && styles.filterTabActive),
+            }}
+            onClick={() => setFilter("all")}
+          >
+            All ({bookings.length})
+          </button>
+          <button
+            style={{
+              ...styles.filterTab,
+              ...(filter === "pending" && styles.filterTabActive),
+            }}
+            onClick={() => setFilter("pending")}
+          >
+            Pending ({bookings.filter((b) => b.status === "pending").length})
+          </button>
+          <button
+            style={{
+              ...styles.filterTab,
+              ...(filter === "confirmed" && styles.filterTabActive),
+            }}
+            onClick={() => setFilter("confirmed")}
+          >
+            Confirmed ({bookings.filter((b) => b.status === "confirmed").length})
+          </button>
+          <button
+            style={{
+              ...styles.filterTab,
+              ...(filter === "completed" && styles.filterTabActive),
+            }}
+            onClick={() => setFilter("completed")}
+          >
+            Completed ({bookings.filter((b) => b.status === "completed").length})
+          </button>
+          <button
+            style={{
+              ...styles.filterTab,
+              ...(filter === "cancelled" && styles.filterTabActive),
+            }}
+            onClick={() => setFilter("cancelled")}
+          >
+            Cancelled ({bookings.filter((b) => b.status === "cancelled").length})
+          </button>
+        </div>
+      )}
 
       {/* Bookings Table */}
-      {!loading && !error && bookings.length > 0 && (
+      {!isLoading && !localError && bookings.length > 0 && (
         <>
           <div style={styles.tableContainer}>
             <table style={styles.table}>
@@ -318,14 +345,14 @@ const HostBookings = () => {
                       <td style={styles.td}>
                         <div style={styles.guestCell}>
                           <span style={styles.guestAvatar}>
-                            {(booking.guest || "U").charAt(0).toUpperCase()}
+                            {(booking.student_name || booking.guest || "U").charAt(0).toUpperCase()}
                           </span>
-                          <span style={styles.guestName}>{booking.guest || "Unknown Guest"}</span>
+                          <span style={styles.guestName}>{booking.student_name || booking.guest || "Unknown Guest"}</span>
                         </div>
                       </td>
-                      <td style={styles.td}>{booking.property || "Unknown Property"}</td>
-                      <td style={styles.td}>{booking.checkIn || "-"}</td>
-                      <td style={styles.td}>{booking.checkOut || "-"}</td>
+                      <td style={styles.td}>{booking.hostel_name || booking.property || "Unknown Property"}</td>
+                      <td style={styles.td}>{formatDate(booking.check_in || booking.checkIn)}</td>
+                      <td style={styles.td}>{formatDate(booking.check_out || booking.checkOut)}</td>
                       <td style={styles.td}>
                         <span style={styles.amount}>KES {(booking.amount || booking.total_amount || 0).toLocaleString()}</span>
                       </td>
@@ -387,9 +414,8 @@ const HostBookings = () => {
                       <span
                         style={{
                           ...styles.arrivalBadge,
-                          ...(booking.status === "confirmed"
-                            ? styles.confirmedBadge
-                            : styles.pendingBadge),
+                          backgroundColor: booking.status === "confirmed" ? "#dcfce7" : "#fef9c3",
+                          color: booking.status === "confirmed" ? "#16a34a" : "#ca8a04",
                         }}
                       >
                         {booking.status}
@@ -397,13 +423,13 @@ const HostBookings = () => {
                     </div>
                     <div style={styles.arrivalGuest}>
                       <span style={styles.arrivalAvatar}>
-                        {(booking.guest || "U").charAt(0).toUpperCase()}
+                        {(booking.student_name || booking.guest || "U").charAt(0).toUpperCase()}
                       </span>
-                      <span style={styles.arrivalName}>{booking.guest || "Unknown Guest"}</span>
+                      <span style={styles.arrivalName}>{booking.student_name || booking.guest || "Unknown Guest"}</span>
                     </div>
-                    <div style={styles.arrivalProperty}>📍 {booking.property || "Unknown Property"}</div>
+                    <div style={styles.arrivalProperty}>📍 {booking.hostel_name || booking.property || "Unknown Property"}</div>
                     <div style={styles.arrivalDates}>
-                      📅 {booking.checkIn || "-"} → {booking.checkOut || "-"}
+                      📅 {formatDate(booking.check_in || booking.checkIn)} → {formatDate(booking.check_out || booking.checkOut)}
                     </div>
                     <div style={styles.arrivalFooter}>
                       <span style={styles.arrivalAmount}>KES {(booking.amount || booking.total_amount || 0).toLocaleString()}</span>
@@ -422,38 +448,46 @@ const HostBookings = () => {
       )}
 
       {/* Booking Detail Modal */}
-      {selectedBooking && (
-        <div style={styles.modal} onClick={() => setSelectedBooking(null)}>
+      {selectedBooking && showDetailsModal && (
+        <div style={styles.modal} onClick={() => setShowDetailsModal(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>Booking Details</h2>
               <button
                 style={styles.closeBtn}
-                onClick={() => setSelectedBooking(null)}
+                onClick={() => setShowDetailsModal(false)}
               >
                 <X size={20} />
               </button>
             </div>
-            <div style={styles.modalContent}>
+            <div style={styles.modalBody}>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Booking ID:</span>
                 <span style={styles.detailValue}>#{selectedBooking.id}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Guest:</span>
-                <span style={styles.detailValue}>{selectedBooking.guest || "Unknown Guest"}</span>
+                <span style={styles.detailValue}>{selectedBooking.student_name || selectedBooking.guest || "Unknown Guest"}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Email:</span>
+                <span style={styles.detailValue}>{selectedBooking.student_email || "N/A"}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Property:</span>
-                <span style={styles.detailValue}>{selectedBooking.property || "Unknown Property"}</span>
+                <span style={styles.detailValue}>{selectedBooking.hostel_name || selectedBooking.property || "Unknown Property"}</span>
+              </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Room Type:</span>
+                <span style={styles.detailValue}>{selectedBooking.room_type || "N/A"}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Check-in:</span>
-                <span style={styles.detailValue}>{selectedBooking.checkIn || "-"}</span>
+                <span style={styles.detailValue}>{formatDate(selectedBooking.check_in || selectedBooking.checkIn)}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Check-out:</span>
-                <span style={styles.detailValue}>{selectedBooking.checkOut || "-"}</span>
+                <span style={styles.detailValue}>{formatDate(selectedBooking.check_out || selectedBooking.checkOut)}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Amount:</span>
@@ -485,20 +519,14 @@ const HostBookings = () => {
                   <>
                     <button
                       style={styles.confirmButton}
-                      onClick={() => {
-                        handleConfirm(selectedBooking.id);
-                        setSelectedBooking(null);
-                      }}
+                      onClick={() => handleAccept(selectedBooking)}
                     >
                       <Check size={18} />
                       Confirm Booking
                     </button>
                     <button
                       style={styles.rejectButton}
-                      onClick={() => {
-                        handleReject(selectedBooking.id);
-                        setSelectedBooking(null);
-                      }}
+                      onClick={() => handleReject(selectedBooking)}
                     >
                       <X size={18} />
                       Reject Booking
@@ -528,23 +556,9 @@ const HostBookings = () => {
   );
 };
 
-// Clock icon component
-const ClockIcon = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="#ca8a04"
-    strokeWidth="2"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
 const styles = {
   container: {
+    animation: "fadeIn 0.4s ease-out",
     padding: "32px",
   },
   header: {
@@ -569,6 +583,16 @@ const styles = {
     borderRadius: "8px",
     marginBottom: "24px",
     color: "#dc2626",
+  },
+  successState: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: "#dcfce7",
+    borderRadius: "8px",
+    marginBottom: "24px",
+    color: "#16a34a",
   },
   retryButton: {
     marginLeft: "auto",
@@ -614,7 +638,6 @@ const styles = {
     width: "48px",
     height: "48px",
     borderRadius: "12px",
-    backgroundColor: "#f0f9ff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -653,19 +676,12 @@ const styles = {
     backgroundColor: "#eff6ff",
     color: "#3b82f6",
   },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "60px 20px",
-    gap: "16px",
-  },
   tableContainer: {
     backgroundColor: "#fff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
     overflow: "hidden",
+    marginBottom: "32px",
   },
   table: {
     width: "100%",
@@ -684,46 +700,41 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
   },
-  tr: {
+  tableRow: {
     borderBottom: "1px solid #f1f5f9",
   },
   td: {
     padding: "16px",
     verticalAlign: "middle",
   },
-  guestInfo: {
+  bookingId: {
+    fontWeight: 600,
+    color: "#0369a1",
+  },
+  guestCell: {
     display: "flex",
-    flexDirection: "column",
-    gap: "2px",
+    alignItems: "center",
+    gap: "12px",
+  },
+  guestAvatar: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    backgroundColor: "#e0f2fe",
+    color: "#0369a1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 600,
+    fontSize: "14px",
   },
   guestName: {
-    fontWeight: 600,
-    color: "#1e293b",
-  },
-  guestEmail: {
-    fontSize: "13px",
-    color: "#64748b",
-  },
-  propertyName: {
     fontWeight: 500,
     color: "#374151",
   },
-  dateInfo: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "2px",
-    fontSize: "13px",
-    color: "#64748b",
-  },
-  guests: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    color: "#64748b",
-  },
-  price: {
+  amount: {
     fontWeight: 600,
-    color: "#1e293b",
+    color: "#059669",
   },
   statusBadge: {
     display: "inline-block",
@@ -736,40 +747,127 @@ const styles = {
     display: "flex",
     gap: "8px",
   },
-  actionBtn: {
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e5e7eb",
+  viewBtn: {
+    padding: "6px 12px",
+    backgroundColor: "#f0f9ff",
+    color: "#0369a1",
+    border: "1px solid #bae6fd",
     borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
     cursor: "pointer",
-    color: "#64748b",
-    transition: "all 0.2s",
   },
-  confirmBtn: {
+  acceptBtn: {
+    padding: "6px 12px",
     backgroundColor: "#dcfce7",
-    borderColor: "#bbf7d0",
     color: "#16a34a",
+    border: "1px solid #bbf7d0",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
+    cursor: "pointer",
   },
   rejectBtn: {
+    padding: "6px 12px",
     backgroundColor: "#fee2e2",
-    borderColor: "#fecaca",
     color: "#dc2626",
+    border: "1px solid #fecaca",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
+    cursor: "pointer",
   },
-  emptyState: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "60px",
+  section: {
+    marginTop: "32px",
+  },
+  sectionTitle: {
+    fontSize: "20px",
+    fontWeight: 600,
+    color: "#1e293b",
+    marginBottom: "16px",
+  },
+  arrivalsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "16px",
+  },
+  arrivalCard: {
     backgroundColor: "#fff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
+    padding: "20px",
   },
-  modalOverlay: {
+  arrivalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "12px",
+  },
+  arrivalId: {
+    fontWeight: 600,
+    color: "#0369a1",
+  },
+  arrivalBadge: {
+    padding: "4px 8px",
+    borderRadius: "12px",
+    fontSize: "11px",
+    fontWeight: 600,
+    textTransform: "uppercase",
+  },
+  arrivalGuest: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "8px",
+  },
+  arrivalAvatar: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "#e0f2fe",
+    color: "#0369a1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 600,
+    fontSize: "13px",
+  },
+  arrivalName: {
+    fontWeight: 500,
+    color: "#374151",
+  },
+  arrivalProperty: {
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "4px",
+  },
+  arrivalDates: {
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "12px",
+  },
+  arrivalFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: "12px",
+    borderTop: "1px solid #f1f5f9",
+  },
+  arrivalAmount: {
+    fontWeight: 600,
+    color: "#059669",
+  },
+  arrivalBtn: {
+    padding: "6px 12px",
+    backgroundColor: "#f0f9ff",
+    color: "#0369a1",
+    border: "1px solid #bae6fd",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
+    cursor: "pointer",
+  },
+  modal: {
     position: "fixed",
     top: 0,
     left: 0,
@@ -807,18 +905,35 @@ const styles = {
     border: "none",
     cursor: "pointer",
     color: "#64748b",
+    padding: "4px",
   },
   modalBody: {
     padding: "24px",
   },
+  detailRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "8px 0",
+    borderBottom: "1px solid #f1f5f9",
+  },
+  detailLabel: {
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  detailValue: {
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#1e293b",
+  },
   detailSection: {
-    marginBottom: "24px",
+    marginTop: "16px",
+    marginBottom: "16px",
   },
   detailTitle: {
     fontSize: "14px",
     fontWeight: 600,
     color: "#374151",
-    marginBottom: "12px",
+    marginBottom: "8px",
   },
   message: {
     padding: "12px",
@@ -872,6 +987,41 @@ const styles = {
     fontWeight: 500,
     cursor: "pointer",
     marginLeft: "auto",
+  },
+  emptyState: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e5e7eb",
+  },
+  emptyIcon: {
+    fontSize: "48px",
+    marginBottom: "16px",
+  },
+  emptyTitle: {
+    fontSize: "20px",
+    fontWeight: 600,
+    color: "#1e293b",
+    marginBottom: "8px",
+  },
+  emptyText: {
+    fontSize: "14px",
+    color: "#64748b",
+    marginBottom: "24px",
+  },
+  emptyButton: {
+    padding: "12px 24px",
+    backgroundColor: "#0369a1",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
   },
 };
 
