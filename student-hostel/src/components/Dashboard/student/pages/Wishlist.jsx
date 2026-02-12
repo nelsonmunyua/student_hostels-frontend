@@ -56,7 +56,7 @@ const StudentWishlist = () => {
 
   // Navigate to accommodation details
   const handleViewDetails = (hostelId) => {
-    navigate(`/student/accommodations/${hostelId}`);
+    navigate(`/accommodations/${hostelId}`);
   };
 
   // Navigate to browse accommodations

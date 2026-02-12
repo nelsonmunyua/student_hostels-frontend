@@ -37,6 +37,8 @@ const FindAccommodation = () => {
     has_next: false,
     has_prev: false,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Filters state
   const [filters, setFilters] = useState({

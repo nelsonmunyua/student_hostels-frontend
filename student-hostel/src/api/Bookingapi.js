@@ -42,7 +42,7 @@ const bookingApi = {
    * @returns {Promise} Response with student bookings
    */
   getStudentBookings: async (params = {}) => {
-    const response = await axios.get("/bookings/my-bookings", { params });
+    const response = await axios.get("/bookings", { params });
     return response.data;
   },
 

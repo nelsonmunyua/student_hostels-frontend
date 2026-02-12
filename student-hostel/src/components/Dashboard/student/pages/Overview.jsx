@@ -70,7 +70,7 @@ const StudentOverview = () => {
         alert("Redirecting to browse accommodations... (Demo)");
         break;
       case "wishlist":
-        navigate("/dashboard/wishlist");
+        navigate("/student/wishlist");
         break;
       case "review":
         alert("Redirecting to reviews page... (Demo)");

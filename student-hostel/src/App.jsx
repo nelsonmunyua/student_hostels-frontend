@@ -171,8 +171,6 @@ function App() {
         <Route path="reviews" element={<Reviews />} />
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="analytics" element={<HostAnalytics />} />
-        <Route path="settings" element={<Settings />} />
       </Route>
 
       {/* Redirect legacy /dashboard route to /student/dashboard */}
