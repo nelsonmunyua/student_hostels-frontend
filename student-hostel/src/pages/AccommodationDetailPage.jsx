@@ -4,12 +4,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { MapPin, Users, Star, Heart, Share2, ChevronLeft, Loader } from 'lucide-react';
 import studentApi from '../api/studentApi';
 import { toggleWishlist } from '../redux/slices/Thunks/wishlistThunks';
-import { createBooking } from '../redux/slices/Thunks/bookingThunks';
+import { createBooking, fetchBookingById } from '../redux/slices/Thunks/bookingThunks';
+import { fetchReviewsByAccommodation } from '../redux/slices/Thunks/reviewThunks';
 import { clearCurrentBooking } from '../redux/slices/bookingSlice';
 import ReviewList from '../components/review/ReviewList';
+import ReviewForm from '../components/review/ReviewForm';
 import BookingForm from '../components/booking/BookingForm';
 
 const AccommodationDetailPage = () => {
+  // Default placeholder image
+  const DEFAULT_PLACEHOLDER = "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80";
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -22,6 +26,7 @@ const AccommodationDetailPage = () => {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   
   const isInWishlist = wishlistItems.some(item => item.hostel_id === parseInt(id));
 

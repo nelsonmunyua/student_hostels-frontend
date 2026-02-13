@@ -12,7 +12,7 @@ const paymentApi = {
    * @returns {Promise} Response with client secret
    */
   getStripeClientSecret: async (data) => {
-    const response = await axios.post("/payments/stripe/create-intent", data);
+    const response = await axios.post("/payments/stripe/client-secret", data);
     return response.data;
   },
 
@@ -22,7 +22,7 @@ const paymentApi = {
    * @returns {Promise} Response with payment result
    */
   processStripePayment: async (data) => {
-    const response = await axios.post("/payments/stripe/process", data);
+    const response = await axios.post("/payments/stripe/confirm", data);
     return response.data;
   },
 
@@ -42,7 +42,7 @@ const paymentApi = {
    * @returns {Promise} Response with payment request
    */
   initiateMpesaPayment: async (data) => {
-    const response = await axios.post("/payments/mpesa/stkpush", data);
+    const response = await axios.post("/payments/mpesa", data);
     return response.data;
   },
 
@@ -138,11 +138,12 @@ const paymentApi = {
   },
 
   /**
-   * Get wallet balance (Host)
-   * @returns {Promise} Response with wallet balance
+   * Process card payment
+   * @param {Object} data - Payment data
+   * @returns {Promise} Response with payment result
    */
-  getWalletBalance: async () => {
-    const response = await axios.get("/payments/wallet-balance");
+  processCardPayment: async (data) => {
+    const response = await axios.post("/payments/card", data);
     return response.data;
   },
 
