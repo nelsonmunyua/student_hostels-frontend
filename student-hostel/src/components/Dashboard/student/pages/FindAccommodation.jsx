@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Home,
   ExternalLink,
+  Users,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import studentApi from "../../../../api/studentApi";
@@ -46,6 +47,7 @@ const FindAccommodation = () => {
     min_price: "",
     max_price: "",
     room_type: "",
+    status: "all",
   });
   const [showFilters, setShowFilters] = useState(true);
 
@@ -56,9 +58,271 @@ const FindAccommodation = () => {
   // Debounce search
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Mock data for fallback - using Unsplash images
+  const mockAccommodations = [
+    {
+      id: 1,
+      name: "University View Hostel",
+      location: "123 Campus Drive",
+      type: "Hostel",
+      rooms: 45,
+      capacity: 180,
+      price: 450,
+      rating: 4.8,
+      status: "active",
+      image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
+      host: "John Smith",
+      room_type: "single",
+      amenities: ["wifi", "security", "study", "parking"],
+      available_rooms: 5,
+      is_verified: true,
+      is_in_wishlist: false,
+      review_count: 28,
+    },
+    {
+      id: 2,
+      name: "Central Student Living",
+      location: "456 Main Street",
+      type: "Apartment",
+      rooms: 38,
+      capacity: 152,
+      price: 520,
+      rating: 4.6,
+      status: "active",
+      image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+      host: "Sarah Johnson",
+      room_type: "bed_sitter",
+      amenities: ["wifi", "breakfast", "security"],
+      available_rooms: 3,
+      is_verified: true,
+      is_in_wishlist: true,
+      review_count: 15,
+    },
+    {
+      id: 3,
+      name: "Campus Edge Apartments",
+      location: "789 University Ave",
+      type: "Apartment",
+      rooms: 52,
+      capacity: 208,
+      price: 380,
+      rating: 4.5,
+      status: "active",
+      image: "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800",
+      host: "Mike Brown",
+      room_type: "double",
+      amenities: ["wifi", "parking", "security"],
+      available_rooms: 8,
+      is_verified: false,
+      is_in_wishlist: false,
+      review_count: 42,
+    },
+    {
+      id: 4,
+      name: "Student Haven",
+      location: "321 College Road",
+      type: "Hostel",
+      rooms: 30,
+      capacity: 120,
+      price: 350,
+      rating: 4.7,
+      status: "pending",
+      image: "https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=800",
+      host: "Emily Davis",
+      room_type: "studio",
+      amenities: ["wifi", "security", "study"],
+      available_rooms: 2,
+      is_verified: true,
+      is_in_wishlist: false,
+      review_count: 12,
+    },
+    {
+      id: 5,
+      name: "The Scholar's Residence",
+      location: "555 Academic Way",
+      type: "Hostel",
+      rooms: 25,
+      capacity: 100,
+      price: 600,
+      rating: 4.9,
+      status: "active",
+      image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
+      host: "David Wilson",
+      room_type: "single",
+      amenities: ["wifi", "security", "study", "parking", "gym"],
+      available_rooms: 6,
+      is_verified: true,
+      is_in_wishlist: false,
+      review_count: 20,
+    },
+    {
+      id: 6,
+      name: "Dormitory Plus",
+      location: "888 Student Lane",
+      type: "Hostel",
+      rooms: 60,
+      capacity: 240,
+      price: 320,
+      rating: 4.3,
+      status: "inactive",
+      image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+      host: "Lisa Anderson",
+      room_type: "double",
+      amenities: ["wifi", "security"],
+      available_rooms: 4,
+      is_verified: true,
+      is_in_wishlist: true,
+      review_count: 18,
+    },
+  ];
+
+  // Helper to get image URL from accommodation
+  const getImageUrl = (acc) => {
+    // If API data with images array
+    if (acc.images && Array.isArray(acc.images) && acc.images.length > 0) {
+      return acc.images[0];
+    }
+    // If API data with single image field
+    if (acc.image) {
+      return acc.image;
+    }
+    // Fallback to Unsplash images based on ID
+    const imageMap = {
+      1: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800',
+      2: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+      3: 'https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=800',
+      4: 'https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=800',
+      5: 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800',
+      6: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+    };
+    return imageMap[acc.id] || 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
+  };
+
+  // Helper to get accommodation type
+  const getType = (acc) => {
+    if (acc.type) return acc.type;
+    if (acc.room_type) return acc.room_type;
+    if (acc.amenities?.type) return acc.amenities.type;
+    return 'Hostel';
+  };
+
+  // Helper to get accommodation status
+  const getStatus = (acc) => {
+    if (acc.status) return acc.status;
+    return 'active';
+  };
+
+  // Helper to get capacity
+  const getCapacity = (acc) => {
+    if (acc.capacity) return acc.capacity;
+    if (acc.amenities?.capacity) return acc.amenities.capacity;
+    if (acc.available_rooms) return acc.available_rooms;
+    return 0;
+  };
+
+  // Helper to get price
+  const getPrice = (acc) => {
+    if (acc.price) return acc.price;
+    if (acc.amenities?.price) return acc.amenities.price;
+    return 0;
+  };
+
+  // Helper to get rating
+  const getRating = (acc) => {
+    if (acc.rating) return acc.rating;
+    return 0;
+  };
+
+  // Helper to get review count
+  const getReviewCount = (acc) => {
+    if (acc.review_count) return acc.review_count;
+    return 0;
+  };
+
+  // Helper to get host name
+  const getHostName = (acc) => {
+    if (acc.host) return acc.host;
+    if (acc.host_name) return acc.host_name;
+    if (acc.host_id) return `Host #${acc.host_id}`;
+    return 'Unknown Host';
+  };
+
+  // Helper to get number of rooms
+  const getRooms = (acc) => {
+    if (acc.rooms) return acc.rooms;
+    if (acc.amenities?.rooms) return acc.amenities.rooms;
+    return 0;
+  };
+
+  // Helper to get available rooms
+  const getAvailableRooms = (acc) => {
+    if (acc.available_rooms !== undefined) return acc.available_rooms;
+    if (acc.rooms) return acc.rooms;
+    return 0;
+  };
+
+  // Helper to get amenities
+  const getAmenities = (acc) => {
+    if (acc.amenities && Array.isArray(acc.amenities)) return acc.amenities;
+    return [];
+  };
+
+  // Helper to check if verified
+  const getIsVerified = (acc) => {
+    if (acc.is_verified !== undefined) return acc.is_verified;
+    return false;
+  };
+
+  // Get status badge
+  const getStatusBadge = (status) => {
+    const statusStyles = {
+      active: {
+        backgroundColor: "#ecfdf5",
+        color: "#059669",
+      },
+      pending: {
+        backgroundColor: "#fffbeb",
+        color: "#d97706",
+      },
+      inactive: {
+        backgroundColor: "#fef2f2",
+        color: "#dc2626",
+      },
+    };
+
+    // Handle undefined status - default to active
+    const safeStatus = status || "active";
+    const style = statusStyles[safeStatus] || statusStyles.active;
+
+    return (
+      <span
+        style={{
+          ...styles.statusBadge,
+          backgroundColor: style.backgroundColor,
+          color: style.color,
+        }}
+      >
+        {safeStatus.charAt(0).toUpperCase() + safeStatus.slice(1)}
+      </span>
+    );
+  };
+
+  // Use mock data if API data is empty or on error
+  const displayAccommodations = accommodations.length > 0 ? accommodations : mockAccommodations;
+
+  // Filter accommodations based on status
+  const filteredAccommodations = displayAccommodations.filter((acc) => {
+    const matchesStatus = filters.status === "all" || getStatus(acc) === filters.status;
+    const matchesSearch = !searchTerm || 
+      acc.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      acc.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
   // Fetch accommodations
   const fetchAccommodations = useCallback(async () => {
     try {
+      setLoading(true);
       const params = {
         page: pagination.page,
         limit: 12,
@@ -69,6 +333,7 @@ const FindAccommodation = () => {
       if (filters.min_price) params.min_price = parseInt(filters.min_price);
       if (filters.max_price) params.max_price = parseInt(filters.max_price);
       if (filters.room_type) params.room_type = filters.room_type;
+      if (filters.status && filters.status !== "all") params.status = filters.status;
 
       const response = await studentApi.getAccommodations(params);
 
@@ -80,6 +345,7 @@ const FindAccommodation = () => {
         has_next: response.has_next || false,
         has_prev: response.has_prev || false,
       });
+      setError(null);
 
       // Update wishlist IDs from response
       const wishlistIds = response.accommodations
@@ -88,11 +354,9 @@ const FindAccommodation = () => {
       setWishlistIds(new Set(wishlistIds));
     } catch (err) {
       console.error("Error fetching accommodations:", err);
-      setError("Failed to load accommodations. Please try again.");
-      // Mock data for demo
-      const mockData = getMockAccommodations();
-      setAccommodations(mockData);
-      setPagination({ page: 1, pages: 1, total: mockData.length, has_next: false, has_prev: false });
+      setError("Failed to load accommodations. Using demo data.");
+      // Keep mock data on error
+      setAccommodations([]);
     } finally {
       setLoading(false);
     }
@@ -106,12 +370,6 @@ const FindAccommodation = () => {
     return () => clearTimeout(debounceTimer);
   }, [fetchAccommodations]);
 
-  // Handle filter changes
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
   // Clear all filters
   const clearFilters = () => {
     setFilters({
@@ -119,8 +377,15 @@ const FindAccommodation = () => {
       min_price: "",
       max_price: "",
       room_type: "",
+      status: "all",
     });
     setSearchTerm("");
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -257,6 +522,50 @@ const FindAccommodation = () => {
         {/* Expandable Filters */}
         {showFilters && (
           <div style={styles.filtersPanel}>
+            {/* Status Filter Buttons */}
+            <div style={styles.statusFilterButtons}>
+              <button
+                style={{
+                  ...styles.statusFilterBtn,
+                  backgroundColor: filters.status === "all" ? "#0369a1" : "#f1f5f9",
+                  color: filters.status === "all" ? "#ffffff" : "#64748b",
+                }}
+                onClick={() => handleFilterChange("status", "all")}
+              >
+                All
+              </button>
+              <button
+                style={{
+                  ...styles.statusFilterBtn,
+                  backgroundColor: filters.status === "active" ? "#0369a1" : "#f1f5f9",
+                  color: filters.status === "active" ? "#ffffff" : "#64748b",
+                }}
+                onClick={() => handleFilterChange("status", "active")}
+              >
+                Active
+              </button>
+              <button
+                style={{
+                  ...styles.statusFilterBtn,
+                  backgroundColor: filters.status === "pending" ? "#0369a1" : "#f1f5f9",
+                  color: filters.status === "pending" ? "#ffffff" : "#64748b",
+                }}
+                onClick={() => handleFilterChange("status", "pending")}
+              >
+                Pending
+              </button>
+              <button
+                style={{
+                  ...styles.statusFilterBtn,
+                  backgroundColor: filters.status === "inactive" ? "#0369a1" : "#f1f5f9",
+                  color: filters.status === "inactive" ? "#ffffff" : "#64748b",
+                }}
+                onClick={() => handleFilterChange("status", "inactive")}
+              >
+                Inactive
+              </button>
+            </div>
+
             <div style={styles.filterGrid}>
               {/* Room Type */}
               <div style={styles.filterGroup}>
@@ -313,9 +622,9 @@ const FindAccommodation = () => {
       {/* Results Info */}
       <div style={styles.resultsInfo}>
         <span style={styles.resultsCount}>
-          {pagination.total} accommodation{pagination.total !== 1 ? "s" : ""} found
+          {filteredAccommodations.length} accommodation{filteredAccommodations.length !== 1 ? "s" : ""} found
         </span>
-        {(filters.location || filters.room_type || filters.min_price || filters.max_price) && (
+        {(filters.location || filters.room_type || filters.min_price || filters.max_price || filters.status !== "all") && (
           <button style={styles.clearFilters} onClick={clearFilters}>
             Clear filters
           </button>
@@ -351,10 +660,10 @@ const FindAccommodation = () => {
       )}
 
       {/* Accommodations Grid */}
-      {!loading && !error && accommodations.length > 0 && (
+      {!loading && !error && filteredAccommodations.length > 0 && (
         <>
           <div style={styles.grid}>
-            {accommodations.map((accommodation) => (
+            {filteredAccommodations.map((accommodation) => (
               <div
                 key={accommodation.id}
                 style={styles.card}
@@ -363,12 +672,10 @@ const FindAccommodation = () => {
                 {/* Image */}
                 <div style={styles.cardImage}>
                   <img
-                    src={
-                      accommodation.images?.[0] ||
-                      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400"
-                    }
+                    src={getImageUrl(accommodation)}
                     alt={accommodation.name}
                     style={styles.cardImageImg}
+                    onError={(e) => { e.target.src = mockAccommodations[0]?.image; }}
                   />
 
                   {/* Wishlist Button */}
@@ -403,13 +710,16 @@ const FindAccommodation = () => {
                   </button>
 
                   {/* Verified Badge */}
-                  {accommodation.is_verified && (
+                  {getIsVerified(accommodation) && (
                     <span style={styles.verifiedBadge}>Verified</span>
                   )}
 
+                  {/* Status Badge */}
+                  {getStatusBadge(getStatus(accommodation))}
+
                   {/* Room Type Badge */}
                   <span style={styles.roomTypeBadge}>
-                    {accommodation.room_type?.replace("_", " ")}
+                    {getType(accommodation)}
                   </span>
                 </div>
 
@@ -418,14 +728,14 @@ const FindAccommodation = () => {
                   {/* Title & Rating */}
                   <div style={styles.cardHeader}>
                     <h3 style={styles.cardTitle}>{accommodation.name}</h3>
-                    {accommodation.rating > 0 && (
+                    {getRating(accommodation) > 0 && (
                       <div style={styles.rating}>
                         <Star size={16} color="#f59e0b" fill="#f59e0b" />
                         <span style={styles.ratingValue}>
-                          {accommodation.rating}
+                          {getRating(accommodation)}
                         </span>
                         <span style={styles.reviewCount}>
-                          ({accommodation.review_count || 0})
+                          ({getReviewCount(accommodation)})
                         </span>
                       </div>
                     )}
@@ -437,9 +747,24 @@ const FindAccommodation = () => {
                     <span>{accommodation.location}</span>
                   </div>
 
+                  {/* Stats */}
+                  <div style={styles.cardStats}>
+                    <div style={styles.cardStat}>
+                      <Users size={16} color="#64748b" />
+                      <span>{getCapacity(accommodation)} students</span>
+                    </div>
+                    <div style={styles.cardStat}>
+                      <Star size={16} color="#f59e0b" />
+                      <span>{getRating(accommodation)}</span>
+                    </div>
+                    <div style={styles.cardStat}>
+                      <span style={styles.priceStat}>Ksh{getPrice(accommodation)}/mo</span>
+                    </div>
+                  </div>
+
                   {/* Amenities */}
                   <div style={styles.cardAmenities}>
-                    {(accommodation.amenities || [])
+                    {getAmenities(accommodation)
                       .slice(0, 4)
                       .map((amenity, idx) => (
                         <span key={idx} style={styles.amenity}>
@@ -450,9 +775,9 @@ const FindAccommodation = () => {
                           </span>
                         </span>
                       ))}
-                    {(accommodation.amenities?.length || 0) > 4 && (
+                    {getAmenities(accommodation).length > 4 && (
                       <span style={styles.moreAmenities}>
-                        +{accommodation.amenities.length - 4}
+                        +{getAmenities(accommodation).length - 4}
                       </span>
                     )}
                   </div>
@@ -461,7 +786,7 @@ const FindAccommodation = () => {
                   <div style={styles.cardFooter}>
                     <div style={styles.price}>
                       <span style={styles.priceValue}>
-                        KSh {accommodation.price?.toLocaleString()}
+                        KSh {getPrice(accommodation).toLocaleString()}
                       </span>
                       <span style={styles.pricePeriod}>/month</span>
                     </div>
@@ -472,7 +797,7 @@ const FindAccommodation = () => {
                   </div>
 
                   {/* Availability */}
-                  {accommodation.available_rooms > 0 && (
+                  {getAvailableRooms(accommodation) > 0 && (
                     <div style={styles.availability}>
                       <span
                         style={{
@@ -480,8 +805,8 @@ const FindAccommodation = () => {
                           backgroundColor: "#10b981",
                         }}
                       />
-                      {accommodation.available_rooms} room
-                      {accommodation.available_rooms !== 1 ? "s" : ""} available
+                      {getAvailableRooms(accommodation)} room
+                      {getAvailableRooms(accommodation) !== 1 ? "s" : ""} available
                     </div>
                   )}
                 </div>
@@ -545,19 +870,20 @@ const FindAccommodation = () => {
       )}
 
       {/* Empty State */}
-      {!loading && !error && accommodations.length === 0 && (
+      {!loading && !error && filteredAccommodations.length === 0 && (
         <div style={styles.emptyState}>
           <Home size={64} color="#d1d5db" />
           <h3 style={styles.emptyStateTitle}>No accommodations found</h3>
           <p style={styles.emptyStateText}>
-            {filters.location || filters.room_type || filters.min_price || filters.max_price
+            {filters.location || filters.room_type || filters.min_price || filters.max_price || filters.status !== "all"
               ? "Try adjusting your filters to see more results"
               : "Check back later for new listings"}
           </p>
           {(filters.location ||
             filters.room_type ||
             filters.min_price ||
-            filters.max_price) && (
+            filters.max_price ||
+            filters.status !== "all") && (
             <button style={styles.browseButton} onClick={clearFilters}>
               Clear Filters
             </button>
@@ -581,98 +907,7 @@ const FindAccommodation = () => {
   );
 };
 
-// Mock data for demo - using Unsplash images
-const getMockAccommodations = () => [
-  {
-    id: 1,
-    name: "University View Hostel",
-    location: "123 College Ave, Nairobi",
-    price: 8500,
-    room_type: "single",
-    rating: 4.5,
-    review_count: 28,
-    amenities: ["wifi", "security", "study", "parking"],
-    images: [
-      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
-    ],
-    is_verified: true,
-    is_in_wishlist: false,
-    available_rooms: 5,
-  },
-  {
-    id: 2,
-    name: "Central Student Living",
-    location: "456 Main Street, Nairobi",
-    price: 6500,
-    room_type: "bed_sitter",
-    rating: 4.2,
-    review_count: 15,
-    amenities: ["wifi", "breakfast", "security"],
-    images: [
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-    ],
-    is_verified: true,
-    is_in_wishlist: true,
-    available_rooms: 3,
-  },
-  {
-    id: 3,
-    name: "Green Valley Hostel",
-    location: "789 Park Road, Nairobi",
-    price: 5500,
-    room_type: "double",
-    rating: 4.0,
-    review_count: 42,
-    amenities: ["wifi", "parking", "security"],
-    images: ["https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=400"],
-    is_verified: false,
-    is_in_wishlist: false,
-    available_rooms: 8,
-  },
-  {
-    id: 4,
-    name: "Lakeside Accommodation",
-    location: "321 Lake View, Kisumu",
-    price: 7500,
-    room_type: "studio",
-    rating: 4.8,
-    review_count: 12,
-    amenities: ["wifi", "security", "study", "parking"],
-    images: ["https://images.unsplash.com/photo-1562503542-2a1e6f03b16b?w=400"],
-    is_verified: true,
-    is_in_wishlist: false,
-    available_rooms: 2,
-  },
-  {
-    id: 5,
-    name: "Coastal View Hostel",
-    location: "555 Ocean Drive, Mombasa",
-    price: 7000,
-    room_type: "single",
-    rating: 4.3,
-    review_count: 20,
-    amenities: ["wifi", "security", "parking"],
-    images: ["https://images.unsplash.com/photo-1590508794514-f2a3c8b8edd4?w=400"],
-    is_verified: true,
-    is_in_wishlist: false,
-    available_rooms: 6,
-  },
-  {
-    id: 6,
-    name: "Mountain View Lodge",
-    location: "888 Highlands, Nakuru",
-    price: 6000,
-    room_type: "bed_sitter",
-    rating: 4.1,
-    review_count: 18,
-    amenities: ["wifi", "breakfast", "security"],
-    images: ["https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400"],
-    is_verified: true,
-    is_in_wishlist: true,
-    available_rooms: 4,
-  },
-];
-
+// Styles object
 const styles = {
   container: {
     maxWidth: "1400px",
@@ -756,6 +991,20 @@ const styles = {
     marginTop: "16px",
     paddingTop: "16px",
     borderTop: "1px solid #e2e8f0",
+  },
+  statusFilterButtons: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "16px",
+  },
+  statusFilterBtn: {
+    padding: "8px 16px",
+    border: "none",
+    borderRadius: "6px",
+    fontSize: "13px",
+    fontWeight: 500,
+    cursor: "pointer",
+    transition: "all 0.2s",
   },
   filterGrid: {
     display: "grid",
@@ -939,6 +1188,15 @@ const styles = {
     fontSize: "12px",
     fontWeight: 600,
   },
+  statusBadge: {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    padding: "4px 10px",
+    borderRadius: "4px",
+    fontSize: "12px",
+    fontWeight: 600,
+  },
   roomTypeBadge: {
     position: "absolute",
     bottom: "12px",
@@ -990,6 +1248,22 @@ const styles = {
     fontSize: "14px",
     color: "#64748b",
     marginBottom: "12px",
+  },
+  cardStats: {
+    display: "flex",
+    gap: "16px",
+    marginBottom: "12px",
+  },
+  cardStat: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  priceStat: {
+    fontWeight: 600,
+    color: "#059669",
   },
   cardAmenities: {
     display: "flex",
