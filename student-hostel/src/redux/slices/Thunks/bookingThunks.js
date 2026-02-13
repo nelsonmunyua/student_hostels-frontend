@@ -1,6 +1,16 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import bookingApi from "../../../api/Bookingapi";
 
+// Helper function to format date to YYYY-MM-DD
+const formatDate = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 /**
  * Create a new booking
  * Accepts bookingData with either accommodation_id/hostel_id and check_in/check_out or start_date/end_date
@@ -14,9 +24,9 @@ export const createBooking = createAsyncThunk(
         // Accept both naming conventions
         hostel_id: bookingData.hostel_id || bookingData.accommodation_id,
         room_id: bookingData.room_id,
-        // Accept both date formats
-        start_date: bookingData.start_date || bookingData.check_in,
-        end_date: bookingData.end_date || bookingData.check_out,
+        // Accept both date formats and convert to YYYY-MM-DD
+        start_date: bookingData.start_date || (bookingData.check_in ? formatDate(bookingData.check_in) : null),
+        end_date: bookingData.end_date || (bookingData.check_out ? formatDate(bookingData.check_out) : null),
         // Include other fields
         number_of_guests: bookingData.number_of_guests || bookingData.guests,
         special_requests: bookingData.special_requests,
@@ -226,7 +236,16 @@ export const calculateBookingPrice = createAsyncThunk(
   "booking/calculatePrice",
   async (params, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.calculatePrice(params);
+      // Transform frontend data to backend format
+      const transformedData = {
+        // Accept both naming conventions
+        hostel_id: params.hostel_id || params.accommodation_id,
+        // Accept both date formats and convert to YYYY-MM-DD
+        start_date: params.start_date || (params.check_in ? formatDate(params.check_in) : null),
+        end_date: params.end_date || (params.check_out ? formatDate(params.check_out) : null),
+      };
+      
+      const response = await bookingApi.calculatePrice(transformedData);
       return response;
     } catch (error) {
       const message =
@@ -238,6 +257,8 @@ export const calculateBookingPrice = createAsyncThunk(
     }
   },
 );
+
+// Helper function to format date to YYYY-MM-DD (moved to top of file)
 
 /**
  * Get booking calendar
