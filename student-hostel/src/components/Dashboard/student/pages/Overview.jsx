@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Heart, Star, MapPin } from "lucide-react";
+import { Calendar, Heart, Star, MapPin, Loader2, ArrowRight } from "lucide-react";
 import { useSelector } from "react-redux";
 import studentApi from "../../../../api/studentApi";
 
@@ -16,17 +16,15 @@ const StudentOverview = () => {
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Use ref to prevent double-fetching in React Strict Mode
   const fetchRef = useRef(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log("Fetching dashboard stats...");
+      
       const data = await studentApi.getDashboardStats();
-      console.log("Dashboard stats received:", data);
-
+      
       // Map backend field names to frontend field names
       setStats({
         totalBookings: data.stats?.total_bookings || 0,
@@ -37,8 +35,6 @@ const StudentOverview = () => {
       setRecentBookings(data.recent_bookings || []);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
       setError(error.response?.data?.message || "Failed to load dashboard data");
       // Use mock data when API fails
       setStats({
@@ -55,32 +51,12 @@ const StudentOverview = () => {
   }, []);
 
   useEffect(() => {
-    // Prevent double-fetching in React Strict Mode
-    // Only fetch if user is authenticated
     if (!fetchRef.current && user) {
       fetchRef.current = true;
       fetchDashboardData();
     }
   }, [fetchDashboardData, user]);
 
-  // Handle action card click
-  const handleAction = (action) => {
-    switch (action) {
-      case "browse":
-        alert("Redirecting to browse accommodations... (Demo)");
-        break;
-      case "wishlist":
-        navigate("/student/wishlist");
-        break;
-      case "review":
-        alert("Redirecting to reviews page... (Demo)");
-        break;
-      default:
-        break;
-    }
-  };
-
-  // Handle Get Started button
   const handleGetStarted = useCallback((action) => {
     switch (action) {
       case "browse":
@@ -97,16 +73,43 @@ const StudentOverview = () => {
     }
   }, [navigate]);
 
+  // Loading skeleton component
+  const LoadingSkeleton = () => (
+    <div style={styles.skeletonContainer}>
+      {/* Stats skeleton */}
+      <div style={styles.statsGrid}>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={styles.skeletonStatCard}>
+            <div style={styles.skeletonIcon} />
+            <div style={styles.skeletonTextContainer}>
+              <div style={styles.skeletonTextShort} />
+              <div style={styles.skeletonTextLong} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Section skeleton */}
+      <div style={styles.skeletonSection}>
+        <div style={styles.skeletonTitle} />
+        <div style={styles.skeletonCard}>
+          <div style={styles.skeletonImage} />
+          <div style={styles.skeletonContent}>
+            <div style={styles.skeletonTextMedium} />
+            <div style={styles.skeletonTextShort} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p>Loading dashboard...</p>
+      <div style={styles.container}>
+        <LoadingSkeleton />
       </div>
     );
   }
 
-  // Show error state
   if (error) {
     return (
       <div style={styles.container}>
@@ -131,12 +134,21 @@ const StudentOverview = () => {
     <div style={styles.container}>
       {/* Welcome Section */}
       <div style={styles.welcomeSection}>
-        <h1 style={styles.welcomeTitle}>
-          Welcome back, {user?.first_name || "Student"}! 👋
-        </h1>
-        <p style={styles.welcomeSubtitle}>
-          Here's what's happening with your bookings
-        </p>
+        <div>
+          <h1 style={styles.welcomeTitle}>
+            Welcome back, {user?.first_name || "Student"}! 👋
+          </h1>
+          <p style={styles.welcomeSubtitle}>
+            Here&apos;s what&apos;s happening with your bookings
+          </p>
+        </div>
+        <button 
+          style={styles.browseButton}
+          onClick={() => navigate("/student/find-accommodation")}
+        >
+          Browse All
+          <ArrowRight size={18} />
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -147,6 +159,7 @@ const StudentOverview = () => {
           value={stats.totalBookings}
           color="#3b82f6"
           bgColor="#eff6ff"
+          onClick={() => navigate("/student/my-bookings")}
         />
         <StatCard
           icon={Calendar}
@@ -154,6 +167,7 @@ const StudentOverview = () => {
           value={stats.activeBookings}
           color="#10b981"
           bgColor="#f0fdf4"
+          onClick={() => navigate("/student/my-bookings")}
         />
         <StatCard
           icon={Heart}
@@ -161,6 +175,7 @@ const StudentOverview = () => {
           value={stats.wishlistCount}
           color="#ef4444"
           bgColor="#fef2f2"
+          onClick={() => navigate("/student/wishlist")}
         />
         <StatCard
           icon={Star}
@@ -168,6 +183,7 @@ const StudentOverview = () => {
           value={stats.reviewsGiven}
           color="#f59e0b"
           bgColor="#fffbeb"
+          onClick={() => navigate("/student/my-reviews")}
         />
       </div>
 
@@ -179,7 +195,7 @@ const StudentOverview = () => {
             style={styles.viewAllLink}
             onClick={() => navigate("/student/my-bookings")}
           >
-            View all
+            View all →
           </button>
         </div>
         <div style={styles.card}>
@@ -196,6 +212,12 @@ const StudentOverview = () => {
               <p style={styles.emptyStateSubtext}>
                 Start exploring accommodations to make your first booking
               </p>
+              <button
+                style={styles.emptyStateButton}
+                onClick={() => navigate("/student/find-accommodation")}
+              >
+                Find Accommodation
+              </button>
             </div>
           )}
         </div>
@@ -228,12 +250,41 @@ const StudentOverview = () => {
           />
         </div>
       </div>
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
 
-const StatCard = ({ icon: Icon, title, value, color, bgColor }) => (
-  <div style={{ ...styles.statCard, backgroundColor: bgColor }}>
+const StatCard = ({ icon: Icon, title, value, color, bgColor, onClick }) => (
+  <div 
+    style={{ ...styles.statCard, backgroundColor: bgColor }}
+    onClick={onClick}
+    onMouseOver={(e) => {
+      e.currentTarget.style.transform = "translateY(-2px)";
+      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+    }}
+    onMouseOut={(e) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+    }}
+  >
     <div style={styles.statIconContainer}>
       <Icon size={24} color={color} strokeWidth={2.5} />
     </div>
@@ -265,12 +316,17 @@ const BookingItem = ({ booking }) => {
         <div style={styles.bookingDetails}>
           <span style={styles.bookingDate}>
             <Calendar size={14} />
-            {new Date(booking.check_in).toLocaleDateString()} -{" "}
-            {new Date(booking.check_out).toLocaleDateString()}
+            {booking.check_in 
+              ? new Date(booking.check_in).toLocaleDateString() 
+              : "N/A"}{" "}
+            -{" "}
+            {booking.check_out 
+              ? new Date(booking.check_out).toLocaleDateString() 
+              : "Ongoing"}
           </span>
           <span style={styles.bookingLocation}>
             <MapPin size={14} />
-            {booking.location}
+            {booking.location || "Location not specified"}
           </span>
         </div>
       </div>
@@ -284,14 +340,26 @@ const BookingItem = ({ booking }) => {
         >
           {booking.status}
         </span>
-        <span style={styles.bookingPrice}>KSh {booking.total_price}</span>
+        <span style={styles.bookingPrice}>
+          KSh {(booking.total_price || 0).toLocaleString()}
+        </span>
       </div>
     </div>
   );
 };
 
 const ActionCard = ({ title, description, icon, action, onAction }) => (
-  <div style={styles.actionCard}>
+  <div 
+    style={styles.actionCard}
+    onMouseOver={(e) => {
+      e.currentTarget.style.transform = "translateY(-4px)";
+      e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)";
+    }}
+    onMouseOut={(e) => {
+      e.currentTarget.style.transform = "translateY(0)";
+      e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+    }}
+  >
     <span style={styles.actionIcon}>{icon}</span>
     <h3 style={styles.actionTitle}>{title}</h3>
     <p style={styles.actionDescription}>{description}</p>
@@ -299,7 +367,7 @@ const ActionCard = ({ title, description, icon, action, onAction }) => (
       style={styles.actionButton}
       onClick={() => onAction(action)}
     >
-      Get Started
+      Get Started →
     </button>
   </div>
 );
@@ -308,24 +376,82 @@ const styles = {
   container: {
     maxWidth: "1200px",
     margin: "0 auto",
+    animation: "fadeIn 0.3s ease",
   },
-  loadingContainer: {
+  skeletonContainer: {
+    animation: "pulse 1.5s infinite",
+  },
+  skeletonStatCard: {
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: "400px",
+    gap: "16px",
+    padding: "20px",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+  },
+  skeletonIcon: {
+    width: "48px",
+    height: "48px",
+    borderRadius: "10px",
+    backgroundColor: "#f1f5f9",
+  },
+  skeletonTextContainer: {
+    flex: 1,
+  },
+  skeletonTextShort: {
+    width: "40%",
+    height: "14px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "4px",
+    marginBottom: "8px",
+  },
+  skeletonTextLong: {
+    width: "60%",
+    height: "24px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "4px",
+  },
+  skeletonSection: {
+    marginTop: "32px",
+  },
+  skeletonTitle: {
+    width: "200px",
+    height: "28px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "8px",
+    marginBottom: "16px",
+  },
+  skeletonCard: {
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    padding: "24px",
+    display: "flex",
     gap: "16px",
   },
-  spinner: {
-    width: "40px",
-    height: "40px",
-    border: "4px solid #e5e7eb",
-    borderTop: "4px solid #3b82f6",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
+  skeletonImage: {
+    width: "120px",
+    height: "80px",
+    borderRadius: "8px",
+    backgroundColor: "#f1f5f9",
+  },
+  skeletonContent: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  skeletonTextMedium: {
+    width: "70%",
+    height: "20px",
+    backgroundColor: "#f1f5f9",
+    borderRadius: "4px",
   },
   welcomeSection: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: "32px",
   },
   welcomeTitle: {
@@ -337,6 +463,20 @@ const styles = {
   welcomeSubtitle: {
     fontSize: "16px",
     color: "#64748b",
+  },
+  browseButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "10px 20px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s",
   },
   statsGrid: {
     display: "grid",
@@ -353,6 +493,8 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "16px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
   },
   statIconContainer: {
     width: "48px",
@@ -421,6 +563,7 @@ const styles = {
     backgroundColor: "#f8fafc",
     borderRadius: "8px",
     border: "1px solid #e2e8f0",
+    transition: "all 0.2s",
   },
   bookingInfo: {
     flex: 1,
@@ -483,6 +626,17 @@ const styles = {
     color: "#9ca3af",
     marginTop: "4px",
   },
+  emptyStateButton: {
+    marginTop: "16px",
+    padding: "10px 20px",
+    backgroundColor: "#3b82f6",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
   actionsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
@@ -495,7 +649,8 @@ const styles = {
     boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
     border: "1px solid #e2e8f0",
     textAlign: "center",
-    transition: "all 0.2s",
+    transition: "all 0.2s ease",
+    cursor: "pointer",
   },
   actionIcon: {
     fontSize: "48px",
@@ -525,7 +680,6 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.2s",
   },
-  // Error state styles
   errorContainer: {
     display: "flex",
     flexDirection: "column",
@@ -559,14 +713,7 @@ const styles = {
     fontWeight: 600,
     cursor: "pointer",
   },
-  // Add hover effects for better UX
-  actionCardHover: {
-    transform: "translateY(-2px)",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-  },
-  actionButtonHover: {
-    backgroundColor: "#2563eb",
-  },
 };
 
 export default StudentOverview;
+

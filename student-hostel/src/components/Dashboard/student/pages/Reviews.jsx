@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Star,
   MessageSquare,
@@ -12,24 +11,16 @@ import {
   XCircle,
   Plus,
 } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  fetchMyReviews,
-  fetchPendingReviews,
-  createReview,
-  deleteReview,
-} from "../../../../redux/slices/Thunks/reviewThunks";
+import studentApi from "../../../../api/studentApi";
 
 const StudentReviews = () => {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
-  const { myReviews, pendingReviews, loading, error } = useSelector(
-    (state) => state.review,
-  );
-
   // State
-  const [activeTab, setActiveTab] = useState("reviews"); // reviews | pending
+  const [myReviews, setMyReviews] = useState([]);
+  const [pendingReviews, setPendingReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [activeTab, setActiveTab] = useState("reviews");
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -47,9 +38,45 @@ const StudentReviews = () => {
 
   // Fetch reviews on mount
   useEffect(() => {
-    dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
-    dispatch(fetchPendingReviews());
-  }, [dispatch, pagination.page]);
+    fetchReviews();
+    fetchPendingReviews();
+  }, []);
+
+  // Fetch my reviews
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await studentApi.getMyReviews({
+        page: pagination.page,
+        limit: 10,
+      });
+      setMyReviews(response.reviews || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: response.total || 0,
+        pages: response.pages || 1,
+      }));
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      setError("Failed to load reviews");
+      // Mock data fallback
+      setMyReviews(getMockReviews());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch pending reviews (bookings that can be reviewed)
+  const fetchPendingReviews = async () => {
+    try {
+      const response = await studentApi.getPendingReviews();
+      setPendingReviews(response.pending_reviews || []);
+    } catch (err) {
+      console.error("Error fetching pending reviews:", err);
+      setPendingReviews([]);
+    }
+  };
 
   // Open review modal
   const handleOpenReview = (booking) => {
@@ -65,41 +92,43 @@ const StudentReviews = () => {
     setReviewForm({ rating: 5, comment: "" });
   };
 
-  // Submit review using Redux thunk
+  // Submit review
   const handleSubmitReview = async () => {
     if (!selectedBooking) return;
 
     try {
       setSubmitting(true);
-      await dispatch(
-        createReview({
-          booking_id: selectedBooking.booking_id,
-          rating: reviewForm.rating,
-          comment: reviewForm.comment,
-        }),
-      );
+      await studentApi.createReview({
+        booking_id: selectedBooking.booking_id,
+        rating: reviewForm.rating,
+        comment: reviewForm.comment,
+      });
       // Refresh data
-      dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
-      dispatch(fetchPendingReviews());
+      await fetchReviews();
+      await fetchPendingReviews();
       handleCloseModal();
-      alert("Review submitted successfully!");
+      setSuccess("Review submitted successfully!");
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Error submitting review:", err);
-      alert("Failed to submit review. Please try again.");
+      alert(err.response?.data?.message || "Failed to submit review. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Delete review using Redux thunk
+  // Delete review
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm("Are you sure you want to delete this review?")) {
       return;
     }
 
     try {
-      await dispatch(deleteReview(reviewId));
-      alert("Review deleted successfully.");
+      await studentApi.deleteReview(reviewId);
+      setMyReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      setSuccess("Review deleted successfully.");
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Error deleting review:", err);
       alert("Failed to delete review. Please try again.");
@@ -129,12 +158,7 @@ const StudentReviews = () => {
       },
     };
 
-    const {
-      icon: Icon,
-      color,
-      bgColor,
-      text,
-    } = config[status] || config.pending;
+    const { icon: Icon, color, bgColor, text } = config[status] || config.pending;
 
     return (
       <span
@@ -172,12 +196,6 @@ const StudentReviews = () => {
     );
   };
 
-  // Retry fetch
-  const handleRetry = () => {
-    dispatch(fetchMyReviews({ page: pagination.page, limit: 10 }));
-    dispatch(fetchPendingReviews());
-  };
-
   if (loading && myReviews.length === 0) {
     return (
       <div style={styles.loadingContainer}>
@@ -202,6 +220,14 @@ const StudentReviews = () => {
           </p>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div style={styles.successBanner}>
+          <CheckCircle size={18} />
+          <span>{success}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={styles.tabs}>
@@ -229,7 +255,7 @@ const StudentReviews = () => {
       {error && (
         <div style={styles.errorContainer}>
           <p>{error}</p>
-          <button style={styles.retryButton} onClick={handleRetry}>
+          <button style={styles.retryButton} onClick={fetchReviews}>
             Retry
           </button>
         </div>
@@ -271,7 +297,9 @@ const StudentReviews = () => {
                       <Calendar size={14} color="#6b7280" />
                       <span>
                         Stay:{" "}
-                        {new Date(review.booking_check_in).toLocaleDateString()}
+                        {review.booking_check_in
+                          ? new Date(review.booking_check_in).toLocaleDateString()
+                          : "N/A"}
                         {review.booking_check_out &&
                           ` - ${new Date(
                             review.booking_check_out,
@@ -295,11 +323,13 @@ const StudentReviews = () => {
 
                   <div style={styles.reviewDate}>
                     Reviewed on{" "}
-                    {new Date(review.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {review.created_at
+                      ? new Date(review.created_at).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "N/A"}
                   </div>
                 </div>
               ))}
@@ -367,7 +397,10 @@ const StudentReviews = () => {
                       <div style={styles.pendingDate}>
                         <Calendar size={14} color="#6b7280" />
                         <span>
-                          {new Date(booking.check_in).toLocaleDateString()} -{" "}
+                          {booking.check_in
+                            ? new Date(booking.check_in).toLocaleDateString()
+                            : "N/A"}{" "}
+                          -{" "}
                           {booking.check_out
                             ? new Date(booking.check_out).toLocaleDateString()
                             : "Present"}
@@ -419,7 +452,10 @@ const StudentReviews = () => {
                 <div style={styles.modalHostelInfo}>
                   <h3>{selectedBooking.hostel_name}</h3>
                   <p>
-                    {new Date(selectedBooking.check_in).toLocaleDateString()} -{" "}
+                    {selectedBooking.check_in
+                      ? new Date(selectedBooking.check_in).toLocaleDateString()
+                      : "N/A"}{" "}
+                    -{" "}
                     {selectedBooking.check_out
                       ? new Date(selectedBooking.check_out).toLocaleDateString()
                       : "Present"}
@@ -485,28 +521,95 @@ const StudentReviews = () => {
                   Cancel
                 </button>
                 <button
-                  style={styles.submitButton}
+                  style={{
+                    ...styles.submitButton,
+                    ...(submitting ? styles.submitButtonDisabled : {}),
+                  }}
                   onClick={handleSubmitReview}
                   disabled={submitting}
                 >
-                  {submitting ? "Submitting..." : "Submit Review"}
+                  {submitting ? (
+                    <>
+                      <Loader2
+                        size={18}
+                        style={{ animation: "spin 1s linear infinite" }}
+                      />
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Review"
+                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
+
+// Mock data for demo
+const getMockReviews = () => [
+  {
+    id: 1,
+    hostel_name: "University View Hostel",
+    hostel_location: "123 College Ave, Nairobi",
+    rating: 5,
+    comment: "Great accommodation! Clean rooms and friendly staff.",
+    status: "approved",
+    booking_check_in: "2024-01-15",
+    booking_check_out: "2024-02-15",
+    created_at: "2024-02-16T10:00:00Z",
+  },
+  {
+    id: 2,
+    hostel_name: "Central Student Living",
+    hostel_location: "456 Main Street, Nairobi",
+    rating: 4,
+    comment: "Good value for money. Slightly noisy during the day but overall nice.",
+    status: "pending",
+    booking_check_in: "2024-02-01",
+    booking_check_out: "2024-02-28",
+    created_at: "2024-03-01T14:30:00Z",
+  },
+];
 
 const styles = {
   container: {
     maxWidth: "1000px",
     padding: "0 24px",
+    animation: "fadeIn 0.3s ease",
   },
   header: {
     marginBottom: "32px",
+  },
+  successBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 16px",
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    marginBottom: "24px",
+    border: "1px solid #86efac",
+    animation: "fadeIn 0.3s ease",
   },
   title: {
     fontSize: "28px",
@@ -577,6 +680,7 @@ const styles = {
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
     padding: "24px",
+    transition: "all 0.2s ease",
   },
   reviewHeader: {
     display: "flex",
@@ -667,6 +771,7 @@ const styles = {
     backgroundColor: "#fff",
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
+    transition: "all 0.2s ease",
   },
   pendingInfo: {
     flex: 1,
@@ -870,6 +975,11 @@ const styles = {
     fontWeight: 500,
     cursor: "pointer",
   },
+  submitButtonDisabled: {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
 };
 
 export default StudentReviews;
+

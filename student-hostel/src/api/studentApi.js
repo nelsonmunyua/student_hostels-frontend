@@ -277,6 +277,48 @@ const studentApi = {
     const response = await axios.get('/student/dashboard-stats');
     return response.data;
   },
+
+  // =========================
+  // BOOKING
+  // =========================
+
+  /**
+   * Create a new booking
+   * @param {Object} bookingData - Booking data
+   * @param {number} bookingData.hostel_id - Hostel ID
+   * @param {number} bookingData.room_id - Room ID (optional, will use first available if not provided)
+   * @param {string} bookingData.start_date - Start date (YYYY-MM-DD)
+   * @param {string} bookingData.end_date - End date (YYYY-MM-DD)
+   * @returns {Promise} Response with created booking
+   */
+  createBooking: async (bookingData) => {
+    const response = await axios.post('/bookings', bookingData);
+    return response.data;
+  },
+
+  /**
+   * Get booking details
+   * @param {number} bookingId - Booking ID
+   * @returns {Promise} Response with booking details
+   */
+  getBookingDetail: async (bookingId) => {
+    const response = await axios.get(`/student/bookings/${bookingId}`);
+    return response.data;
+  },
+
+  /**
+   * Check room availability
+   * @param {Object} availabilityData - Availability check data
+   * @param {number} availabilityData.hostel_id - Hostel ID
+   * @param {number} availabilityData.room_id - Room ID (optional)
+   * @param {string} availabilityData.start_date - Start date
+   * @param {string} availabilityData.end_date - End date
+   * @returns {Promise} Response with availability info
+   */
+  checkAvailability: async (availabilityData) => {
+    const response = await axios.post('/bookings/check-availability', availabilityData);
+    return response.data;
+  },
 };
 
 export default studentApi;

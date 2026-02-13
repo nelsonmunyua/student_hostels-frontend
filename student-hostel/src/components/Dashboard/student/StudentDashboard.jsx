@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import DashboardHeader from "./components/Header.jsx";
 import DashboardSidebar from "./components/Sidebar.jsx";
 import { logoutUser } from "../../../redux/slices/Thunks/authThunks";
+import { useEffect } from "react";
 
 const StudentDashboard = () => {
   const dispatch = useDispatch();
@@ -17,6 +18,28 @@ const StudentDashboard = () => {
     }
     navigate("/login", { replace: true });
   };
+
+  // Inject responsive styles on mount
+  useEffect(() => {
+    // Create and inject stylesheet
+    const styleId = 'student-dashboard-styles';
+    let stylesheet = document.getElementById(styleId);
+    
+    if (!stylesheet) {
+      stylesheet = document.createElement('style');
+      stylesheet.id = styleId;
+      stylesheet.textContent = cssStyles;
+      document.head.appendChild(stylesheet);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      const existing = document.getElementById(styleId);
+      if (existing && document.head.contains(existing)) {
+        document.head.removeChild(existing);
+      }
+    };
+  }, []);
 
   // Student menu items - exact from specification
   const menuItems = [
@@ -144,9 +167,5 @@ const cssStyles = `
   }
 `;
 
-// Inject CSS styles
-const styleSheet = document.createElement("style");
-styleSheet.innerText = cssStyles;
-document.head.appendChild(styleSheet);
-
 export default StudentDashboard;
+

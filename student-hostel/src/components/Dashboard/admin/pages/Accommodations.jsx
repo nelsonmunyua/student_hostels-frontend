@@ -193,6 +193,54 @@ const Accommodations = () => {
     return imageMap[acc.id] || 'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800';
   };
 
+  // Helper to get accommodation type
+  const getType = (acc) => {
+    if (acc.type) return acc.type;
+    if (acc.amenities?.type) return acc.amenities.type;
+    return 'Hostel';
+  };
+
+  // Helper to get accommodation status
+  const getStatus = (acc) => {
+    if (acc.status) return acc.status;
+    return 'active';
+  };
+
+  // Helper to get capacity
+  const getCapacity = (acc) => {
+    if (acc.capacity) return acc.capacity;
+    if (acc.amenities?.capacity) return acc.amenities.capacity;
+    return 0;
+  };
+
+  // Helper to get price
+  const getPrice = (acc) => {
+    if (acc.price) return acc.price;
+    if (acc.amenities?.price) return acc.amenities.price;
+    return 0;
+  };
+
+  // Helper to get rating
+  const getRating = (acc) => {
+    if (acc.rating) return acc.rating;
+    return 'N/A';
+  };
+
+  // Helper to get host name
+  const getHostName = (acc) => {
+    if (acc.host) return acc.host;
+    if (acc.host_name) return acc.host_name;
+    if (acc.host_id) return `Host #${acc.host_id}`;
+    return 'Unknown Host';
+  };
+
+  // Helper to get number of rooms
+  const getRooms = (acc) => {
+    if (acc.rooms) return acc.rooms;
+    if (acc.amenities?.rooms) return acc.amenities.rooms;
+    return 0;
+  };
+
   const getStatusBadge = (status) => {
     const statusStyles = {
       active: {

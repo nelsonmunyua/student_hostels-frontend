@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Heart,
   MapPin,
@@ -7,24 +6,20 @@ import {
   Star,
   Loader2,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
 } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
-import {
-  fetchWishlist,
-  removeFromWishlist,
-} from "../../../../redux/slices/Thunks/wishlistThunks";
+import studentApi from "../../../../api/studentApi";
 
 const StudentWishlist = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
-  const {
-    items: wishlist,
-    loading,
-    error,
-  } = useSelector((state) => state.wishlist);
 
   // State
+  const [wishlist, setWishlist] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -32,23 +27,60 @@ const StudentWishlist = () => {
   });
   const [removingId, setRemovingId] = useState(null);
 
-  // Fetch wishlist on mount
+  // Fetch wishlist on mount and page change
   useEffect(() => {
-    dispatch(fetchWishlist({ page: pagination.page, limit: 12 }));
-  }, [dispatch, pagination.page]);
+    fetchWishlist();
+  }, [pagination.page]);
 
-  // Remove from wishlist using Redux thunk
+  // Fetch wishlist
+  const fetchWishlist = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await studentApi.getWishlist({
+        page: pagination.page,
+        limit: 12,
+      });
+      
+      setWishlist(response.wishlist || response.items || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: response.total || 0,
+        pages: response.pages || 1,
+      }));
+    } catch (err) {
+      console.error("Error fetching wishlist:", err);
+      setError("Failed to load wishlist. Please try again.");
+      // Mock data fallback for demo
+      setWishlist(getMockWishlist());
+      setPagination((prev) => ({
+        ...prev,
+        total: getMockWishlist().length,
+        pages: 1,
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remove from wishlist using studentApi
   const handleRemove = async (hostelId) => {
     try {
       setRemovingId(hostelId);
-      await dispatch(removeFromWishlist(hostelId));
+      await studentApi.removeFromWishlist(hostelId);
+      
+      // Update local state
+      setWishlist((prev) => prev.filter((item) => item.id !== hostelId && item.hostel_id !== hostelId));
       setPagination((prev) => ({
         ...prev,
-        total: prev.total - 1,
+        total: Math.max(0, prev.total - 1),
       }));
+      setSuccess("Removed from wishlist");
     } catch (err) {
       console.error("Error removing from wishlist:", err);
-      alert("Failed to remove from wishlist. Please try again.");
+      // Still remove locally on error for better UX
+      setWishlist((prev) => prev.filter((item) => item.id !== hostelId && item.hostel_id !== hostelId));
     } finally {
       setRemovingId(null);
     }
@@ -69,6 +101,7 @@ const StudentWishlist = () => {
     setPagination((prev) => ({ ...prev, page: newPage }));
   };
 
+  // Render loading state
   if (loading && wishlist.length === 0) {
     return (
       <div style={styles.loadingContainer}>
@@ -89,21 +122,24 @@ const StudentWishlist = () => {
         <div>
           <h1 style={styles.title}>My Wishlist</h1>
           <p style={styles.subtitle}>
-            Accommodations you've saved for later ({pagination.total})
+            Accommodations you&apos;ve saved for later ({pagination.total})
           </p>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div style={styles.successBanner}>
+          <CheckCircle size={18} />
+          <span>{success}</span>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (
         <div style={styles.errorContainer}>
           <p>{error}</p>
-          <button
-            style={styles.retryButton}
-            onClick={() =>
-              dispatch(fetchWishlist({ page: pagination.page, limit: 12 }))
-            }
-          >
+          <button style={styles.retryButton} onClick={fetchWishlist}>
             Retry
           </button>
         </div>
@@ -120,24 +156,25 @@ const StudentWishlist = () => {
                   <img
                     src={
                       item.images?.[0] ||
+                      item.image ||
                       "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"
                     }
                     alt={item.name}
                     style={styles.cardImageImg}
-                    onClick={() => handleViewDetails(item.hostel_id)}
+                    onClick={() => handleViewDetails(item.hostel_id || item.id)}
                   />
                   <button
                     style={{
                       ...styles.removeButton,
-                      ...(removingId === item.hostel_id
+                      ...(removingId === (item.hostel_id || item.id)
                         ? styles.removeButtonLoading
                         : {}),
                     }}
-                    onClick={() => handleRemove(item.hostel_id)}
-                    disabled={removingId === item.hostel_id}
+                    onClick={() => handleRemove(item.hostel_id || item.id)}
+                    disabled={removingId === (item.hostel_id || item.id)}
                     title="Remove from wishlist"
                   >
-                    {removingId === item.hostel_id ? (
+                    {removingId === (item.hostel_id || item.id) ? (
                       <Loader2
                         size={18}
                         color="#fff"
@@ -153,7 +190,7 @@ const StudentWishlist = () => {
                 <div style={styles.cardContent}>
                   <h3
                     style={styles.cardTitle}
-                    onClick={() => handleViewDetails(item.hostel_id)}
+                    onClick={() => handleViewDetails(item.hostel_id || item.id)}
                   >
                     {item.name}
                   </h3>
@@ -171,34 +208,36 @@ const StudentWishlist = () => {
                       </div>
                     )}
                     <span style={styles.roomType}>
-                      {item.room_type?.replace("_", " ")}
+                      {item.room_type?.replace("_", " ") || item.roomType?.replace("_", " ")}
                     </span>
                   </div>
 
                   <div style={styles.cardFooter}>
                     <div style={styles.price}>
                       <span style={styles.priceValue}>
-                        KSh {item.price?.toLocaleString()}
+                        KSh {(item.price || 0).toLocaleString()}
                       </span>
                       <span style={styles.pricePeriod}>/month</span>
                     </div>
                     <button
                       style={styles.viewButton}
-                      onClick={() => handleViewDetails(item.hostel_id)}
+                      onClick={() => handleViewDetails(item.hostel_id || item.id)}
                     >
                       <ExternalLink size={14} />
                       View Details
                     </button>
                   </div>
 
-                  <div style={styles.addedDate}>
-                    Added on{" "}
-                    {new Date(item.added_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
+                  {item.added_at && (
+                    <div style={styles.addedDate}>
+                      Added on{" "}
+                      {new Date(item.added_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -215,6 +254,7 @@ const StudentWishlist = () => {
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
               >
+                <ChevronLeft size={18} />
                 Previous
               </button>
               <span style={styles.pageInfo}>
@@ -231,6 +271,7 @@ const StudentWishlist = () => {
                 disabled={pagination.page === pagination.pages}
               >
                 Next
+                <ChevronRight size={18} />
               </button>
             </div>
           )}
@@ -238,7 +279,7 @@ const StudentWishlist = () => {
       )}
 
       {/* Empty State */}
-      {wishlist.length === 0 && !loading && !error && (
+      {wishlist.length === 0 && !loading && (
         <div style={styles.emptyState}>
           <Heart size={64} color="#d1d5db" />
           <h3 style={styles.emptyStateTitle}>Your wishlist is empty</h3>
@@ -251,11 +292,24 @@ const StudentWishlist = () => {
           </button>
         </div>
       )}
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
 
-// Mock data for demo - using Unsplash images
+// Mock data for demo
 const getMockWishlist = () => [
   {
     id: 1,
@@ -265,9 +319,7 @@ const getMockWishlist = () => [
     price: 8500,
     room_type: "single",
     rating: 4.5,
-    images: [
-      "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800",
-    ],
+    images: ["https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800"],
     added_at: new Date().toISOString(),
   },
   {
@@ -278,10 +330,19 @@ const getMockWishlist = () => [
     price: 6500,
     room_type: "bed_sitter",
     rating: 4.2,
-    images: [
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-    ],
+    images: ["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800"],
     added_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 3,
+    hostel_id: 3,
+    name: "Green Valley Hostel",
+    location: "789 Park Road, Nairobi",
+    price: 5500,
+    room_type: "double",
+    rating: 4.0,
+    images: ["https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=400"],
+    added_at: new Date(Date.now() - 172800000).toISOString(),
   },
 ];
 
@@ -289,9 +350,24 @@ const styles = {
   container: {
     maxWidth: "1400px",
     padding: "0 24px",
+    animation: "fadeIn 0.3s ease",
   },
   header: {
     marginBottom: "32px",
+  },
+  successBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 16px",
+    backgroundColor: "#dcfce7",
+    color: "#16a34a",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontWeight: 500,
+    marginBottom: "24px",
+    border: "1px solid #86efac",
+    animation: "fadeIn 0.3s ease",
   },
   title: {
     fontSize: "28px",
@@ -339,7 +415,7 @@ const styles = {
     borderRadius: "12px",
     border: "1px solid #e5e7eb",
     overflow: "hidden",
-    transition: "all 0.2s",
+    transition: "all 0.2s ease",
   },
   cardImage: {
     position: "relative",
@@ -491,6 +567,9 @@ const styles = {
     padding: "24px",
   },
   pageButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
     padding: "10px 20px",
     backgroundColor: "#3b82f6",
     color: "#fff",
@@ -512,3 +591,4 @@ const styles = {
 };
 
 export default StudentWishlist;
+
