@@ -3,12 +3,27 @@ import bookingApi from "../../../api/Bookingapi";
 
 /**
  * Create a new booking
+ * Accepts bookingData with either accommodation_id/hostel_id and check_in/check_out or start_date/end_date
  */
 export const createBooking = createAsyncThunk(
   "booking/create",
   async (bookingData, { rejectWithValue }) => {
     try {
-      const response = await bookingApi.create(bookingData);
+      // Transform frontend data to backend format
+      const transformedData = {
+        // Accept both naming conventions
+        hostel_id: bookingData.hostel_id || bookingData.accommodation_id,
+        room_id: bookingData.room_id,
+        // Accept both date formats
+        start_date: bookingData.start_date || bookingData.check_in,
+        end_date: bookingData.end_date || bookingData.check_out,
+        // Include other fields
+        number_of_guests: bookingData.number_of_guests || bookingData.guests,
+        special_requests: bookingData.special_requests,
+        total_price: bookingData.total_price,
+      };
+      
+      const response = await bookingApi.create(transformedData);
       return response;
     } catch (error) {
       const message =
